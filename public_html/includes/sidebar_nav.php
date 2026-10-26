@@ -18,7 +18,7 @@ $NAV_BY_ROLE = [
         ['id' => 'maintenance',   'label' => 'Maintenance',        'icon' => 'bi-tools'],
         ['id' => 'messages',      'label' => 'Messages',           'icon' => 'bi-chat-dots'],
         ['id' => 'violations',    'label' => 'Violations',         'icon' => 'bi-exclamation-triangle'],
-        ['id' => 'analytics',     'label' => 'Analytics',          'icon' => 'bi-bar-chart'],
+
     ],
     'superadmin' => [
         ['id' => 'overview',    'label' => 'Dashboard',        'icon' => 'bi-speedometer2'],

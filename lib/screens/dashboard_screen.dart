@@ -634,7 +634,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 builder: (context, rentStatusSnap) {
                   final rentStatus = rentStatusSnap.data ?? 'normal';
                   final isOverdue = rentStatus == 'overdue';
-                  final isGracePeriod = rentStatus == 'grace_period';
                   final overdueSubtext = isOverdue
                       ? 'October + November'
                       : null;
@@ -656,10 +655,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           !isOverdue && (isApproved || isPending);
                       final currentPart =
                           (latest?['current_part'] as int?) ?? 1;
-                      final effectiveDueDate =
-                          hasRestructuring && isApproved && currentPart > 1
-                          ? '15 Nov ${now.year}'
-                          : '30 $currentMonthName ${now.year}';
 
                       final leaseList = _allLeases.isNotEmpty
                           ? _allLeases
@@ -706,30 +701,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 }
 
                                 final leaseItem = leaseList[index];
+                                final simulatorStatus = rentStatusSnap.data ?? 'normal';
+                                final isSimulatorActive = simulatorStatus == 'overdue' || simulatorStatus == 'grace_period';
+
+                                final bool isItemGrace = isSimulatorActive
+                                    ? (simulatorStatus == 'grace_period')
+                                    : (leaseItem['is_grace_period'] == true);
+
+                                final bool isItemOverdue = isSimulatorActive
+                                    ? (simulatorStatus == 'overdue')
+                                    : (leaseItem['is_overdue'] == true || leaseItem['rent_status'] == 'overdue');
+
+                                final int itemGraceDays = (leaseItem['grace_days_remaining'] as num?)?.toInt() ?? 5;
+
+                                final itemDueLabel = (leaseItem['due_status_label'] ?? '').toString();
+                                final String dynamicDueDate;
+                                if (hasRestructuring && isApproved && currentPart > 1) {
+                                  dynamicDueDate = '15 Nov ${now.year}';
+                                } else if (itemDueLabel.isNotEmpty && !isSimulatorActive) {
+                                  dynamicDueDate = itemDueLabel;
+                                } else {
+                                  final dueDay = (leaseItem['due_day'] as num?)?.toInt() ?? 30;
+                                  dynamicDueDate = '$dueDay $currentMonthName ${now.year}';
+                                }
+
                                 final itemRent =
                                     (leaseItem['rent'] as num?)?.toDouble() ??
                                     12000.0;
-                                final itemEffectiveRent = isOverdue
-                                    ? (itemRent * 2 + 500)
-                                    : itemRent;
+                                final itemPenalty =
+                                    (leaseItem['penalty_amount'] as num?)?.toDouble() ?? 0.0;
+                                final itemEffectiveRent = isItemOverdue
+                                    ? (itemRent * 2 + (itemPenalty > 0 ? itemPenalty : 500))
+                                    : (itemRent + itemPenalty);
+                                final effectiveSubtext = isItemOverdue
+                                    ? (overdueSubtext ?? 'Overdue Balance + Late Fee')
+                                    : (itemPenalty > 0
+                                        ? 'Includes ₱${itemPenalty.toStringAsFixed(0)} Strike Penalty'
+                                        : null);
                                 final itemCompany =
                                     (leaseItem['business_name'] ?? '')
                                         .toString()
+                                        .replaceAll(RegExp(r'\s*\([^)]*\)\s*$'), '')
                                         .trim();
                                 final itemEffectiveCompany =
                                     itemCompany.isNotEmpty
                                     ? itemCompany
                                     : (_companyName.isNotEmpty
-                                          ? _companyName
+                                          ? _companyName.replaceAll(RegExp(r'\s*\([^)]*\)\s*$'), '').trim()
                                           : '');
                                 final itemTenantName =
                                     itemEffectiveCompany.isNotEmpty
                                     ? itemEffectiveCompany
                                     : (_userName.isNotEmpty
-                                          ? _userName
-                                          : (leaseItem['tenant_name']
+                                          ? _userName.replaceAll(RegExp(r'\s*\([^)]*\)\s*$'), '').trim()
+                                          : ((leaseItem['tenant_name']
                                                     ?.toString() ??
-                                                'Tenant'));
+                                                'Tenant')
+                                                .replaceAll(RegExp(r'\s*\([^)]*\)\s*$'), '')
+                                                .trim()));
                                 final itemPropertyName =
                                     (leaseItem['property_name'] ??
                                             'Commercial Stall')
@@ -741,19 +770,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                   child: LuxuryRentCard(
                                     rentAmount: itemEffectiveRent,
-                                    dueDate: effectiveDueDate,
+                                    dueDate: dynamicDueDate,
                                     propertyName: itemPropertyName,
                                     tenantName: itemTenantName,
                                     activeArrangement: hasRestructuring
                                         ? latest
                                         : null,
-                                    isOverdue: isOverdue,
-                                    isGracePeriod: isGracePeriod,
-                                    graceDaysRemaining: 5,
-                                    overdueSubtext: overdueSubtext,
+                                    isOverdue: isItemOverdue,
+                                    isGracePeriod: isItemGrace,
+                                    graceDaysRemaining: itemGraceDays,
+                                    overdueSubtext: effectiveSubtext,
                                     onCardTap: () {
                                       final enriched = Map<String, dynamic>.from(leaseItem);
-                                      enriched['due_date'] = effectiveDueDate;
+                                      enriched['due_date'] = dynamicDueDate;
                                       BuildingDetailsSheet.show(
                                         context,
                                         lease: enriched,
@@ -781,7 +810,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                               builder: (_) => RentPaymentScreen(
                                                 lease: leaseItem,
                                                 rentAmount: itemRent,
-                                                isOverdue: isOverdue,
+                                                isOverdue: isItemOverdue,
                                                 activeArrangement:
                                                     hasRestructuring
                                                     ? latest

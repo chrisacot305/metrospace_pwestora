@@ -2,18 +2,19 @@
 /**
  * modules/payments.php  (Lessor → "Rent Payments")
  * Comprehensive payment ledger & verification queue.
- * Lessors can verify online tenant transfers (InstaPay / QR / Bank Transfer)
- * and manually log offline payments (cash, check).
+ * Lessors can verify online tenant transfers and manually log offline payments.
  */
 $lessorId = $user['id'];
 $error = '';
 $msg = $_GET['msg'] ?? '';
 
+// Track if the log payment popup drawer should be open
+$loggingPayment = isset($_GET['log']);
+
 $METHODS = [
     'cash'          => 'Cash',
     'bank_transfer' => 'Bank Transfer / InstaPay',
     'gcash'         => 'GCash',
-    'check'         => 'Check',
     'other'         => 'Other',
 ];
 
@@ -72,6 +73,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $update = $pdo->prepare('UPDATE payments SET logged_by = ?, note = ? WHERE id = ?');
             $update->execute([$lessorId, $newNote, $paymentId]);
 
+            // If this payment was a Security Deposit Top-Up, credit the tenant's deposit buffer
+            if (stripos($currentNote, 'Security Deposit Top-Up') !== false || stripos($currentNote, 'security_deposit') !== false) {
+                $pdo->prepare('UPDATE tenants SET security_deposit = COALESCE(security_deposit, 0) + ? WHERE id = ?')
+                    ->execute([$pRow['amount'], $pRow['tenant_id']]);
+
+                $pdo->prepare(
+                    'INSERT INTO deposits (lessor_id, tenant_id, amount, method, status, note, created_at)
+                     VALUES (?, ?, ?, ?, "locked", ?, NOW())'
+                )->execute([$lessorId, $pRow['tenant_id'], $pRow['amount'], $pRow['method'] ?? 'bank_transfer', 'Tenant Deposit Top-Up Verified']);
+            }
+
             audit_log(
                 $pdo,
                 $lessorId,
@@ -79,11 +91,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 '₱' . number_format($pRow['amount'], 2) . ' from ' . $pRow['tenant_name']
             );
 
-            // ================= AUTOMATED SMS RECEIPT & COMPUTATION =================
             require_once __DIR__ . '/../includes/payment_sms_helper.php';
             send_payment_receipt_sms($pdo, $paymentId);
 
-            header('Location: /dashboard.php?page=payments&msg=approved');
+            echo '<script>if(window.history.replaceState){window.history.replaceState(null,null,"/dashboard.php?page=payments&msg=approved");} else {window.location.href="/dashboard.php?page=payments&msg=approved";}</script>';
             exit;
         } else {
             $error = 'Payment record not found or unauthorized.';
@@ -126,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 '₱' . number_format($pRow['amount'], 2) . ' from ' . $pRow['tenant_name'] . ' (' . $reason . ')'
             );
 
-            header('Location: /dashboard.php?page=payments&msg=declined');
+            echo '<script>if(window.history.replaceState){window.history.replaceState(null,null,"/dashboard.php?page=payments&msg=declined");} else {window.location.href="/dashboard.php?page=payments&msg=declined";}</script>';
             exit;
         } else {
             $error = 'Payment record not found or unauthorized.';
@@ -137,14 +148,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// 3. LOG MANUAL PAYMENT (Offline: Cash, Check, etc.)
+// 3. LOG MANUAL PAYMENT (Offline) - Defaulting to PENDING
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['log_payment'])) {
     csrf_check();
     $tenantId = (int) $_POST['tenant_id'];
-    $amount   = (float) $_POST['amount'];
-    $method   = $_POST['method'] ?? 'cash';
+    
+    // Remove commas from the amount before parsing
+    $rawAmount = $_POST['amount'] ?? '0';
+    $amount    = (float) str_replace(',', '', $rawAmount);
+    
+    // Handle the "Other" specification
+    $rawMethod = $_POST['method'] ?? 'cash';
+    $finalMethod = $rawMethod;
+    if ($rawMethod === 'other') {
+        $specified = trim($_POST['method_other'] ?? '');
+        $finalMethod = $specified !== '' ? $specified : 'Other';
+    }
+    
     $paidAt   = $_POST['paid_at'] ?? '';
-    $note     = trim($_POST['note'] ?? '');
+    
+    // Auto-prepend [PENDING] to the note to flag it for verification later
+    $rawNote = trim($_POST['note'] ?? '');
+    $note = '[PENDING] ' . ($rawNote ? $rawNote : 'Offline manual entry');
 
     $check = $pdo->prepare('SELECT id, tenant_name FROM tenants WHERE id = ? AND lessor_id = ?');
     $check->execute([$tenantId, $lessorId]);
@@ -152,25 +177,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['log_payment'])) {
 
     $validDate = DateTime::createFromFormat('Y-m-d', $paidAt) !== false;
 
-    if (!$tRow || $amount <= 0 || !isset($METHODS[$method]) || !$validDate) {
+    if (!$tRow || $amount <= 0 || !isset($METHODS[$rawMethod]) || !$validDate) {
         $error = 'Please fill in every field with a valid tenant, amount, method, and date.';
     } else {
         try {
             $stmt = $pdo->prepare(
                 'INSERT INTO payments (tenant_id, lessor_id, amount, method, note, paid_at, logged_by)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)'
+                 VALUES (?, ?, ?, ?, ?, ?, NULL)'
             );
-            $stmt->execute([$tenantId, $lessorId, $amount, $method, $note ?: null, $paidAt, $lessorId]);
+            $stmt->execute([$tenantId, $lessorId, $amount, $finalMethod, $note, $paidAt]);
 
             $newPayId = (int) $pdo->lastInsertId();
 
-            require_once __DIR__ . '/../includes/payment_sms_helper.php';
-            send_payment_receipt_sms($pdo, $newPayId);
+            audit_log($pdo, $lessorId, 'Logged pending rent payment', "₱$amount via {$finalMethod} for {$tRow['tenant_name']}");
 
-            audit_log($pdo, $lessorId, 'Logged rent payment', "₱$amount via {$METHODS[$method]} for {$tRow['tenant_name']}");
-
-            header('Location: /dashboard.php?page=payments&msg=logged');
-            exit;
+            $loggingPayment = false;
+            echo '<script>if(window.history.replaceState){window.history.replaceState(null,null,"/dashboard.php?page=payments&msg=logged");} else {window.location.href="/dashboard.php?page=payments&msg=logged";}</script>';
         } catch (Throwable $e) {
             error_log('Log payment failed: ' . $e->getMessage());
             $error = 'Could not log this payment — the error has been logged. Please try again.';
@@ -178,58 +200,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['log_payment'])) {
     }
 }
 
-// Capture the search query for filtering
+// ============================================================================
+// DATA FETCHING: UNIFIED TABLE (Pending on top, then verified/declined)
+// ============================================================================
 $q = trim($_GET['q'] ?? '');
 $searchSql = '';
-$pendingParams = [$lessorId];
-$historyParams = [$lessorId];
+$queryParams = [$lessorId];
 
 if ($q !== '') {
     $searchSql = " AND (t.tenant_name LIKE ? OR p.name LIKE ? OR pay.note LIKE ?) ";
     $wildcard = '%' . $q . '%';
-    array_push($pendingParams, $wildcard, $wildcard, $wildcard);
-    array_push($historyParams, $wildcard, $wildcard, $wildcard);
+    array_push($queryParams, $wildcard, $wildcard, $wildcard);
 }
 
-// PENDING INCOMING PAYMENTS (awaiting lessor review)
-$pendingQuery = $pdo->prepare(
+// Fetch all payments for this lessor. 
+// Custom SORT order: Unverified/Pending items rank 0 (top), others rank 1. Then by date descending.
+$allQuery = $pdo->prepare(
     "SELECT pay.*, t.tenant_name, p.name AS property_name
      FROM payments pay
      JOIN tenants t ON t.id = pay.tenant_id
      LEFT JOIN properties p ON p.id = t.property_id
-     WHERE pay.lessor_id = ? AND (pay.logged_by IS NULL OR pay.note LIKE '[PENDING]%') AND (pay.note NOT LIKE '[DECLINED%')
-     $searchSql
-     ORDER BY pay.id DESC"
+     WHERE pay.lessor_id = ? $searchSql
+     ORDER BY 
+       CASE WHEN (pay.logged_by IS NULL AND pay.note NOT LIKE '[DECLINED%') THEN 0 ELSE 1 END ASC,
+       pay.paid_at DESC, 
+       pay.id DESC 
+     LIMIT 500" // Increased limit since we now have pagination
 );
-$pendingQuery->execute($pendingParams);
-$pendingPayments = $pendingQuery->fetchAll();
+$allQuery->execute($queryParams);
+$allPayments = $allQuery->fetchAll();
 
-// HISTORICAL / RECORDED PAYMENTS
-$historyQuery = $pdo->prepare(
-    "SELECT pay.*, t.tenant_name, p.name AS property_name
-     FROM payments pay
-     JOIN tenants t ON t.id = pay.tenant_id
-     LEFT JOIN properties p ON p.id = t.property_id
-     WHERE pay.lessor_id = ? AND (pay.logged_by IS NOT NULL OR pay.note LIKE '[DECLINED%')
-     $searchSql
-     ORDER BY pay.paid_at DESC, pay.id DESC LIMIT 100"
-);
-$historyQuery->execute($historyParams);
-$historyPayments = $historyQuery->fetchAll();
+// Calculate Stats from the fetched array
+$pendingCount = 0;
+$pendingTotal = 0;
+$historyCount = 0;
 
-// PROPERTIES FOR MANUAL LOGGING FORM
-$properties = $pdo->prepare('SELECT id, name FROM properties WHERE lessor_id = ? ORDER BY name');
-$properties->execute([$lessorId]);
-$properties = $properties->fetchAll();
+foreach ($allPayments as $p) {
+    $isPending = ($p['logged_by'] === null && !str_starts_with($p['note'] ?? '', '[DECLINED'));
+    if ($isPending) {
+        $pendingCount++;
+        $pendingTotal += $p['amount'];
+    } else {
+        $historyCount++;
+    }
+}
 
-// TENANTS FOR MANUAL LOGGING FORM (Included property_id)
-$tenants = $pdo->prepare('SELECT id, tenant_name, property_id FROM tenants WHERE lessor_id = ? ORDER BY tenant_name');
-$tenants->execute([$lessorId]);
-$tenants = $tenants->fetchAll();
-
-// STATS
-$pendingTotal = array_sum(array_column($pendingPayments, 'amount'));
-
+// Month Total (Requires independent SQL to catch all records outside the limit)
 $monthTotalStmt = $pdo->prepare(
     "SELECT COALESCE(SUM(amount), 0) FROM payments
      WHERE lessor_id = ? AND logged_by IS NOT NULL
@@ -237,44 +253,76 @@ $monthTotalStmt = $pdo->prepare(
 );
 $monthTotalStmt->execute([$lessorId]);
 $monthTotal = (float) $monthTotalStmt->fetchColumn();
+
+// Fetch Options for the Logging Form
+$properties = $pdo->prepare('SELECT id, name FROM properties WHERE lessor_id = ? ORDER BY name');
+$properties->execute([$lessorId]);
+$properties = $properties->fetchAll();
+
+$tenants = $pdo->prepare('SELECT id, tenant_name, property_id FROM tenants WHERE lessor_id = ? ORDER BY tenant_name');
+$tenants->execute([$lessorId]);
+$tenants = $tenants->fetchAll();
 ?>
 
+<!-- FLOATING TOAST NOTIFICATIONS -->
+<?php if ($msg || ($error && !$loggingPayment)): ?>
+  <div id="toast-notification" style="position:fixed; top:24px; right:24px; z-index:9999; transition: opacity 0.5s ease, transform 0.5s ease; transform: translateY(0); opacity: 1;">
+    <?php if ($msg === 'approved'): ?>
+      <div class="success-msg" style="margin:0; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:8px; display:flex; align-items:center; gap:8px;">
+        <i class="bi bi-check-circle-fill"></i>
+        <span><strong>Payment Confirmed!</strong> The payment has been verified and recorded.</span>
+      </div>
+    <?php elseif ($msg === 'declined'): ?>
+      <div class="error-msg" style="margin:0; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:8px; display:flex; align-items:center; gap:8px;">
+        <i class="bi bi-x-circle-fill"></i>
+        <span><strong>Payment Declined.</strong> The submission was declined and marked accordingly.</span>
+      </div>
+    <?php elseif ($msg === 'logged'): ?>
+      <div class="success-msg" style="margin:0; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:8px; display:flex; align-items:center; gap:8px;">
+        <i class="bi bi-info-circle-fill"></i>
+        <span>Payment logged and is now <strong>Pending Review</strong>.</span>
+      </div>
+    <?php endif; ?>
+
+    <?php if ($error && !$loggingPayment): ?>
+      <div class="error-msg" style="margin:0; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:8px; display:flex; align-items:center; gap:8px;">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span><?= htmlspecialchars($error) ?></span>
+      </div>
+    <?php endif; ?>
+  </div>
+
+  <script>
+    setTimeout(function() {
+      var toast = document.getElementById('toast-notification');
+      if (toast) {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-20px)';
+        setTimeout(function() { toast.remove(); }, 500);
+      }
+    }, 3500);
+  </script>
+<?php endif; ?>
+
+<!-- HEADER SECTION -->
 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
   <div>
-    <h2 style="margin:0 0 4px;">Rent Payments</h2>
+    <h2 style="margin:0 0 4px; font-weight:800; color:var(--ink-900);">Rent Payments</h2>
     <p style="color:var(--ink-500); margin:0;">
-      Verify incoming tenant InstaPay transfers and manage your rent ledger.
+      Verify incoming tenant transfers and manage your complete rent ledger.
     </p>
   </div>
+  <a href="/dashboard.php?page=payments&log=1" class="btn btn-primary" style="width:auto; height:fit-content; display:inline-flex; align-items:center; gap:6px; padding:10px 18px; font-size:13px; font-weight:600; white-space:nowrap; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+    <i class="bi bi-plus-lg"></i> Log Payment
+  </a>
 </div>
 
-<?php if ($msg === 'approved'): ?>
-  <div class="success-msg" style="display:flex; align-items:center; gap:8px;">
-    <i class="bi bi-check-circle-fill"></i>
-    <span><strong>Payment Confirmed!</strong> The payment has been verified, recorded in the ledger, and the tenant's app balance has been updated.</span>
-  </div>
-<?php elseif ($msg === 'declined'): ?>
-  <div class="error-msg" style="display:flex; align-items:center; gap:8px;">
-    <i class="bi bi-x-circle-fill"></i>
-    <span><strong>Payment Declined.</strong> The submission was declined and marked accordingly.</span>
-  </div>
-<?php elseif ($msg === 'logged'): ?>
-  <div class="success-msg" style="display:flex; align-items:center; gap:8px;">
-    <i class="bi bi-check-circle-fill"></i>
-    <span>Manual payment entry recorded successfully.</span>
-  </div>
-<?php endif; ?>
-
-<?php if ($error): ?>
-  <div class="error-msg"><?= htmlspecialchars($error) ?></div>
-<?php endif; ?>
-
 <!-- Summary KPI Grid -->
-<div class="kpi-grid" style="margin-bottom:24px;">
-  <div class="card" style="border-left: 3px solid <?= count($pendingPayments) > 0 ? 'var(--warning)' : 'var(--border)' ?>;">
+<div class="kpi-grid" style="margin-bottom:28px;">
+  <div class="card" style="border-left: 3px solid <?= $pendingCount > 0 ? 'var(--warning)' : 'var(--border)' ?>;">
     <div class="kpi-label">Pending Verification</div>
-    <div class="kpi-value" style="color:<?= count($pendingPayments) > 0 ? 'var(--primary)' : 'inherit' ?>;">
-      <?= count($pendingPayments) ?> <span style="font-size:14px; font-weight:600; color:var(--ink-500);">(₱<?= number_format($pendingTotal, 2) ?>)</span>
+    <div class="kpi-value" style="color:<?= $pendingCount > 0 ? 'var(--primary)' : 'inherit' ?>;">
+      <?= $pendingCount ?> <span style="font-size:14px; font-weight:600; color:var(--ink-500);">(₱<?= number_format($pendingTotal, 2) ?>)</span>
     </div>
   </div>
   <div class="card">
@@ -283,240 +331,184 @@ $monthTotal = (float) $monthTotalStmt->fetchColumn();
   </div>
   <div class="card">
     <div class="kpi-label">Total Verified Records</div>
-    <div class="kpi-value"><?= count($historyPayments) ?></div>
+    <div class="kpi-value"><?= $historyCount ?></div>
   </div>
-</div>
-
-<!-- REAL-TIME FILTER BAR -->
-<div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:20px;">
-  <div style="flex:1; min-width:220px; position:relative;">
-    <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--ink-400); font-size:13px;"></i>
-    <input id="pay-search" type="search" placeholder="Search property, tenant, target, or reference..." autocomplete="off" style="width:100%; box-sizing:border-box; padding:8px 12px 8px 34px; border:1px solid var(--border); border-radius:8px; font:inherit; font-size:13px; background:#fff; color:var(--ink-900);">
-  </div>
-  <select id="pay-status-filter" style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; font:inherit; font-size:13px; background:#fff; color:var(--ink-900); min-width:140px;">
-    <option value="">All statuses</option>
-    <option value="pending">Pending Review</option>
-    <option value="verified">Verified</option>
-    <option value="declined">Declined</option>
-  </select>
 </div>
 
 <!-- =============================================================
-     SECTION 1: INCOMING TENANT PAYMENTS (AWAITING VERIFICATION)
+     UNIFIED PAYMENT LEDGER TABLE
      ============================================================= -->
-<div class="card" style="margin-bottom:28px; padding:0; overflow:hidden; border: 1px solid <?= count($pendingPayments) > 0 ? 'var(--tint)' : 'var(--border)' ?>;">
-  <div style="padding:16px 20px; background:var(--surface); border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-    <div style="display:flex; align-items:center; gap:10px;">
-      <div style="width:32px; height:32px; border-radius:8px; background:var(--accent-soft); color:var(--primary); display:flex; align-items:center; justify-content:center;">
-        <i class="bi bi-qr-code"></i>
-      </div>
-      <div>
-        <h3 style="margin:0; font-size:15px; font-weight:700;">Incoming Transfers Awaiting Verification</h3>
-        <p style="margin:2px 0 0; font-size:12px; color:var(--ink-500);">
-          Submitted by tenants via QR Code / InstaPay / Bank Transfer from the mobile app.
-        </p>
-      </div>
+<div class="card" style="padding:0; overflow:hidden;">
+  <!-- REAL-TIME FILTER BAR -->
+  <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); background:var(--surface);">
+    <div style="flex:1; min-width:220px; position:relative;">
+      <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--ink-400); font-size:13px;"></i>
+      <input id="pay-search" type="search" placeholder="Search property, tenant, target, or reference..." autocomplete="off" style="width:100%; box-sizing:border-box; padding:8px 12px 8px 34px; border:1px solid var(--border); border-radius:8px; font:inherit; font-size:13px; background:#fff; color:var(--ink-900);">
     </div>
-    <?php if (count($pendingPayments) > 0): ?>
-      <span class="badge badge-pending"><?= count($pendingPayments) ?> Pending Review</span>
-    <?php endif; ?>
+    <select id="pay-status-filter" style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; font:inherit; font-size:13px; background:#fff; color:var(--ink-900); min-width:140px;">
+      <option value="">All statuses</option>
+      <option value="pending">Pending Review</option>
+      <option value="verified">Verified</option>
+      <option value="declined">Declined</option>
+    </select>
   </div>
 
   <div class="table-scroll">
     <table>
       <thead>
         <tr>
-          <th>Property</th>
-          <th>Tenant</th>
+          <th>Property & Tenant</th>
           <th>Amount</th>
-          <th>Payment Target</th>
-          <th>Reference Number</th>
-          <th>Date Submitted</th>
-          <th style="text-align:right;">Verification Action</th>
+          <th>Target & Method</th>
+          <th>Date</th>
+          <th>Status</th>
+          <th style="text-align:right;">Action</th>
         </tr>
       </thead>
-      <tbody id="pending-table-body">
-        <?php if (!$pendingPayments): ?>
+      <tbody id="payments-table-body">
+        <?php if (!$allPayments): ?>
           <tr>
-            <td colspan="7" style="text-align:center; padding:32px 16px; color:var(--ink-500);">
-              <i class="bi bi-check2-circle" style="font-size:24px; color:var(--success); display:block; margin-bottom:6px;"></i>
-              No pending payment submissions. All transfers have been verified.
+            <td colspan="6" style="text-align:center; padding:40px 16px; color:var(--ink-500);">
+              <i class="bi bi-receipt" style="font-size:32px; color:var(--ink-300); display:block; margin-bottom:12px;"></i>
+              No payment records found.
             </td>
           </tr>
-        <?php else: foreach ($pendingPayments as $p):
+        <?php else: foreach ($allPayments as $p):
           $parsed = parse_payment_note($p['note']);
+          $isDeclined = $parsed['status'] === 'declined';
+          $isPending = ($p['logged_by'] === null && !$isDeclined);
+          $statusVal = $isDeclined ? 'declined' : ($isPending ? 'pending' : 'verified');
+          
           $searchBlob = strtolower(trim(implode(' ', array_filter([
               $p['property_name'] ?? '',
               $p['tenant_name'],
               $parsed['target'],
-              $parsed['ref']
+              $parsed['ref'],
+              $p['method'],
+              $p['note']
           ]))));
         ?>
-          <tr class="pay-row" data-status="pending" data-search="<?= htmlspecialchars($searchBlob) ?>">
-            <td style="color:var(--ink-500);"><?= htmlspecialchars($p['property_name'] ?? 'Unknown Property') ?></td>
+          <tr class="pay-row" data-status="<?= $statusVal ?>" data-search="<?= htmlspecialchars($searchBlob) ?>" style="background: <?= $isPending ? 'rgba(11, 87, 208, 0.03)' : 'transparent' ?>;">
+            
+            <!-- Property & Tenant -->
             <td>
-              <div style="font-weight:700; color:var(--ink-900);"><?= htmlspecialchars($p['tenant_name']) ?></div>
+              <div style="font-weight:700; color:var(--ink-900); font-size:14px;"><?= htmlspecialchars($p['tenant_name']) ?></div>
+              <div style="color:var(--ink-500); font-size:12px; margin-top:2px;">
+                <i class="bi bi-building" style="margin-right:4px;"></i><?= htmlspecialchars($p['property_name'] ?? 'Unknown Property') ?>
+              </div>
             </td>
+            
+            <!-- Amount -->
             <td>
-              <span style="font-size:15px; font-weight:800; color:var(--primary);">
+              <span style="font-size:15px; font-weight:800; color:<?= $isDeclined ? 'var(--ink-400)' : 'var(--primary)' ?>;">
                 ₱<?= number_format($p['amount'], 2) ?>
               </span>
             </td>
+            
+            <!-- Target & Method -->
             <td>
-              <span class="badge" style="background:var(--accent-soft); color:var(--primary); font-size:11.5px;">
-                <i class="bi bi-tag" style="margin-right:3px;"></i><?= htmlspecialchars($parsed['target']) ?>
-              </span>
+              <div style="font-size:12.5px;">
+                <span style="font-weight:600; color:var(--ink-900);"><?= htmlspecialchars($parsed['target']) ?></span>
+                <div style="color:var(--ink-500); margin-top:2px;">
+                  <?= htmlspecialchars($METHODS[$p['method']] ?? $p['method']) ?>
+                  <?php if ($parsed['ref'] !== '—'): ?>
+                     · <span style="font-family:monospace; color:var(--ink-600);">Ref: <?= htmlspecialchars($parsed['ref']) ?></span>
+                  <?php endif; ?>
+                </div>
+              </div>
             </td>
-            <td>
-              <code style="font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:12.5px; font-weight:700; background:var(--bg); padding:4px 8px; border-radius:6px; border:1px solid var(--border); color:var(--primary);">
-                <?= htmlspecialchars($parsed['ref']) ?>
-              </code>
-            </td>
+            
+            <!-- Date -->
             <td style="color:var(--ink-500); font-size:13px;">
               <?= (new DateTime($p['paid_at']))->format('M j, Y') ?>
             </td>
-            <td style="text-align:right;">
-              <div style="display:inline-flex; gap:8px; justify-content:flex-end;">
-                <!-- Confirm / Approve Button -->
-                <form method="POST" style="margin:0;">
-                  <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-                  <input type="hidden" name="action" value="approve_payment">
-                  <input type="hidden" name="payment_id" value="<?= $p['id'] ?>">
-                  <button type="submit" class="btn" style="padding:7px 14px; font-size:12.5px; background:var(--success); color:#fff; border-radius:8px;">
-                    <i class="bi bi-check-circle-fill"></i> Confirm Received
-                  </button>
-                </form>
-                <!-- Decline Button -->
-                <form method="POST" style="margin:0;" onsubmit="return confirm('Are you sure you want to decline this transfer?');">
-                  <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-                  <input type="hidden" name="action" value="decline_payment">
-                  <input type="hidden" name="payment_id" value="<?= $p['id'] ?>">
-                  <button type="submit" class="btn" style="padding:7px 12px; font-size:12.5px; background:var(--error-soft); color:var(--error); border-radius:8px;">
-                    <i class="bi bi-x-circle"></i> Decline
-                  </button>
-                </form>
-              </div>
+            
+            <!-- Status -->
+            <td>
+              <?php if ($isDeclined): ?>
+                <span class="badge badge-rejected" style="font-size:11px;">Declined</span>
+              <?php elseif (!$isPending): ?>
+                <span class="badge badge-approved" style="font-size:11px;">
+                  <i class="bi bi-shield-check" style="margin-right:2px;"></i> Verified
+                </span>
+              <?php else: ?>
+                <span class="badge badge-pending" style="font-size:11px;">Pending Review</span>
+              <?php endif; ?>
             </td>
+            
+            <!-- Action -->
+            <td style="text-align:right;">
+              <?php if ($isPending): ?>
+                <div style="display:inline-flex; gap:8px; justify-content:flex-end;">
+                  <form method="POST" style="margin:0;" onsubmit="var btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.innerHTML = '<i class=\'bi bi-hourglass\'></i>...';">
+                    <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                    <input type="hidden" name="action" value="approve_payment">
+                    <input type="hidden" name="payment_id" value="<?= $p['id'] ?>">
+                    <button type="submit" class="btn" style="padding:6px 12px; font-size:12px; background:var(--success); color:#fff; border-radius:6px;" title="Confirm Received">
+                      <i class="bi bi-check-lg"></i> Confirm
+                    </button>
+                  </form>
+                  <form method="POST" style="margin:0;" onsubmit="var reason = prompt('Reason for declining this payment?'); if(reason === null || reason.trim() === '') return false; this.querySelector('.decline-reason').value = reason; var btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.innerHTML = '<i class=\'bi bi-hourglass\'></i>';">
+                    <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                    <input type="hidden" name="action" value="decline_payment">
+                    <input type="hidden" name="payment_id" value="<?= $p['id'] ?>">
+                    <input type="hidden" name="decline_reason" class="decline-reason" value="">
+                    <button type="submit" class="btn" style="padding:6px 10px; font-size:12px; background:var(--error-soft); color:var(--error); border-radius:6px;" title="Decline">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </form>
+                </div>
+              <?php else: ?>
+                <span style="font-size:12.5px; color:var(--ink-300); font-weight:500;">—</span>
+              <?php endif; ?>
+            </td>
+
           </tr>
         <?php endforeach; endif; ?>
-          <tr id="pending-empty-filter" style="display:none;">
-            <td colspan="7" style="text-align:center; padding:32px 16px; color:var(--ink-500);">No pending payments match your search.</td>
+          <tr id="payments-empty-filter" style="display:none;">
+            <td colspan="6" style="text-align:center; padding:32px 16px; color:var(--ink-500);">No payments match your search.</td>
           </tr>
       </tbody>
     </table>
   </div>
+  
+  <!-- Pagination UI -->
+  <?php if ($allPayments): ?>
+  <div id="payment-pagination-bar" style="display:flex; justify-content:center; align-items:center; padding:12px 16px; border-top:1px solid var(--border); background:var(--surface);">
+    <div id="payment-page-controls" style="display:flex; gap:6px; align-items:center; justify-content:center;"></div>
+  </div>
+  <?php endif; ?>
 </div>
 
 <!-- =============================================================
-     SECTION 2: VERIFIED PAYMENTS LEDGER & MANUAL LOGGING
+     POPUP DRAWER: LOG OFFLINE PAYMENT
      ============================================================= -->
-<div style="display:grid; grid-template-columns: 2fr 1fr; gap:24px; align-items:start;">
-
-  <!-- Verified Ledger -->
-  <div class="card" style="padding:0; overflow:hidden;">
-    <div style="padding:14px 18px; background:var(--surface); border-bottom:1px solid var(--border);">
-      <h3 style="margin:0; font-size:14px; font-weight:700;">Verified Payment Ledger</h3>
-      <p style="margin:2px 0 0; font-size:12px; color:var(--ink-500);">
-        Credited payments visible to tenants in their mobile app ledger.
-      </p>
+<?php if ($loggingPayment || ($error && isset($_POST['log_payment']))): ?>
+<div style="position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; justify-content:flex-end; z-index:50;">
+  <div style="background:#fff; width:440px; max-width:92vw; height:100%; padding:24px; overflow-y:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 style="margin:0;">Log Offline Payment</h3>
+      <a href="/dashboard.php?page=payments" style="font-size:20px; color:var(--ink-500); text-decoration:none;">&times;</a>
     </div>
-    <div class="table-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th>Property</th>
-            <th>Tenant</th>
-            <th>Amount</th>
-            <th>Method</th>
-            <th>Details & Reference</th>
-            <th>Date</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="history-table-body">
-          <?php if (!$historyPayments): ?>
-            <tr>
-              <td colspan="7" style="text-align:center; padding:24px; color:var(--ink-500);">
-                No verified payments in the ledger yet.
-              </td>
-            </tr>
-          <?php else: foreach ($historyPayments as $p):
-            $parsed = parse_payment_note($p['note']);
-            $isDeclined = $parsed['status'] === 'declined';
-            $statusVal = $isDeclined ? 'declined' : ($p['logged_by'] !== null ? 'verified' : 'pending');
-            $searchBlob = strtolower(trim(implode(' ', array_filter([
-                $p['property_name'] ?? '',
-                $p['tenant_name'],
-                $parsed['target'],
-                $parsed['ref'],
-                $p['note']
-            ]))));
-          ?>
-            <tr class="pay-row" data-status="<?= $statusVal ?>" data-search="<?= htmlspecialchars($searchBlob) ?>">
-              <td style="color:var(--ink-500);"><?= htmlspecialchars($p['property_name'] ?? 'Unknown Property') ?></td>
-              <td style="font-weight:600;"><?= htmlspecialchars($p['tenant_name']) ?></td>
-              <td style="font-weight:700; color:<?= $isDeclined ? 'var(--ink-500)' : 'var(--ink-900)' ?>;">
-                ₱<?= number_format($p['amount'], 2) ?>
-              </td>
-              <td style="color:var(--ink-500); font-size:12.5px;">
-                <?= htmlspecialchars($METHODS[$p['method']] ?? $p['method']) ?>
-              </td>
-              <td>
-                <div style="font-size:12px;">
-                  <?php if ($parsed['target'] !== 'Monthly Rent'): ?>
-                    <span style="font-weight:600; color:var(--primary);"><?= htmlspecialchars($parsed['target']) ?></span>
-                  <?php endif; ?>
-                  
-                  <?php if ($parsed['ref'] !== '—'): ?>
-                    <span style="color:var(--ink-500); font-family:monospace; margin-left:4px;">Ref: <?= htmlspecialchars($parsed['ref']) ?></span>
-                  <?php elseif (!empty($p['note']) && !$isDeclined): ?>
-                    <span style="color:var(--ink-500);"><?= htmlspecialchars($p['note']) ?></span>
-                  <?php else: ?>
-                    <span style="color:var(--ink-300);">—</span>
-                  <?php endif; ?>
-                </div>
-              </td>
-              <td style="color:var(--ink-500); font-size:12.5px;">
-                <?= (new DateTime($p['paid_at']))->format('M j, Y') ?>
-              </td>
-              <td>
-                <?php if ($isDeclined): ?>
-                  <span class="badge badge-rejected" style="font-size:11px;">Declined</span>
-                <?php elseif ($p['logged_by'] !== null): ?>
-                  <span class="badge badge-approved" style="font-size:11px;">
-                    <i class="bi bi-shield-check" style="margin-right:2px;"></i> Verified
-                  </span>
-                <?php else: ?>
-                  <span class="badge badge-pending" style="font-size:11px;">Pending</span>
-                <?php endif; ?>
-              </td>
-            </tr>
-          <?php endforeach; endif; ?>
-            <tr id="history-empty-filter" style="display:none;">
-              <td colspan="7" style="text-align:center; padding:24px; color:var(--ink-500);">No verified payments match your search.</td>
-            </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
 
-  <!-- Manual Logging Card -->
-  <div class="card">
-    <p style="font-weight:700; font-size:14px; margin:0 0 4px;">Log Offline Payment</p>
-    <p style="font-size:12.5px; color:var(--ink-500); margin:0 0 16px;">
-      Directly record payments received in cash, cheque, or OTC deposit.
+    <p style="font-size:13px; color:var(--ink-500); margin-bottom:20px;">
+      Directly record payments received. They will be added to the queue for pending verification.
     </p>
+
+    <?php if ($error): ?>
+      <div class="error-msg" style="margin-bottom:16px; border-radius:8px;"><?= htmlspecialchars($error) ?></div>
+    <?php endif; ?>
 
     <?php if (!$tenants): ?>
       <p style="font-size:13px; color:var(--ink-500);">You don't have any active tenants yet.</p>
     <?php else: ?>
-      <form method="POST">
+      <form method="POST" action="/dashboard.php?page=payments" onsubmit="var btn = this.querySelector('button[type=submit]'); btn.disabled = true; btn.innerHTML = '<i class=\'bi bi-hourglass-split\'></i> Logging...';">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="log_payment" value="1">
         
         <div class="field">
-          <label>Property</label>
-          <select id="payment_property_select" name="property_id" required>
+          <label style="font-weight:600;">Property</label>
+          <select id="payment_property_select" name="property_id" required style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit;">
             <option value="">Select property…</option>
             <?php foreach ($properties as $p): ?>
               <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
@@ -524,64 +516,99 @@ $monthTotal = (float) $monthTotalStmt->fetchColumn();
           </select>
         </div>
 
-        <div class="field">
-          <label>Tenant</label>
-          <select id="payment_tenant_select" name="tenant_id" required disabled>
+        <div class="field" style="margin-top:16px;">
+          <label style="font-weight:600;">Tenant</label>
+          <select id="payment_tenant_select" name="tenant_id" required disabled style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit;">
             <option value="">Select a property first…</option>
-            <!-- These options are hidden and managed by JS based on property_id -->
             <?php foreach ($tenants as $t): ?>
               <option value="<?= $t['id'] ?>" data-property="<?= $t['property_id'] ?>"><?= htmlspecialchars($t['tenant_name']) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
         
-        <div class="field">
-          <label>Amount (₱)</label>
-          <input type="number" name="amount" min="1" step="0.01" placeholder="e.g. 2500" required>
+        <div style="display:flex; gap:16px; margin-top:16px;">
+          <div class="field" style="flex:1;">
+            <label style="font-weight:600;">Amount (₱)</label>
+            <input type="text" id="manual_payment_amount" name="amount" placeholder="e.g. 2,500" required style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; box-sizing:border-box; font-family:inherit;" inputmode="numeric">
+          </div>
+          
+          <div class="field" style="flex:1;">
+            <label style="font-weight:600;">Payment Method</label>
+            <select name="method" id="payment_method_select" required style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; font-family:inherit;">
+              <?php foreach ($METHODS as $key => $label): ?>
+                <option value="<?= $key ?>"><?= $label ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+        </div>
+
+        <div class="field" id="method_other_container" style="display:none; margin-top:16px;">
+          <label style="font-weight:600;">Specify Method</label>
+          <input type="text" name="method_other" id="method_other_input" placeholder="e.g. Western Union, Remitly" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; box-sizing:border-box; font-family:inherit;">
         </div>
         
-        <div class="field">
-          <label>Payment Method</label>
-          <select name="method" required>
-            <?php foreach ($METHODS as $key => $label): ?>
-              <option value="<?= $key ?>"><?= $label ?></option>
-            <?php endforeach; ?>
-          </select>
+        <div class="field" style="margin-top:16px;">
+          <label style="font-weight:600;">Date Received</label>
+          <input type="date" name="paid_at" value="<?= date('Y-m-d') ?>" required style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; box-sizing:border-box; font-family:inherit;">
         </div>
         
-        <div class="field">
-          <label>Date Received</label>
-          <input type="date" name="paid_at" value="<?= date('Y-m-d') ?>" required>
+        <div class="field" style="margin-top:16px; margin-bottom:24px;">
+          <label style="font-weight:600;">Note / Remarks (optional)</label>
+          <input type="text" name="note" placeholder="e.g. Official Receipt #10492" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px; box-sizing:border-box; font-family:inherit;">
         </div>
         
-        <div class="field">
-          <label>Note / Remarks (optional)</label>
-          <input type="text" name="note" placeholder="e.g. Official Receipt #10492">
-        </div>
-        
-        <button class="btn btn-primary" type="submit" style="margin-top:6px; width:100%;">
-          <i class="bi bi-save2"></i> Log Payment
+        <button class="btn btn-primary" type="submit" style="width:100%; padding:12px; font-weight:600; border-radius:8px;">
+          <i class="bi bi-save2" style="margin-right:6px;"></i> Log Payment
         </button>
       </form>
 
-      <!-- Javascript for Property -> Tenant Cascading Dropdown -->
       <script>
         document.addEventListener('DOMContentLoaded', function() {
            var propSel = document.getElementById('payment_property_select');
            var tenSel = document.getElementById('payment_tenant_select');
+           var amtInput = document.getElementById('manual_payment_amount');
+           var methodSel = document.getElementById('payment_method_select');
+           var methodOtherContainer = document.getElementById('method_other_container');
+           var methodOtherInput = document.getElementById('method_other_input');
            
+           if (methodSel) {
+               methodSel.addEventListener('change', function() {
+                   if (this.value === 'other') {
+                       methodOtherContainer.style.display = 'block';
+                       methodOtherInput.required = true;
+                   } else {
+                       methodOtherContainer.style.display = 'none';
+                       methodOtherInput.required = false;
+                       methodOtherInput.value = '';
+                   }
+               });
+           }
+
+           function formatNumber(val) {
+               var parts = val.replace(/,/g, '').split('.');
+               parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+               return parts.join('.');
+           }
+
+           if (amtInput) {
+               amtInput.addEventListener('input', function(e) {
+                   var value = this.value.replace(/[^0-9.]/g, ''); 
+                   var parts = value.split('.');
+                   if (parts.length > 2) {
+                       value = parts[0] + '.' + parts.slice(1).join(''); 
+                   }
+                   this.value = formatNumber(value);
+               });
+           }
+
            if (propSel && tenSel) {
-               // Clone all original tenant options to keep as a master list
                var allOptions = Array.from(tenSel.querySelectorAll('option[data-property]'));
                
                propSel.addEventListener('change', function() {
                    var pid = this.value;
-                   
-                   // Reset tenant dropdown
                    tenSel.innerHTML = '<option value="">Select tenant...</option>';
                    var hasTenants = false;
                    
-                   // Append only tenants belonging to the selected property
                    allOptions.forEach(function(opt) {
                        if(opt.getAttribute('data-property') === pid) {
                            tenSel.appendChild(opt.cloneNode(true));
@@ -589,7 +616,6 @@ $monthTotal = (float) $monthTotalStmt->fetchColumn();
                        }
                    });
                    
-                   // Handle disabled states and messaging
                    if (!pid) {
                       tenSel.innerHTML = '<option value="">Select a property first...</option>';
                       tenSel.disabled = true;
@@ -601,7 +627,6 @@ $monthTotal = (float) $monthTotalStmt->fetchColumn();
                    }
                });
                
-               // Initialize pure state
                tenSel.innerHTML = '<option value="">Select a property first...</option>';
                tenSel.disabled = true;
            }
@@ -609,51 +634,105 @@ $monthTotal = (float) $monthTotalStmt->fetchColumn();
       </script>
     <?php endif; ?>
   </div>
-
 </div>
+<?php endif; ?>
 
-<!-- Real-Time Javascript Filtering Script -->
+<!-- Unified Real-Time Javascript Filtering & Pagination Script -->
 <script>
 (function () {
   var search = document.getElementById('pay-search');
   var status = document.getElementById('pay-status-filter');
-  var pendingRows = Array.prototype.slice.call(document.querySelectorAll('#pending-table-body .pay-row'));
-  var historyRows = Array.prototype.slice.call(document.querySelectorAll('#history-table-body .pay-row'));
-  var emptyPending = document.getElementById('pending-empty-filter');
-  var emptyHistory = document.getElementById('history-empty-filter');
+  var rows = Array.prototype.slice.call(document.querySelectorAll('#payments-table-body .pay-row'));
+  var emptyFilter = document.getElementById('payments-empty-filter');
+  
+  // Pagination vars
+  var paginationBar = document.getElementById('payment-pagination-bar');
+  var pageControls = document.getElementById('payment-page-controls');
+  var currentPage = 1;
+  var perPage = 10;
+  var total = rows.length;
+
+  function renderPagination(totalMatching, totalPages) {
+    if (!paginationBar || !pageControls) return;
+    if (totalMatching === 0) {
+      paginationBar.style.display = 'none';
+      return;
+    }
+    
+    paginationBar.style.display = 'flex';
+    pageControls.innerHTML = '';
+
+    var prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.innerHTML = '<i class="bi bi-chevron-left"></i> Prev';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:' + (currentPage === 1 ? 'var(--bg)' : '#fff') + '; color:' + (currentPage === 1 ? 'var(--ink-300)' : 'var(--ink-900)') + '; cursor:' + (currentPage === 1 ? 'not-allowed' : 'pointer') + '; font-family:inherit; font-weight:500;';
+    prevBtn.addEventListener('click', function () {
+      if (currentPage > 1) { currentPage--; applyFilter(); }
+    });
+    pageControls.appendChild(prevBtn);
+
+    for (var p = 1; p <= totalPages; p++) {
+      (function (pageNum) {
+        var pageBtn = document.createElement('button');
+        pageBtn.type = 'button';
+        pageBtn.textContent = pageNum;
+        var isActive = pageNum === currentPage;
+        pageBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid ' + (isActive ? 'var(--primary)' : 'var(--border)') + '; border-radius:6px; background:' + (isActive ? 'var(--primary)' : '#fff') + '; color:' + (isActive ? '#fff' : 'var(--ink-900)') + '; cursor:pointer; font-weight:' + (isActive ? '700' : '500') + '; font-family:inherit; min-width:30px;';
+        pageBtn.addEventListener('click', function () {
+          currentPage = pageNum; applyFilter();
+        });
+        pageControls.appendChild(pageBtn);
+      })(p);
+    }
+
+    var nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.innerHTML = 'Next <i class="bi bi-chevron-right"></i>';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:' + (currentPage === totalPages ? 'var(--bg)' : '#fff') + '; color:' + (currentPage === totalPages ? 'var(--ink-300)' : 'var(--ink-900)') + '; cursor:' + (currentPage === totalPages ? 'not-allowed' : 'pointer') + '; font-family:inherit; font-weight:500;';
+    nextBtn.addEventListener('click', function () {
+      if (currentPage < totalPages) { currentPage++; applyFilter(); }
+    });
+    pageControls.appendChild(nextBtn);
+  }
 
   function applyFilter() {
     var q = (search.value || '').trim().toLowerCase();
     var st = status.value || '';
-
-    var shownPending = 0;
-    pendingRows.forEach(function (row) {
+    
+    // First, find all matching rows based on search & filter
+    var matchingRows = rows.filter(function (row) {
       var matchQ = !q || (row.getAttribute('data-search') || '').indexOf(q) !== -1;
       var matchS = !st || row.getAttribute('data-status') === st;
-      var visible = matchQ && matchS;
-      row.style.display = visible ? '' : 'none';
-      if (visible) shownPending++;
+      return matchQ && matchS;
     });
-    if (emptyPending && pendingRows.length > 0) {
-        emptyPending.style.display = shownPending ? 'none' : '';
+
+    var totalMatching = matchingRows.length;
+    var totalPages = Math.max(1, Math.ceil(totalMatching / perPage));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    // Hide everything initially
+    rows.forEach(function (row) { row.style.display = 'none'; });
+
+    // Show only the slice for the current page
+    var startIndex = (currentPage - 1) * perPage;
+    var endIndex = startIndex + perPage;
+    matchingRows.slice(startIndex, endIndex).forEach(function (row) { 
+        row.style.display = ''; 
+    });
+
+    if (emptyFilter) {
+        emptyFilter.style.display = (totalMatching === 0 && total > 0) ? '' : 'none';
     }
 
-    var shownHistory = 0;
-    historyRows.forEach(function (row) {
-      var matchQ = !q || (row.getAttribute('data-search') || '').indexOf(q) !== -1;
-      var matchS = !st || row.getAttribute('data-status') === st;
-      var visible = matchQ && matchS;
-      row.style.display = visible ? '' : 'none';
-      if (visible) shownHistory++;
-    });
-    if (emptyHistory && historyRows.length > 0) {
-        emptyHistory.style.display = shownHistory ? 'none' : '';
-    }
+    // Re-render pagination buttons
+    renderPagination(totalMatching, totalPages);
   }
 
   if (search && status) {
-    search.addEventListener('input', applyFilter);
-    status.addEventListener('change', applyFilter);
+    search.addEventListener('input', function() { currentPage = 1; applyFilter(); });
+    status.addEventListener('change', function() { currentPage = 1; applyFilter(); });
     applyFilter(); // Run immediately on load
   }
 })();

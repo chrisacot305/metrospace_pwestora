@@ -36,6 +36,28 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   bool _loading = true;
   List<dynamic> _paymentsHistory = [];
 
+  double get _penaltyAmount {
+    final p = widget.lease['penalty_amount'];
+    if (p is num) return p.toDouble();
+    if (p != null) return double.tryParse(p.toString()) ?? 0.0;
+    return 0.0;
+  }
+
+  List<dynamic> get _penaltyBreakdown {
+    final pb = widget.lease['penalty_breakdown'];
+    if (pb is List) return pb;
+    return [];
+  }
+
+  double get _effectiveLateFee => _penaltyAmount > 0 ? _penaltyAmount : 500.0;
+
+  double get _securityDeposit {
+    final raw = widget.lease['security_deposit'];
+    if (raw is num) return raw.toDouble();
+    if (raw != null) return double.tryParse(raw.toString()) ?? 0.0;
+    return 0.0;
+  }
+
   bool get _hasRestructuring {
     final status = (widget.activeArrangement?['status'] ?? '').toString().toLowerCase();
     return status == 'approved' || status == 'pending';
@@ -48,42 +70,92 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
 
   double get _splitAmount => widget.rentAmount / _numParts;
 
+  double get _totalObligation {
+    if (widget.isOverdue) {
+      if (_selectedTarget == 'full_balance') {
+        return widget.rentAmount * 2 + _effectiveLateFee;
+      }
+      return widget.rentAmount + _effectiveLateFee;
+    }
+    if (_hasRestructuring) {
+      if (_selectedTarget == 'restructuring_plan') {
+        return _splitAmount + _penaltyAmount;
+      } else if (_selectedTarget == 'both') {
+        return widget.rentAmount + _splitAmount + _penaltyAmount;
+      }
+    }
+    return widget.rentAmount + _penaltyAmount;
+  }
+
+  double get _paidThisMonth {
+    double verifiedFromHistory = 0.0;
+    for (final p in _paymentsHistory) {
+      final status = (p['status'] ?? '').toString().toLowerCase();
+      final note = (p['note'] ?? '').toString();
+      final isPending = status == 'pending' ||
+          note.toUpperCase().contains('[PENDING]') ||
+          note.toLowerCase().contains('pending verification');
+      if (!isPending && (status == 'approved' || status == 'verified')) {
+        verifiedFromHistory += (p['amount'] as num?)?.toDouble() ?? 0.0;
+      }
+    }
+    if (verifiedFromHistory > 0) return verifiedFromHistory;
+    final rptm = widget.lease['rent_paid_this_month'];
+    if (rptm is num) return rptm.toDouble();
+    if (rptm != null) return double.tryParse(rptm.toString()) ?? 0.0;
+    return 0.0;
+  }
+
+  double get _paymentLeft {
+    final left = _totalObligation - _paidThisMonth;
+    return left < 0 ? 0.0 : left;
+  }
+
+  bool get _isPaymentComplete => _paymentLeft <= 0;
+
+  double get _enteredAmount {
+    final amtText = _amountController.text.trim().replaceAll(',', '');
+    return double.tryParse(amtText) ?? 0.0;
+  }
+
+  bool get _isOverpaying => !_isPaymentComplete && _enteredAmount > _paymentLeft && _paymentLeft > 0;
+
   @override
   void initState() {
     super.initState();
+    _amountController.addListener(_onAmountChanged);
     _initInitialTargetAndAmount();
     _fetchPaymentsHistory();
+  }
+
+  void _onAmountChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _syncAmountToPaymentLeft() {
+    if (_isPaymentComplete) {
+      _amountController.text = '0';
+    } else {
+      _amountController.text = _paymentLeft.toStringAsFixed(0);
+    }
   }
 
   void _initInitialTargetAndAmount() {
     if (widget.isOverdue) {
       _selectedTarget = 'overdue_october';
-      final octAmount = widget.rentAmount + 500;
-      _amountController.text = octAmount.toStringAsFixed(0);
     } else if (_hasRestructuring) {
       _selectedTarget = 'restructuring_plan';
-      _amountController.text = _splitAmount.toStringAsFixed(0);
     } else {
       _selectedTarget = 'monthly_rent';
-      _amountController.text = widget.rentAmount.toStringAsFixed(0);
     }
+    _syncAmountToPaymentLeft();
   }
 
   void _onTargetChanged(String? val) {
     if (val == null) return;
     setState(() {
       _selectedTarget = val;
-      if (val == 'overdue_october') {
-        _amountController.text = (widget.rentAmount + 500).toStringAsFixed(0);
-      } else if (val == 'full_balance') {
-        _amountController.text = (widget.rentAmount * 2 + 500).toStringAsFixed(0);
-      } else if (val == 'restructuring_plan') {
-        _amountController.text = _splitAmount.toStringAsFixed(0);
-      } else if (val == 'monthly_rent') {
-        _amountController.text = widget.rentAmount.toStringAsFixed(0);
-      } else if (val == 'both') {
-        _amountController.text = (widget.rentAmount + _splitAmount).toStringAsFixed(0);
-      }
+      _syncAmountToPaymentLeft();
     });
   }
 
@@ -100,6 +172,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
         setState(() {
           _paymentsHistory = list;
           _loading = false;
+          _syncAmountToPaymentLeft();
         });
       }
     } catch (_) {
@@ -150,7 +223,8 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   }
 
   Future<void> _submitPayment() async {
-    final ref = _refNoController.text.trim();
+    if (_isPaymentComplete) return;
+
     final amtText = _amountController.text.trim().replaceAll(',', '');
     final amt = double.tryParse(amtText) ?? 0.0;
 
@@ -161,11 +235,23 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       return;
     }
 
-    if (ref.isEmpty && _proofImage == null) {
+    if (amt > _paymentLeft && _paymentLeft > 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please provide a reference number or upload a proof photo.')),
+        SnackBar(
+          backgroundColor: const Color(0xFFDC2626),
+          content: Text('Cannot submit: Amount (₱${_formatMoney(amt)}) exceeds remaining payment left of ₱${_formatMoney(_paymentLeft)}.'),
+        ),
       );
       return;
+    }
+
+    String ref = _refNoController.text.trim();
+    if (ref.isEmpty) {
+      if (_proofImage != null) {
+        ref = 'PROOF-${DateTime.now().millisecondsSinceEpoch % 1000000}';
+      } else {
+        ref = 'TRX-${DateTime.now().millisecondsSinceEpoch % 1000000}';
+      }
     }
 
     setState(() => _submitting = true);
@@ -174,7 +260,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       await ApiService.submitRentPayment(
         amount: amt,
         target: _selectedTarget,
-        referenceNo: ref.isNotEmpty ? ref : 'IMG-RECEIPT-${DateTime.now().millisecondsSinceEpoch % 10000}',
+        referenceNo: ref,
         note: _noteController.text.trim().isNotEmpty ? _noteController.text.trim() : null,
         tenantId: _tenantId,
       );
@@ -282,14 +368,25 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     for (final p in _paymentsHistory) {
       final amt = (p['amount'] as num?)?.toDouble() ?? 0.0;
       final status = (p['status'] ?? '').toString().toLowerCase();
-      if (status == 'approved' || status == 'verified') {
+      final note = (p['note'] ?? '').toString();
+      final isPending = status == 'pending' ||
+          note.toUpperCase().contains('[PENDING]') ||
+          note.toLowerCase().contains('pending verification');
+
+      if (!isPending && (status == 'approved' || status == 'verified')) {
         totalVerifiedPaid += amt;
       } else {
         totalPendingPaid += amt;
       }
     }
 
-    final totalTarget = widget.rentAmount > 0 ? widget.rentAmount : 2500.0;
+    if (totalVerifiedPaid == 0.0 && _paidThisMonth > 0) {
+      totalVerifiedPaid = _paidThisMonth;
+    }
+
+    final totalTarget = _totalObligation > 0
+        ? _totalObligation
+        : (widget.rentAmount > 0 ? widget.rentAmount : 2500.0);
     final verifiedPercent = ((totalVerifiedPaid / totalTarget) * 100).clamp(0, 100).toInt();
     final remainingAmount = (totalTarget - totalVerifiedPaid).clamp(0.0, totalTarget);
     final remainingPercent = (100 - verifiedPercent).clamp(0, 100);
@@ -306,6 +403,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
 
   @override
   void dispose() {
+    _amountController.removeListener(_onAmountChanged);
     _amountController.dispose();
     _refNoController.dispose();
     _noteController.dispose();
@@ -418,8 +516,11 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
                     children: [
                       Text(
                         'Remaining: ₱${_formatMoney(remainingAmount)} ($remainingPercent%)',
@@ -572,6 +673,11 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   ),
                   const SizedBox(height: 14),
 
+                  // Itemized Statement Breakdown
+                  if (_penaltyAmount > 0 || widget.isOverdue) ...[
+                    _buildPaymentBreakdownCard(),
+                  ],
+
                   // Payment Target Options (Overdue Arrears or Restructuring)
                   if (widget.isOverdue) ...[
                     const Text(
@@ -582,7 +688,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     _buildPaymentOptionCard(
                       value: 'overdue_october',
                       title: 'Option 1: Pay Overdue Month (October First)',
-                      amountText: '₱${_formatMoney(widget.rentAmount + 500)}',
+                      amountText: '₱${_formatMoney(widget.rentAmount + _effectiveLateFee)}',
                       badgeText: 'Priority Target · Clears Overdue & Strike',
                       badgeColor: const Color(0xFFFEF2F2),
                       badgeTextColor: const Color(0xFFDC2626),
@@ -591,7 +697,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     _buildPaymentOptionCard(
                       value: 'full_balance',
                       title: 'Option 2: Pay Full Balance (October + November)',
-                      amountText: '₱${_formatMoney(widget.rentAmount * 2 + 500)}',
+                      amountText: '₱${_formatMoney(widget.rentAmount * 2 + _effectiveLateFee)}',
                       badgeText: 'Full 2-Month Settlement',
                       badgeColor: const Color(0xFFEFF6FF),
                       badgeTextColor: AppColors.electricBlue,
@@ -633,43 +739,194 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     ),
                     const SizedBox(height: 12),
                   ],
+                  if (_securityDeposit > 0 && !_isPaymentComplete) ...[
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFBFDBFE), width: 0.8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.shield_outlined, size: 17, color: Color(0xFF005CEE)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Backed by ₱${_formatMoney(_securityDeposit)} Deposit in Escrow • Auto-covers if unpaid on grace expiry',
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF0A1832),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   // Amount Input
-                  const Text(
-                    'Amount to Pay',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.ink700),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Amount to Pay',
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.midnightNavy),
+                      ),
+                      if (_isPaymentComplete)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 12),
+                              SizedBox(width: 4),
+                              Text(
+                                'FULLY SETTLED',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF059669),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else if (_paymentLeft > 0)
+                        InkWell(
+                          onTap: () {
+                            _amountController.text = _paymentLeft.toStringAsFixed(0);
+                            setState(() {});
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Remaining: ₱${_formatMoney(_paymentLeft)}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.electricBlue,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  '• Auto-fill',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF3B82F6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 6),
                   TextField(
                     controller: _amountController,
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink900),
+                    enabled: !_isPaymentComplete && !_submitting,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: _isOverpaying ? const Color(0xFFDC2626) : AppColors.ink900,
+                    ),
                     decoration: InputDecoration(
                       prefixText: '₱ ',
-                      prefixStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink900),
+                      prefixStyle: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: _isOverpaying ? const Color(0xFFDC2626) : AppColors.ink900,
+                      ),
                       filled: true,
-                      fillColor: const Color(0xFFF8FAFC),
+                      fillColor: _isPaymentComplete
+                          ? const Color(0xFFF1F5F9)
+                          : (_isOverpaying ? const Color(0xFFFEF2F2) : const Color(0xFFF8FAFC)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.border),
+                        borderSide: BorderSide(color: _isOverpaying ? const Color(0xFFEF4444) : AppColors.border),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.border),
+                        borderSide: BorderSide(
+                          color: _isOverpaying ? const Color(0xFFEF4444) : AppColors.border,
+                          width: _isOverpaying ? 1.5 : 1.0,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.electricBlue, width: 1.5),
+                        borderSide: BorderSide(
+                          color: _isOverpaying ? const Color(0xFFEF4444) : AppColors.electricBlue,
+                          width: 1.8,
+                        ),
+                      ),
+                      disabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                       ),
                     ),
                   ),
 
+                  if (_isOverpaying) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF2F2),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: Color(0xFFDC2626), size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Warning: Amount exceeds remaining payment left of ₱${_formatMoney(_paymentLeft)}. Please adjust the amount.',
+                              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFFB91C1C)),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              _amountController.text = _paymentLeft.toStringAsFixed(0);
+                              setState(() {});
+                            },
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: const Text('Set to Max', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFFDC2626))),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 18),
 
-                  // Proof of Payment / Upload Receipt
+                  // Proof of Payment / Upload Receipt (Optional)
                   const Text(
-                    'Proof of Payment (Photo / Screenshot)',
+                    'Proof of Payment (Photo / Screenshot - Optional)',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.ink700),
                   ),
                   const SizedBox(height: 6),
@@ -708,7 +965,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  _proofImage != null ? _proofImage!.name : 'Attach Transfer Receipt',
+                                  _proofImage != null ? _proofImage!.name : 'Attach Transfer Receipt (Optional)',
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w700,
@@ -718,7 +975,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
-                                  _proofImage != null ? 'Tap to change photo' : 'JPG, PNG screenshot from bank app',
+                                  _proofImage != null ? 'Tap to change photo' : 'JPG, PNG screenshot from bank app (optional)',
                                   style: const TextStyle(fontSize: 11, color: AppColors.ink500),
                                 ),
                               ],
@@ -738,18 +995,19 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
 
                   // Reference Number Input
                   const Text(
-                    'Transaction Reference Number',
+                    'Transaction Reference Number (Optional)',
                     style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.ink700),
                   ),
                   const SizedBox(height: 6),
                   TextField(
                     controller: _refNoController,
+                    enabled: !_isPaymentComplete && !_submitting,
                     style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: AppColors.ink900),
                     decoration: InputDecoration(
-                      hintText: 'e.g. 102938475612',
-                      hintStyle: const TextStyle(fontSize: 13, color: AppColors.ink400),
+                      hintText: 'e.g. 102938475612 (or leave blank to auto-generate)',
+                      hintStyle: const TextStyle(fontSize: 12.5, color: AppColors.ink400),
                       filled: true,
-                      fillColor: const Color(0xFFF8FAFC),
+                      fillColor: _isPaymentComplete ? const Color(0xFFF1F5F9) : const Color(0xFFF8FAFC),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -763,6 +1021,10 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(color: AppColors.electricBlue, width: 1.5),
                       ),
+                      disabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
                     ),
                   ),
 
@@ -771,26 +1033,52 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   // Submit Button
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _submitting ? null : _submitPayment,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        elevation: 0,
-                      ),
-                      child: _submitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
-                          : const Text(
-                              'Submit Payment for Verification',
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.2),
+                    child: _isPaymentComplete
+                        ? ElevatedButton(
+                            onPressed: null, // Disabled, not clickable
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF10B981),
+                              disabledBackgroundColor: const Color(0xFF10B981),
+                              foregroundColor: Colors.white,
+                              disabledForegroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              elevation: 0,
                             ),
-                    ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: const [
+                                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Payment Complete',
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.2),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ElevatedButton(
+                            onPressed: (_submitting || _isOverpaying) ? null : _submitPayment,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: const Color(0xFFCBD5E1),
+                              disabledForegroundColor: Colors.white70,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              elevation: 0,
+                            ),
+                            child: _submitting
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                  )
+                                : const Text(
+                                    'Submit Payment for Verification',
+                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, letterSpacing: 0.2),
+                                  ),
+                          ),
                   ),
                 ],
               ),
@@ -1080,4 +1368,177 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       ),
     );
   }
+
+  Widget _buildPaymentBreakdownCard() {
+    final baseRent = widget.rentAmount;
+    final penalty = _penaltyAmount;
+    final total = widget.isOverdue
+        ? (baseRent + _effectiveLateFee)
+        : (baseRent + penalty);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Itemized Payment Statement',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.midnightNavy,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Includes Penalty',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFFD97706),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Base Monthly Rent',
+                  style: TextStyle(fontSize: 12.5, color: AppColors.ink700),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '₱${_formatMoney(baseRent)}',
+                style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppColors.ink900),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_penaltyBreakdown.isNotEmpty)
+            ..._penaltyBreakdown.map((pb) {
+              final label = pb['label'] ?? 'Violation Penalty';
+              final amt = (pb['amount'] as num?)?.toDouble() ?? 500.0;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '⚠️ $label',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFFDC2626),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '+₱${_formatMoney(amt)}',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFFDC2626),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            })
+          else if (_penaltyAmount > 0)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      '⚠️ Strike 2 Infraction Penalty',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFDC2626),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '+₱${_formatMoney(_penaltyAmount)}',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFFDC2626),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (widget.isOverdue)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '⚠️ Post-Grace Overdue Fee',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFDC2626),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    '+₱500',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFFDC2626),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const Divider(height: 18, color: Color(0xFFE2E8F0)),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Total Payable Balance',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppColors.midnightNavy),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '₱${_formatMoney(total)}',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppColors.electricBlue),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+
 }

@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../screens/lease_contract_screen.dart';
 
 class BuildingDetailsSheet extends StatefulWidget {
   final Map<String, dynamic> lease;
@@ -119,7 +120,7 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
   String get _businessName {
     final b = widget.lease['business_name'] ?? widget.lease['tenant_name'];
     return (b != null && b.toString().trim().isNotEmpty)
-        ? b.toString().trim()
+        ? b.toString().replaceAll(RegExp(r'\s*\([^)]*\)\s*$'), '').trim()
         : 'Commercial Tenant';
   }
 
@@ -222,6 +223,64 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
       return s.contains('%') ? '$s Annual Escalation' : '$s% Annual Escalation';
     }
     return null;
+  }
+
+  String get _appliedDate {
+    final raw = widget.lease['applied_at'] ?? widget.lease['submitted_at'] ?? widget.lease['since'];
+    if (raw != null && raw.toString().isNotEmpty) {
+      try {
+        final dt = DateTime.parse(raw.toString());
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
+      } catch (_) {}
+    }
+    return 'On Record';
+  }
+
+  String get _leaseDurationTimeline {
+    final start = widget.lease['start_date'] ?? widget.lease['since'];
+    final end = widget.lease['end_date'];
+    if (start != null && end != null && start.toString().isNotEmpty && end.toString().isNotEmpty) {
+      try {
+        final sDt = DateTime.parse(start.toString());
+        final eDt = DateTime.parse(end.toString());
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return '${months[sDt.month - 1]} ${sDt.year} – ${months[eDt.month - 1]} ${eDt.year}';
+      } catch (_) {}
+    }
+    return _leaseTermMonths;
+  }
+
+  String get _securityDeposit {
+    final raw = widget.lease['security_deposit'];
+    final val = (raw as num?)?.toDouble() ?? 0.0;
+    if (val > 0) {
+      return '₱${val.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+    }
+    final rent = (widget.lease['rent'] as num?)?.toDouble() ?? 0.0;
+    if (rent > 0) {
+      return '₱${(rent * 2).toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+    }
+    return '2 Months Deposit';
+  }
+
+  String get _advanceRent {
+    final raw = widget.lease['advance_rent'];
+    final val = (raw as num?)?.toDouble() ?? 0.0;
+    if (val > 0) {
+      return '₱${val.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+    }
+    final rent = (widget.lease['rent'] as num?)?.toDouble() ?? 0.0;
+    if (rent > 0) {
+      return '₱${rent.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]},')}';
+    }
+    return '1 Month Advance';
+  }
+
+  String get _accountStanding {
+    final strike = (widget.lease['strike_level'] as num?)?.toInt() ?? 0;
+    if (strike == 0) return 'Clean Record (0 Strikes)';
+    return 'Strike $strike Citation Active';
   }
 
   @override
@@ -867,6 +926,115 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
                                 ),
                               ),
                             ],
+
+                            const SizedBox(height: 10),
+
+                            // ================= APPLICATION DATE & LEASE TIMELINE =================
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildFrostedInfoTile(
+                                    icon: Icons.how_to_reg_outlined,
+                                    iconColor: const Color(0xFF2563EB),
+                                    title: 'APPLICATION DATE',
+                                    value: _appliedDate,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _buildFrostedInfoTile(
+                                    icon: Icons.event_available_rounded,
+                                    iconColor: const Color(0xFF0284C7),
+                                    title: 'LEASE TIMELINE',
+                                    value: _leaseDurationTimeline,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            // ================= DEPOSITS & ADVANCE RENT =================
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildFrostedInfoTile(
+                                    icon: Icons.security_rounded,
+                                    iconColor: const Color(0xFF10B981),
+                                    title: 'SECURITY DEPOSIT',
+                                    value: _securityDeposit,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _buildFrostedInfoTile(
+                                    icon: Icons.account_balance_wallet_outlined,
+                                    iconColor: const Color(0xFF6366F1),
+                                    title: 'ADVANCE RENT',
+                                    value: _advanceRent,
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            // ================= ACCOUNT STANDING & COMPLIANCE =================
+                            _buildFrostedInfoTile(
+                              icon: Icons.verified_user_outlined,
+                              iconColor: const Color(0xFF059669),
+                              title: 'LEGAL STANDING & COMPLIANCE',
+                              value: _accountStanding,
+                              isFullWidth: true,
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // ================= VIEW CONTRACT ACTION BUTTON =================
+                            InkWell(
+                              borderRadius: BorderRadius.circular(14),
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => LeaseContractScreen(lease: widget.lease),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(vertical: 13),
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFF1E3A8A), Color(0xFF1E6BFF)],
+                                  ),
+                                  borderRadius: BorderRadius.circular(14),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF1E6BFF).withValues(alpha: 0.28),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    Icon(Icons.description_outlined, color: Colors.white, size: 16),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'View Signed Lease Contract (PDF)',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -876,6 +1044,72 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFrostedInfoTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String value,
+    bool isFullWidth = false,
+  }) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          width: isFullWidth ? double.infinity : null,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.52),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.85),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, size: 12, color: iconColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF64748B),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 3),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF0B1B3D),
+                  letterSpacing: -0.2,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
       ),

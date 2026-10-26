@@ -48,6 +48,13 @@ class _PaymentArrangementScreenState extends State<PaymentArrangementScreen> {
     return tid is int ? tid : (tid != null ? int.tryParse(tid.toString()) : null);
   }
 
+  double get _securityDeposit {
+    final raw = widget.lease['security_deposit'];
+    if (raw is num) return raw.toDouble();
+    if (raw != null) return double.tryParse(raw.toString()) ?? 0.0;
+    return 0.0;
+  }
+
   Future<void> _fetchRequests() async {
     setState(() => _loading = true);
     try {
@@ -960,6 +967,9 @@ class _PaymentArrangementScreenState extends State<PaymentArrangementScreen> {
                   _buildMutualBenefitBar(),
 
                   const SizedBox(height: 18),
+
+                  // 2. SECURITY DEPOSIT & ADVANCE SHIELD (LUXURY MINIMAL)
+                  _buildSecurityDepositShieldCard(),
 
                   // 2.5 INSTRUCTIONS & HOW IT WORKS (SMOOTH & INTEGRATED)
                   _buildInstructionsCard(),
@@ -2005,6 +2015,348 @@ class _PaymentArrangementScreenState extends State<PaymentArrangementScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  // ================= 2. SECURITY DEPOSIT & ADVANCE SHIELD =================
+  Widget _buildSecurityDepositShieldCard() {
+    final deposit = _securityDeposit;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0A1832).withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                    ),
+                    child: const Icon(
+                      Icons.shield_outlined,
+                      size: 18,
+                      color: Color(0xFF005CEE),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Security Deposit Shield',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0A1832),
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                ),
+                child: const Text(
+                  'LOCKED ASSET',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF005CEE),
+                    letterSpacing: 0.4,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Current Locked Escrow Balance',
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '₱${_formatMoney(deposit)}',
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFF0A1832),
+              letterSpacing: -0.8,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF005CEE)),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Optional advance shield held in escrow. Untouchable during normal operations. Automatically covers unpaid rent when your grace period expires with zero strikes.',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF475569),
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _showTopUpDepositModal,
+              icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+              label: const Text(
+                'Top Up Advance / Security Deposit',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF005CEE),
+                backgroundColor: Colors.white,
+                side: const BorderSide(color: Color(0xFFBFDBFE), width: 1.2),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTopUpDepositModal() {
+    final amountController = TextEditingController();
+    final refController = TextEditingController();
+    bool isSubmitting = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            padding: EdgeInsets.fromLTRB(
+              22,
+              16,
+              22,
+              MediaQuery.of(ctx).viewInsets.bottom + 24,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                        ),
+                        child: const Icon(Icons.shield_rounded, size: 18, color: Color(0xFF005CEE)),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Top Up Security Deposit / Advance',
+                        style: TextStyle(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0A1832),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Image.asset(
+                        'img/instapay_qr.jpg',
+                        width: 160,
+                        height: 160,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Center(
+                    child: Text(
+                      'Pwestora Escrow Account • InstaPay QR',
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Amount to Deposit (₱)',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Color(0xFF0A1832)),
+                    decoration: InputDecoration(
+                      prefixText: '₱ ',
+                      hintText: '5,000',
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'InstaPay / Bank Reference Number',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
+                  ),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: refController,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. 1029384756',
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              final amtText = amountController.text.trim().replaceAll(',', '');
+                              final amt = double.tryParse(amtText) ?? 0.0;
+                              final ref = refController.text.trim();
+                              if (amt <= 0) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please enter a valid amount greater than 0.')),
+                                );
+                                return;
+                              }
+                              if (ref.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Please enter your transaction reference number.')),
+                                );
+                                return;
+                              }
+                              setModalState(() => isSubmitting = true);
+                              try {
+                                await ApiService.submitRentPayment(
+                                  amount: amt,
+                                  target: 'security_deposit',
+                                  referenceNo: ref,
+                                  tenantId: _tenantId,
+                                );
+                                if (!ctx.mounted) return;
+                                Navigator.pop(ctx);
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('₱${_formatMoney(amt)} deposit top-up submitted for verification!'),
+                                    backgroundColor: const Color(0xFF0A1832),
+                                  ),
+                                );
+                                widget.onArrangementSubmitted?.call();
+                              } catch (e) {
+                                setModalState(() => isSubmitting = false);
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Submission failed: $e')),
+                                );
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0A1832),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        elevation: 0,
+                      ),
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Text(
+                              'Submit Deposit for Verification',
+                              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

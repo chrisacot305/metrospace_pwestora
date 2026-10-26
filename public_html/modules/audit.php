@@ -1,47 +1,48 @@
 <?php
 /**
  * modules/audit.php  (SuperAdmin → "Audit Logs")
- * PHP port of the AuditLogs component. Pulls from the real audit_logs table
- * that every module in this app has been writing to since Phase 1.
+ * Controller for Audit Logs.
  */
-$logs = $pdo->query(
-    "SELECT al.*, u.company_name, u.full_name, u.role AS actor_role
-     FROM audit_logs al
-     LEFT JOIN users u ON u.id = al.actor_id
-     ORDER BY al.created_at DESC
-     LIMIT 200"
-)->fetchAll();
 
-function actor_label(array $row): string {
-    if (!$row['actor_role']) return 'System';
-    return $row['actor_role'] === 'lessor' ? ($row['company_name'] ?: 'Lessor') : ($row['full_name'] ?: 'User');
+// --- SAFETY CHECKS ---
+$modelPath = __DIR__ . '/../models/AuditModel.php';
+$viewPath = __DIR__ . '/../views/superadmin/audit.php';
+
+if (!file_exists($modelPath)) {
+    die("<div class='card' style='margin: 20px; border: 2px solid red; color: red;'><strong>Fatal Error:</strong> Cannot find <b>models/AuditModel.php</b></div>");
 }
-?>
-<h2 style="margin:0 0 4px;">Audit Logs</h2>
-<p style="color:var(--ink-500); margin:0 0 20px;">Immutable record of every consequential action on the platform.</p>
+if (!file_exists($viewPath)) {
+    die("<div class='card' style='margin: 20px; border: 2px solid red; color: red;'><strong>Fatal Error:</strong> Cannot find <b>views/superadmin/audit.php</b></div>");
+}
+// ---------------------
 
-<div class="card" style="padding:0; overflow:hidden;">
-  <div class="table-scroll">
-  <table>
-    <thead><tr><th>Actor</th><th>Action</th><th>Target</th><th>Time</th></tr></thead>
-    <tbody>
-      <?php if (!$logs): ?>
-        <tr><td colspan="4" style="text-align:center; color:var(--ink-500);">Nothing logged yet.</td></tr>
-      <?php else: foreach ($logs as $l): ?>
-        <tr>
-          <td style="font-weight:600;"><?= htmlspecialchars(actor_label($l)) ?></td>
-          <td style="color:var(--ink-500);"><?= htmlspecialchars($l['action']) ?></td>
-          <td style="color:var(--ink-500);"><?= htmlspecialchars($l['details'] ?: '—') ?></td>
-          <td style="color:var(--ink-500);"><?= (new DateTime($l['created_at']))->format('M j, g:i A') ?></td>
-        </tr>
-      <?php endforeach; endif; ?>
-    </tbody>
-  </table>
-  </div>
-</div>
+require_once $modelPath;
+$auditModel = new AuditModel($pdo);
 
-<div style="margin-top:16px;">
-  <a href="/export_audit_log.php" class="btn" style="background:var(--bg); color:var(--ink-900); display:inline-flex; border:1px solid var(--border);">
-    <i class="bi bi-download"></i> Export Full Log
-  </a>
-</div>
+// Fetch logs (Increased to 500 for better search capability)
+$rawLogs = $auditModel->getRecentLogs(500);
+
+$uniqueActions = [];
+$logs = array_map(function($l) use (&$uniqueActions) {
+    // Format Actor Name
+    if (!$l['actor_role']) {
+        $l['actor_display'] = 'System';
+    } else {
+        $l['actor_display'] = $l['actor_role'] === 'lessor' 
+            ? ($l['company_name'] ?: 'Lessor') 
+            : ($l['full_name'] ?: 'User');
+    }
+    
+    // Collect unique actions for the filter dropdown
+    if (!empty($l['action']) && !in_array($l['action'], $uniqueActions)) {
+        $uniqueActions[] = $l['action'];
+    }
+    
+    return $l;
+}, $rawLogs);
+
+// Sort actions alphabetically for the dropdown
+sort($uniqueActions);
+
+// Load View
+require_once $viewPath;

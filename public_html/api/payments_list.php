@@ -52,8 +52,10 @@ $payments = $stmt->fetchAll();
 foreach ($payments as &$p) {
     $p['id'] = (int) $p['id'];
     $p['amount'] = (float) $p['amount'];
-    $isPending = ($p['logged_by'] === null || (is_string($p['note'] ?? '') && str_starts_with($p['note'], '[PENDING]')));
-    $p['status'] = $isPending ? 'pending' : 'approved';
+    $noteStr = is_string($p['note'] ?? '') ? $p['note'] : '';
+    $isPending = ($p['logged_by'] === null || str_contains(strtoupper($noteStr), '[PENDING]') || stripos($noteStr, 'pending verification') !== false);
+    $isDeclined = (stripos($noteStr, '[DECLINED') !== false);
+    $p['status'] = $isDeclined ? 'declined' : ($isPending ? 'pending' : 'approved');
 
     $refNo = '';
     $target = '';

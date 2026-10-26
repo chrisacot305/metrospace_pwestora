@@ -305,6 +305,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
         body.contains('Restructuring Request Revoked');
   }
 
+  bool _isReceiptMessage(String body, String? noticeType) {
+    return noticeType == 'Payment Receipt' ||
+        body.contains('PAYMENT RECEIPT') ||
+        body.contains('Receipt Ref:') ||
+        body.contains('Payment Ref:');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -444,9 +451,14 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                     _isRestructuringMessage(body);
                                 final isExpanded =
                                     _expandedMessageIndices.contains(index);
+                                final isReceipt =
+                                    _isReceiptMessage(body, noticeType);
 
                                 Widget bubbleContent;
-                                if (isViolation) {
+                                if (isReceipt) {
+                                  bubbleContent =
+                                      _buildSpecialReceiptBubble(body, isMe);
+                                } else if (isViolation) {
                                   bubbleContent =
                                       _buildSpecialViolationBubble(msg, body);
                                 } else if (isReport) {
@@ -704,6 +716,96 @@ class _MessagesScreenState extends State<MessagesScreen> {
         _msgCtrl.text = prompt;
         _sendMessage();
       },
+    );
+  }
+
+  // ================= SPECIAL DIGITAL PAYMENT RECEIPT BUBBLE =================
+  Widget _buildSpecialReceiptBubble(String body, bool isMe) {
+    final isVerified = body.contains('VERIFIED') || body.contains('POSTED');
+    final primaryColor = isVerified ? const Color(0xFF059669) : const Color(0xFF1E6BFF);
+    final headerBgColor = isVerified ? const Color(0xFFECFDF5) : const Color(0xFFEFF6FF);
+    final borderColor = isVerified ? const Color(0xFFA7F3D0) : const Color(0xFFBFDBFE);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.of(context).size.width * 0.85,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: primaryColor.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              color: headerBgColor,
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.receipt_long_rounded, size: 16, color: primaryColor),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      isVerified ? 'VERIFIED PAYMENT RECEIPT' : 'DIGITAL PAYMENT RECEIPT',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w900,
+                        color: primaryColor,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: isVerified ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      isVerified ? 'VERIFIED' : 'PENDING',
+                      style: const TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Text(
+                body,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  height: 1.45,
+                  color: Color(0xFF0F172A),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

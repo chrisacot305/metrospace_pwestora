@@ -533,7 +533,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
         };
       }
 
-      final fullBusinessName = '${_businessCtrl.text.trim()} ($_selectedCategory)';
+      final fullBusinessName = _businessCtrl.text.trim();
 
       await ApiService.submitApplication(
         propertyId: widget.propertyId,

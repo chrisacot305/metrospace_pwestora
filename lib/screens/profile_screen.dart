@@ -110,13 +110,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final hasLease = _leaseData != null;
-    final leaseCompany = _leaseData?['business_name']?.toString().trim() ?? '';
+    final rawLeaseCompany = _leaseData?['business_name']?.toString().trim() ?? '';
+    final leaseCompany = rawLeaseCompany.replaceAll(RegExp(r'\s*\([^)]*\)\s*$'), '').trim();
     final effectiveCompany = _companyName.isNotEmpty
-        ? _companyName
+        ? _companyName.replaceAll(RegExp(r'\s*\([^)]*\)\s*$'), '').trim()
         : (leaseCompany.isNotEmpty ? leaseCompany : '');
     final displayProfileTitle = effectiveCompany.isNotEmpty
         ? effectiveCompany
-        : (_name.isNotEmpty ? _name : 'Pwestora User');
+        : (_name.isNotEmpty ? _name.replaceAll(RegExp(r'\s*\([^)]*\)\s*$'), '').trim() : 'Pwestora User');
     final displayProfileSub = effectiveCompany.isNotEmpty
         ? _name
         : (hasLease ? 'Commercial Space' : 'Applicant / Prospective Tenant');

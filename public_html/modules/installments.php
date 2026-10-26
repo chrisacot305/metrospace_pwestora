@@ -6,6 +6,8 @@
 $lessorId = $user['id'];
 $error = '';
 
+$loggingReq = isset($_GET['log']);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['request_id'])) {
     csrf_check();
     $reqId  = (int) $_POST['request_id'];
@@ -41,8 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['req
                 error_log('Installment decision SMS error: ' . $smsEx->getMessage());
             }
         }
-        header('Location: /dashboard.php?page=installments');
-        exit;
+        // Seamless transition: Prevent blank screen and close the review drawer without reloading
+        echo '<script>if(window.history.replaceState){window.history.replaceState(null,null,"/dashboard.php?page=installments");}</script>';
+        unset($_GET['review']);
     } catch (Throwable $e) {
         error_log('Installment decision failed: ' . $e->getMessage());
         $error = 'Could not process this request — the error has been logged. Please try again.';
@@ -66,8 +69,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['log_request'])) {
             $pdo->prepare(
                 'INSERT INTO installment_requests (lessor_id, tenant_id, reason, plan_label, amount) VALUES (?, ?, ?, ?, ?)'
             )->execute([$lessorId, $tenantId, $reason, $plan, $amount]);
-            header('Location: /dashboard.php?page=installments');
-            exit;
+            
+            // Seamless transition: Prevent blank screen and close the log drawer without reloading
+            echo '<script>if(window.history.replaceState){window.history.replaceState(null,null,"/dashboard.php?page=installments");}</script>';
+            $loggingReq = false;
+            unset($_GET['log']);
         } catch (Throwable $e) {
             error_log('Log installment request failed: ' . $e->getMessage());
             $error = 'Could not log this request — the error has been logged. Please try again.';
@@ -86,7 +92,13 @@ $requests = $pdo->prepare(
 $requests->execute([$lessorId]);
 $requests = $requests->fetchAll();
 
-$tenants = $pdo->prepare('SELECT id, tenant_name FROM tenants WHERE lessor_id = ? ORDER BY tenant_name');
+// Fetch properties for the dropdown
+$properties = $pdo->prepare('SELECT id, name FROM properties WHERE lessor_id = ? ORDER BY name');
+$properties->execute([$lessorId]);
+$properties = $properties->fetchAll();
+
+// Include property_id to allow JS filtering in the popup
+$tenants = $pdo->prepare('SELECT id, tenant_name, property_id FROM tenants WHERE lessor_id = ? ORDER BY tenant_name');
 $tenants->execute([$lessorId]);
 $tenants = $tenants->fetchAll();
 
@@ -97,7 +109,6 @@ if ($reviewId) {
         if ((int) $r['id'] === $reviewId) { $reviewing = $r; break; }
     }
 }
-$loggingReq = isset($_GET['log']);
 ?>
 
 <div style="margin-bottom:20px;">
@@ -169,7 +180,7 @@ $loggingReq = isset($_GET['log']);
               <span class="badge badge-rejected">Rejected</span>
             <?php endif; ?>
           </td>
-          <td>
+          <td style="text-align:right;">
             <?php if ($r['status'] === 'pending'): ?>
               <a class="btn btn-primary" style="padding:6px 14px; display:inline-flex;"
                  href="/dashboard.php?page=installments&review=<?= $r['id'] ?>">Review</a>
@@ -184,6 +195,13 @@ $loggingReq = isset($_GET['log']);
     </tbody>
   </table>
   </div>
+  
+  <!-- Pagination UI -->
+  <?php if ($requests): ?>
+  <div id="req-pagination-bar" style="display:flex; justify-content:center; align-items:center; padding:12px 16px; border-top:1px solid var(--border); background:var(--surface);">
+    <div id="req-page-controls" style="display:flex; gap:6px; align-items:center; justify-content:center;"></div>
+  </div>
+  <?php endif; ?>
 </div>
 
 <script>
@@ -195,29 +213,92 @@ $loggingReq = isset($_GET['log']);
   var rows = Array.prototype.slice.call(document.querySelectorAll('.req-row'));
   var total = rows.length;
 
+  var paginationBar = document.getElementById('req-pagination-bar');
+  var pageControls = document.getElementById('req-page-controls');
+  var currentPage = 1;
+  var perPage = 10;
+
+  function renderPagination(totalMatching, totalPages) {
+    if (!paginationBar || !pageControls) return;
+    if (totalMatching === 0) {
+      paginationBar.style.display = 'none';
+      return;
+    }
+    
+    paginationBar.style.display = 'flex';
+    pageControls.innerHTML = '';
+
+    var prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.innerHTML = '<i class="bi bi-chevron-left"></i> Prev';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:' + (currentPage === 1 ? 'var(--bg)' : '#fff') + '; color:' + (currentPage === 1 ? 'var(--ink-300)' : 'var(--ink-900)') + '; cursor:' + (currentPage === 1 ? 'not-allowed' : 'pointer') + '; font-family:inherit; font-weight:500;';
+    prevBtn.addEventListener('click', function () {
+      if (currentPage > 1) { currentPage--; applyFilter(); }
+    });
+    pageControls.appendChild(prevBtn);
+
+    for (var p = 1; p <= totalPages; p++) {
+      (function (pageNum) {
+        var pageBtn = document.createElement('button');
+        pageBtn.type = 'button';
+        pageBtn.textContent = pageNum;
+        var isActive = pageNum === currentPage;
+        pageBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid ' + (isActive ? 'var(--primary)' : 'var(--border)') + '; border-radius:6px; background:' + (isActive ? 'var(--primary)' : '#fff') + '; color:' + (isActive ? '#fff' : 'var(--ink-900)') + '; cursor:pointer; font-weight:' + (isActive ? '700' : '500') + '; font-family:inherit; min-width:30px;';
+        pageBtn.addEventListener('click', function () {
+          currentPage = pageNum; applyFilter();
+        });
+        pageControls.appendChild(pageBtn);
+      })(p);
+    }
+
+    var nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.innerHTML = 'Next <i class="bi bi-chevron-right"></i>';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:' + (currentPage === totalPages ? 'var(--bg)' : '#fff') + '; color:' + (currentPage === totalPages ? 'var(--ink-300)' : 'var(--ink-900)') + '; cursor:' + (currentPage === totalPages ? 'not-allowed' : 'pointer') + '; font-family:inherit; font-weight:500;';
+    nextBtn.addEventListener('click', function () {
+      if (currentPage < totalPages) { currentPage++; applyFilter(); }
+    });
+    pageControls.appendChild(nextBtn);
+  }
+
   function applyFilter() {
     var q = (search.value || '').trim().toLowerCase();
     var st = status.value || '';
-    var shown = 0;
 
-    rows.forEach(function (row) {
+    // Filter all rows first
+    var matchingRows = rows.filter(function (row) {
       var matchQ = !q || (row.getAttribute('data-search') || '').indexOf(q) !== -1;
       var matchS = !st || row.getAttribute('data-status') === st;
-      var visible = matchQ && matchS;
-
-      row.style.display = visible ? '' : 'none';
-      if (visible) shown++;
+      return matchQ && matchS;
     });
 
-    if (empty && total > 0) empty.style.display = shown ? 'none' : '';
+    var totalMatching = matchingRows.length;
+    var totalPages = Math.max(1, Math.ceil(totalMatching / perPage));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    // Hide everything
+    rows.forEach(function (row) { row.style.display = 'none'; });
+
+    // Show only the slice for the current page
+    var startIndex = (currentPage - 1) * perPage;
+    var endIndex = startIndex + perPage;
+    matchingRows.slice(startIndex, endIndex).forEach(function (row) {
+      row.style.display = '';
+    });
+
+    if (empty && total > 0) empty.style.display = totalMatching ? 'none' : '';
     if (count) {
-      count.textContent = (q || st) ? (shown + ' of ' + total) : (total + ' request' + (total === 1 ? '' : 's'));
+      count.textContent = (q || st) ? (totalMatching + ' of ' + total) : (total + ' request' + (total === 1 ? '' : 's'));
     }
+
+    renderPagination(totalMatching, totalPages);
   }
 
   if (search && status) {
-    search.addEventListener('input', applyFilter);
-    status.addEventListener('change', applyFilter);
+    search.addEventListener('input', function() { currentPage = 1; applyFilter(); });
+    status.addEventListener('change', function() { currentPage = 1; applyFilter(); });
     applyFilter(); // Run on load
   }
 })();
@@ -243,18 +324,31 @@ $loggingReq = isset($_GET['log']);
     <?php if (!$tenants): ?>
       <p style="font-size:13px; color:var(--ink-500);">You don't have any active tenants yet — approve an application first.</p>
     <?php else: ?>
-      <form method="POST">
+      <form method="POST" action="/dashboard.php?page=installments">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="log_request" value="1">
+        
         <div class="field">
-          <label>Tenant</label>
-          <select name="tenant_id" required>
-            <option value="">Select tenant…</option>
-            <?php foreach ($tenants as $t): ?>
-              <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['tenant_name']) ?></option>
+          <label>Property</label>
+          <select id="inst_property_select" name="property_id" required>
+            <option value="">Select property…</option>
+            <?php foreach ($properties as $p): ?>
+              <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
+
+        <div class="field">
+          <label>Tenant</label>
+          <select id="inst_tenant_select" name="tenant_id" required disabled>
+            <option value="">Select a property first…</option>
+            <!-- These options are hidden and managed by JS based on property_id -->
+            <?php foreach ($tenants as $t): ?>
+              <option value="<?= $t['id'] ?>" data-property="<?= $t['property_id'] ?>"><?= htmlspecialchars($t['tenant_name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
         <div class="field">
           <label>Reason</label>
           <input type="text" name="reason" placeholder="e.g. Seasonal slowdown in business" required>
@@ -272,6 +366,44 @@ $loggingReq = isset($_GET['log']);
         </div>
         <button class="btn btn-primary" type="submit" style="width:100%; margin-top:8px;">Log Request</button>
       </form>
+
+      <!-- JAVASCRIPT FOR CASCADING DROPDOWN -->
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+           var propSel = document.getElementById('inst_property_select');
+           var tenSel = document.getElementById('inst_tenant_select');
+           
+           if (propSel && tenSel) {
+               var allOptions = Array.from(tenSel.querySelectorAll('option[data-property]'));
+               
+               propSel.addEventListener('change', function() {
+                   var pid = this.value;
+                   tenSel.innerHTML = '<option value="">Select tenant...</option>';
+                   var hasTenants = false;
+                   
+                   allOptions.forEach(function(opt) {
+                       if(opt.getAttribute('data-property') === pid) {
+                           tenSel.appendChild(opt.cloneNode(true));
+                           hasTenants = true;
+                       }
+                   });
+                   
+                   if (!pid) {
+                      tenSel.innerHTML = '<option value="">Select a property first...</option>';
+                      tenSel.disabled = true;
+                   } else if (!hasTenants) {
+                      tenSel.innerHTML = '<option value="">No tenants found here</option>';
+                      tenSel.disabled = true;
+                   } else {
+                      tenSel.disabled = false;
+                   }
+               });
+               
+               tenSel.innerHTML = '<option value="">Select a property first...</option>';
+               tenSel.disabled = true;
+           }
+        });
+      </script>
     <?php endif; ?>
   </div>
 </div>
@@ -290,6 +422,7 @@ $loggingReq = isset($_GET['log']);
     </div>
 
     <div class="card" style="margin-bottom:16px;">
+      <p style="margin:4px 0; font-size:13px;"><strong>Property:</strong> <?= htmlspecialchars($reviewing['property_name'] ?? 'Unknown') ?></p>
       <p style="margin:4px 0; font-size:13px;"><strong>Tenant:</strong> <?= htmlspecialchars($reviewing['tenant_name']) ?></p>
       <p style="margin:4px 0; font-size:13px;"><strong>Reason:</strong> <?= htmlspecialchars($reviewing['reason']) ?></p>
       <p style="margin:4px 0; font-size:13px;"><strong>Requested plan:</strong> <?= htmlspecialchars($reviewing['plan_label']) ?></p>
@@ -311,7 +444,7 @@ $loggingReq = isset($_GET['log']);
     </p>
 
     <div style="display:flex; gap:12px;">
-      <form method="POST" style="flex:1;">
+      <form method="POST" action="/dashboard.php?page=installments" style="flex:1;">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="request_id" value="<?= $reviewing['id'] ?>">
         <input type="hidden" name="action" value="approve">
@@ -319,7 +452,7 @@ $loggingReq = isset($_GET['log']);
           <i class="bi bi-check-lg"></i> Approve Plan
         </button>
       </form>
-      <form method="POST" style="flex:1;">
+      <form method="POST" action="/dashboard.php?page=installments" style="flex:1;">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="request_id" value="<?= $reviewing['id'] ?>">
         <input type="hidden" name="action" value="reject">

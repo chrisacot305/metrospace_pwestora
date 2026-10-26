@@ -8,15 +8,7 @@
 $lessorId = $user['id'];
 $error = '';
 
-// Redirect only while headers can still be sent. The dashboard often prints
-// the layout first, so Location + exit would otherwise leave a blank content area.
-$applicationsRedirect = static function (string $extra = '') {
-    $url = '/dashboard.php?page=applications' . $extra;
-    if (!headers_sent()) {
-        header('Location: ' . $url);
-        exit;
-    }
-};
+$loggingApp = isset($_GET['log']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['application_id'])) {
     csrf_check();
@@ -84,7 +76,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'], $_POST['app
         }
     }
     if (!$error) {
-        $applicationsRedirect($action === 'rebuttal' ? '&review=' . $appId : '');
+        if ($action === 'rebuttal') {
+            echo '<script>if(window.history.replaceState){window.history.replaceState(null,null,"/dashboard.php?page=applications&review=' . $appId . '");}</script>';
+            $_GET['review'] = $appId;
+        } else {
+            echo '<script>if(window.history.replaceState){window.history.replaceState(null,null,"/dashboard.php?page=applications");}</script>';
+            unset($_GET['review']);
+        }
     }
 }
 
@@ -108,7 +106,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['log_application'])) {
             'INSERT INTO applications (property_id, lessor_id, tenant_name, business_name, term_months, rent)
              VALUES (?, ?, ?, ?, ?, ?)'
         )->execute([$propertyId, $lessorId, $tenantName, $business, $term, $rent]);
-        $applicationsRedirect();
+        
+        echo '<script>if(window.history.replaceState){window.history.replaceState(null,null,"/dashboard.php?page=applications");}</script>';
+        $loggingApp = false;
+        unset($_GET['log']);
     }
 }
 
@@ -134,7 +135,6 @@ if ($reviewId) {
         if ((int) $a['id'] === $reviewId) { $reviewing = $a; break; }
     }
 }
-$loggingApp = isset($_GET['log']);
 ?>
 
 <div style="margin-bottom:20px;">
@@ -151,32 +151,25 @@ $loggingApp = isset($_GET['log']);
   <!-- FILTER BAR & LOG BUTTON -->
   <div style="display:flex; gap:10px; flex-wrap:nowrap; align-items:center; padding:14px 16px; border-bottom:1px solid var(--border); overflow-x:auto;">
     
-    <?php if ($applications): ?>
-      <div style="flex:1; min-width:220px; position:relative;">
-        <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--ink-400); font-size:13px;"></i>
-        <input id="app-search" type="search" placeholder="Search applicant, business, or property..."
-               autocomplete="off"
-               style="width:100%; box-sizing:border-box; padding:8px 12px 8px 34px; border:1px solid var(--border); border-radius:8px; font:inherit; font-size:13px; background:var(--bg); color:var(--ink-900);">
-      </div>
-    <?php else: ?>
-      <div style="flex:1;"></div>
-    <?php endif; ?>
+    <div style="flex:1; min-width:220px; position:relative;">
+      <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--ink-400); font-size:13px;"></i>
+      <input id="app-search" type="search" placeholder="Search applicant, business, or property..."
+             autocomplete="off"
+             style="width:100%; box-sizing:border-box; padding:8px 12px 8px 34px; border:1px solid var(--border); border-radius:8px; font:inherit; font-size:13px; background:var(--bg); color:var(--ink-900);">
+    </div>
 
-    <!-- MATCHED SIZING TO VIEW CONTRACT BUTTON -->
     <a href="/dashboard.php?page=applications&log=1" class="btn btn-primary" style="width:auto; display:inline-flex; align-items:center; gap:6px; padding:6px 14px; font-size:12px; flex-shrink:0;">
       <i class="bi bi-plus-lg"></i> Log Application
     </a>
 
-    <?php if ($applications): ?>
-      <select id="app-status-filter"
-              style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; font:inherit; font-size:13px; background:#fff; color:var(--ink-900); min-width:140px; flex-shrink:0;">
-        <option value="">All statuses</option>
-        <option value="pending">Pending</option>
-        <option value="approved">Approved</option>
-        <option value="rejected">Rejected</option>
-      </select>
-      <span id="app-filter-count" style="font-size:12.5px; color:var(--ink-500); white-space:nowrap; flex-shrink:0;"></span>
-    <?php endif; ?>
+    <select id="app-status-filter"
+            style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; font:inherit; font-size:13px; background:#fff; color:var(--ink-900); min-width:140px; flex-shrink:0;">
+      <option value="">All statuses</option>
+      <option value="pending">Pending</option>
+      <option value="approved">Approved</option>
+      <option value="rejected">Rejected</option>
+    </select>
+    <span id="app-filter-count" style="font-size:12.5px; color:var(--ink-500); white-space:nowrap; flex-shrink:0;"></span>
     
   </div>
   <!-- END FILTER BAR -->
@@ -233,10 +226,10 @@ $loggingApp = isset($_GET['log']);
           </td>
           <td>
             <?php if ($a['status'] === 'pending'): ?>
-              <a class="btn btn-primary" style="padding:6px 14px; display:inline-flex;"
+              <a class="btn btn-primary" style="width:auto; padding:6px 14px; display:inline-flex; font-size:12px;"
                  href="/dashboard.php?page=applications&review=<?= $a['id'] ?>">Review</a>
             <?php elseif ($a['status'] === 'approved' && $a['tenant_id']): ?>
-              <a class="btn" style="background:var(--bg); color:var(--ink-900); padding:6px 14px; display:inline-flex; border:1px solid var(--border); font-size:12px;"
+              <a class="btn" style="width:auto; background:var(--bg); color:var(--ink-900); padding:6px 14px; display:inline-flex; border:1px solid var(--border); font-size:12px;"
                  href="/lease_contract.php?tenant_id=<?= $a['tenant_id'] ?>" target="_blank">
                 <i class="bi bi-file-earmark-text"></i> View Contract
               </a>
@@ -251,6 +244,13 @@ $loggingApp = isset($_GET['log']);
     </tbody>
   </table>
   </div>
+
+  <!-- CENTERED PAGINATION BAR (NO INFO TEXT) -->
+  <?php if ($applications): ?>
+  <div id="app-pagination-bar" style="display:flex; justify-content:center; align-items:center; padding:12px 16px; border-top:1px solid var(--border); background:var(--surface);">
+    <div id="app-page-controls" style="display:flex; gap:6px; align-items:center; justify-content:center;"></div>
+  </div>
+  <?php endif; ?>
 </div>
 
 <?php if ($applications): ?>
@@ -260,32 +260,115 @@ $loggingApp = isset($_GET['log']);
   var status = document.getElementById('app-status-filter');
   var count = document.getElementById('app-filter-count');
   var empty = document.getElementById('app-empty-filter');
+  var pageControls = document.getElementById('app-page-controls');
+  var paginationBar = document.getElementById('app-pagination-bar');
   var rows = Array.prototype.slice.call(document.querySelectorAll('.app-row'));
   var total = rows.length;
 
-  function applyFilter() {
-    var q = (search.value || '').trim().toLowerCase();
-    var st = status.value || '';
-    var shown = 0;
+  var currentPage = 1;
+  var perPage = 5; // Change this number to show more or fewer applications per page
 
-    rows.forEach(function (row) {
-      var matchQ = !q || (row.getAttribute('data-search') || '').indexOf(q) !== -1;
-      var matchS = !st || row.getAttribute('data-status') === st;
-      var visible = matchQ && matchS;
-
-      row.style.display = visible ? '' : 'none';
-      if (visible) shown++;
-    });
-
-    if (empty) empty.style.display = shown ? 'none' : '';
-    if (count) {
-      count.textContent = (q || st) ? (shown + ' of ' + total) : (total + ' application' + (total === 1 ? '' : 's'));
+  function renderPagination(totalMatching, totalPages) {
+    if (!paginationBar) return;
+    
+    if (totalMatching === 0) {
+      paginationBar.style.display = 'none';
+      return;
     }
+    paginationBar.style.display = 'flex';
+
+    if (!pageControls) return;
+    pageControls.innerHTML = '';
+
+    // Previous Button
+    var prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.innerHTML = '<i class="bi bi-chevron-left"></i> Prev';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:' + (currentPage === 1 ? 'var(--bg)' : '#fff') + '; color:' + (currentPage === 1 ? 'var(--ink-300)' : 'var(--ink-900)') + '; cursor:' + (currentPage === 1 ? 'not-allowed' : 'pointer') + '; font-family:inherit; font-weight:500;';
+    prevBtn.addEventListener('click', function () {
+      if (currentPage > 1) {
+        currentPage--;
+        updateTable();
+      }
+    });
+    pageControls.appendChild(prevBtn);
+
+    // Page Number Buttons
+    for (var p = 1; p <= totalPages; p++) {
+      (function (pageNum) {
+        var pageBtn = document.createElement('button');
+        pageBtn.type = 'button';
+        pageBtn.textContent = pageNum;
+        var isActive = pageNum === currentPage;
+        pageBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid ' + (isActive ? 'var(--primary)' : 'var(--border)') + '; border-radius:6px; background:' + (isActive ? 'var(--primary)' : '#fff') + '; color:' + (isActive ? '#fff' : 'var(--ink-900)') + '; cursor:pointer; font-weight:' + (isActive ? '700' : '500') + '; font-family:inherit; min-width:30px;';
+        pageBtn.addEventListener('click', function () {
+          currentPage = pageNum;
+          updateTable();
+        });
+        pageControls.appendChild(pageBtn);
+      })(p);
+    }
+
+    // Next Button
+    var nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.innerHTML = 'Next <i class="bi bi-chevron-right"></i>';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:' + (currentPage === totalPages ? 'var(--bg)' : '#fff') + '; color:' + (currentPage === totalPages ? 'var(--ink-300)' : 'var(--ink-900)') + '; cursor:' + (currentPage === totalPages ? 'not-allowed' : 'pointer') + '; font-family:inherit; font-weight:500;';
+    nextBtn.addEventListener('click', function () {
+      if (currentPage < totalPages) {
+        currentPage++;
+        updateTable();
+      }
+    });
+    pageControls.appendChild(nextBtn);
   }
 
-  search.addEventListener('input', applyFilter);
-  status.addEventListener('change', applyFilter);
-  applyFilter(); // Run on load
+  function updateTable() {
+    var q = (search.value || '').trim().toLowerCase();
+    var st = status.value || '';
+
+    var matchingRows = rows.filter(function (row) {
+      var matchQ = !q || (row.getAttribute('data-search') || '').indexOf(q) !== -1;
+      var matchS = !st || row.getAttribute('data-status') === st;
+      return matchQ && matchS;
+    });
+
+    var totalMatching = matchingRows.length;
+    var totalPages = Math.max(1, Math.ceil(totalMatching / perPage));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    // Hide all rows first
+    rows.forEach(function (row) {
+      row.style.display = 'none';
+    });
+
+    // Show only rows for the current page
+    var startIndex = (currentPage - 1) * perPage;
+    var endIndex = startIndex + perPage;
+    matchingRows.slice(startIndex, endIndex).forEach(function (row) {
+      row.style.display = '';
+    });
+
+    if (empty) empty.style.display = totalMatching ? 'none' : '';
+    if (count) {
+      count.textContent = (q || st) ? (totalMatching + ' of ' + total) : (total + ' application' + (total === 1 ? '' : 's'));
+    }
+
+    renderPagination(totalMatching, totalPages);
+  }
+
+  search.addEventListener('input', function () {
+    currentPage = 1;
+    updateTable();
+  });
+  status.addEventListener('change', function () {
+    currentPage = 1;
+    updateTable();
+  });
+
+  updateTable(); // Run on load
 })();
 </script>
 <?php endif; ?>
@@ -310,7 +393,7 @@ $loggingApp = isset($_GET['log']);
     <?php if (!$verifiedProperties): ?>
       <p style="font-size:13px; color:var(--ink-500);">You need at least one verified property before you can log applications.</p>
     <?php else: ?>
-      <form method="POST">
+      <form method="POST" action="/dashboard.php?page=applications">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="log_application" value="1">
         <div class="field">
@@ -457,7 +540,7 @@ $loggingApp = isset($_GET['log']);
               <i class="bi <?= $info['icon'] ?>" style="color:var(--ink-500);"></i> <?= $info['label'] ?>
             </span>
             <?php if (!empty($path)): ?>
-              <a href="/<?= htmlspecialchars($path) ?>" target="_blank" class="btn btn-primary" style="padding:4px 10px; font-size:11.5px; display:inline-flex; align-items:center; gap:4px; text-decoration:none;">
+              <a href="/<?= htmlspecialchars($path) ?>" target="_blank" class="btn btn-primary" style="width:auto; padding:4px 10px; font-size:11.5px; display:inline-flex; align-items:center; gap:4px; text-decoration:none;">
                 <i class="bi bi-box-arrow-up-right"></i> View
               </a>
             <?php else: ?>
@@ -495,7 +578,7 @@ $loggingApp = isset($_GET['log']);
 
     <div class="card" style="margin-bottom:20px;">
       <p style="margin:0 0 6px; font-size:12.5px; font-weight:700;">Reply / Counter-Proposal to Applicant</p>
-      <form method="POST">
+      <form method="POST" action="/dashboard.php?page=applications&review=<?= $reviewing['id'] ?>">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="application_id" value="<?= $reviewing['id'] ?>">
         <input type="hidden" name="action" value="rebuttal">
@@ -507,7 +590,7 @@ $loggingApp = isset($_GET['log']);
     </div>
 
     <div style="display:flex; gap:12px;">
-      <form method="POST" style="flex:1;">
+      <form method="POST" action="/dashboard.php?page=applications" style="flex:1;">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="application_id" value="<?= $reviewing['id'] ?>">
         <input type="hidden" name="action" value="approve">
@@ -515,7 +598,7 @@ $loggingApp = isset($_GET['log']);
           Approve
         </button>
       </form>
-      <form method="POST" style="flex:1;">
+      <form method="POST" action="/dashboard.php?page=applications" style="flex:1;">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
         <input type="hidden" name="application_id" value="<?= $reviewing['id'] ?>">
         <input type="hidden" name="action" value="reject">

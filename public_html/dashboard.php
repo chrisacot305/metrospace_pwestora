@@ -6,9 +6,9 @@ require_role(['lessor', 'superadmin']);
 $user = current_user();
 $page = preg_replace('/[^a-z_]/', '', $_GET['page'] ?? 'overview'); // whitelist-safe
 
-// Which module files each role is allowed to open (mirrors sidebar_nav.php)
+// Which module files each role is allowed to open
 $allowed = [
-    'lessor'     => ['overview','listings','applications','tenants','installments','deposits','payments','maintenance','messages','violations','analytics'],
+    'lessor'     => ['overview','listings','applications','tenants','edit_tenant','installments','deposits','payments','maintenance','messages','violations'],
     'superadmin' => ['overview','lessors','properties','users','notify','revenue','audit','settings'],
 ];
 
@@ -23,11 +23,14 @@ $moduleFile = ($page === 'overview')
 
 require __DIR__ . '/includes/header.php';
 
+// Load the module (which now handles its own Models and Views)
 if (file_exists($moduleFile)) {
     require $moduleFile;
 } else {
-    echo '<div class="placeholder-note"><i class="bi bi-cone-striped" style="font-size:24px;"></i>
-          <p>This module (' . htmlspecialchars($page) . ') hasn\'t been built yet — coming in the next phase.</p></div>';
+    echo '<div class="placeholder-note" style="padding:40px; text-align:center; color:var(--ink-500);">
+            <i class="bi bi-cone-striped" style="font-size:32px; display:block; margin-bottom:12px; color:var(--ink-300);"></i>
+            <p>This module (' . htmlspecialchars($page) . ') hasn\'t been built yet — coming in the next phase.</p>
+          </div>';
 }
 
 require __DIR__ . '/includes/footer.php';

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Oct 22, 2026 at 11:33 PM
+-- Generation Time: Oct 26, 2026 at 01:21 PM
 -- Server version: 11.8.9-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -60,9 +60,9 @@ INSERT INTO `applications` (`id`, `property_id`, `lessor_id`, `lessee_id`, `tena
 (6, 1, 2, 12, 'Jake Peralta', 'BabyCakes', 12, 2500.00, 'approved', '2026-09-07 10:01:14', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (7, 1, 2, 17, 'Charmain Acot', 'MangJuan Store', 12, 4500.00, 'rejected', '2026-09-14 11:25:32', NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (8, 1, 2, 17, 'Charmain Acot', 'Perfume Treats', 12, 1500.00, 'approved', '2026-09-14 12:03:45', '{\"security_deposit\":{\"agreed\":false,\"rebuttal_note\":\"Is it ok that I will pay 1 month rent? becuase this is beyond my cost and my budget is limited. I hope you will understand, Thankyou.\"},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"messages\":[{\"sender\":\"lessee\",\"sender_name\":\"Charmain Acot\",\"message\":\"Yes I assure you that!\",\"sent_at\":\"2026-09-14 12:18:27\"}]}', 'Yes but how I can assure that you are really will be consistent tenant', '2026-09-14 12:09:00', NULL, NULL, NULL, NULL),
-(9, 5, 2, 22, 'Jeremy Gonzales', 'Uncle Brew (General / Other)', 36, 3000.00, 'rejected', '2026-09-28 09:51:22', '{\"security_deposit\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"General / Other\",\"target_move_in\":\"2026-10-30\",\"fitout_grace_requested\":true}}', NULL, NULL, NULL, NULL, NULL, NULL),
-(10, 4, 2, 22, 'Jeremy Gonzales', 'Bilbalos (Food & Beverage)', 24, 5000.00, 'pending', '2026-09-28 10:00:07', '{\"security_deposit\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"Food & Beverage\",\"target_move_in\":\"2026-10-31\",\"fitout_grace_requested\":true}}', NULL, NULL, NULL, NULL, NULL, NULL),
-(11, 5, 2, 22, 'Jeremy Gonzales', 'Uncle Bro (Retail & Fashion)', 36, 3000.00, 'approved', '2026-09-28 10:46:07', '{\"security_deposit\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"Retail & Fashion\",\"target_move_in\":\"2026-10-23\",\"fitout_grace_requested\":true}}', NULL, NULL, 'uploads/applications/11/valid_id_5d6fea2e.jpeg', 'uploads/applications/11/sec_dti_f595cc1b.jpg', 'uploads/applications/11/business_permit_e790c688.jpg', 'uploads/applications/11/bir_cert_f728a3fe.jpg'),
+(9, 5, 2, NULL, 'Jeremy Gonzales', 'Uncle Brew (General / Other)', 36, 3000.00, 'rejected', '2026-09-28 09:51:22', '{\"security_deposit\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"General / Other\",\"target_move_in\":\"2026-10-30\",\"fitout_grace_requested\":true}}', NULL, NULL, NULL, NULL, NULL, NULL),
+(10, 4, 2, NULL, 'Jeremy Gonzales', 'Bilbalos (Food & Beverage)', 24, 5000.00, 'pending', '2026-09-28 10:00:07', '{\"security_deposit\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"Food & Beverage\",\"target_move_in\":\"2026-10-31\",\"fitout_grace_requested\":true}}', NULL, NULL, NULL, NULL, NULL, NULL),
+(11, 5, 2, NULL, 'Jeremy Gonzales', 'Uncle Bro (Retail & Fashion)', 36, 3000.00, 'approved', '2026-09-28 10:46:07', '{\"security_deposit\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"Retail & Fashion\",\"target_move_in\":\"2026-10-23\",\"fitout_grace_requested\":true}}', NULL, NULL, 'uploads/applications/11/valid_id_5d6fea2e.jpeg', 'uploads/applications/11/sec_dti_f595cc1b.jpg', 'uploads/applications/11/business_permit_e790c688.jpg', 'uploads/applications/11/bir_cert_f728a3fe.jpg'),
 (12, 4, 2, 30, 'Chris Acot', 'Uncle Brew (Food & Beverage)', 36, 5000.00, 'approved', '2026-10-12 15:59:14', '{\"security_deposit\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_grace_period\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_restructuring_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"violations_discipline_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"Food & Beverage\",\"target_move_in\":\"2026-10-29\",\"fitout_grace_requested\":true}}', NULL, NULL, 'uploads/applications/12/valid_id_26941a09.png', 'uploads/applications/12/sec_dti_ca079bb1.jpg', 'uploads/applications/12/business_permit_2ca71dc8.jpg', 'uploads/applications/12/bir_cert_b1e10337.jpg'),
 (13, 5, 2, 30, 'Chris Acot', 'Gether\'s (Food & Beverage)', 6, 3000.00, 'approved', '2026-10-19 04:47:17', '{\"security_deposit\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_grace_period\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_restructuring_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"violations_discipline_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"Food & Beverage\",\"target_move_in\":\"2026-11-02\",\"fitout_grace_requested\":true}}', NULL, NULL, 'uploads/applications/13/valid_id_6a627626.png', 'uploads/applications/13/sec_dti_59c55658.jpg', 'uploads/applications/13/business_permit_dc239f57.jpg', 'uploads/applications/13/bir_cert_cfc6b282.jpg'),
 (14, 5, 2, 31, 'Anton', 'Gether (Food & Beverage)', 12, 3000.00, 'pending', '2026-10-19 05:12:49', '{\"security_deposit\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_grace_period\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_restructuring_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"violations_discipline_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":false,\"rebuttal_note\":\"\"},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"Food & Beverage\",\"target_move_in\":\"2026-11-02\",\"fitout_grace_requested\":false}}', NULL, NULL, 'uploads/applications/14/valid_id_eb9b81e2.jpg', 'uploads/applications/14/sec_dti_2d627cea.jpg', 'uploads/applications/14/business_permit_b95220ab.jpg', 'uploads/applications/14/bir_cert_0b19195a.jpg'),
@@ -241,7 +241,7 @@ INSERT INTO `audit_logs` (`id`, `actor_id`, `action`, `details`, `created_at`) V
 (139, 2, 'login', '', '2026-09-19 15:55:55'),
 (140, 19, 'Lessee registered via app', 'glennsazon@gmail.com', '2026-09-21 15:24:54'),
 (141, 2, 'login', '', '2026-09-22 11:00:20'),
-(142, 22, 'Lessee registered via app', 'jeremy@gmail.com', '2026-09-22 15:21:50'),
+(142, NULL, 'Lessee registered via app', 'jeremy@gmail.com', '2026-09-22 15:21:50'),
 (143, 23, 'Lessee registered via app', 'garry@gmail.com', '2026-09-22 15:34:44'),
 (144, 1, 'login', '', '2026-09-22 15:41:49'),
 (145, 2, 'login', '', '2026-09-22 15:43:46'),
@@ -262,7 +262,7 @@ INSERT INTO `audit_logs` (`id`, `actor_id`, `action`, `details`, `created_at`) V
 (160, 4, 'login', '', '2026-09-29 01:08:11'),
 (161, 2, 'login', '', '2026-09-29 01:08:20'),
 (162, 2, 'login', '', '2026-09-29 01:11:05'),
-(163, 26, 'Lessee registered via app', 'george@gmail.com', '2026-10-05 01:24:23'),
+(163, NULL, 'Lessee registered via app', 'george@gmail.com', '2026-10-05 01:24:23'),
 (164, 2, 'login', '', '2026-10-07 03:07:39'),
 (165, 3, 'Tenant Submitted Payment', '₱2500 for Monthly Rent (Ref: TEST-123456)', '2026-10-07 03:40:14'),
 (166, 2, 'Confirmed Tenant Payment', '₱2,500.00 from jm', '2026-10-07 03:45:22'),
@@ -276,11 +276,11 @@ INSERT INTO `audit_logs` (`id`, `actor_id`, `action`, `details`, `created_at`) V
 (174, 2, 'login', '', '2026-10-07 14:41:47'),
 (175, 2, 'login', '', '2026-10-07 14:46:59'),
 (176, NULL, 'Lessee registered via app', 'amy@gmail.com', '2026-10-07 14:49:48'),
-(177, 29, 'Lessee registered via app', 'jose@gmail.com', '2026-10-12 14:05:37'),
+(177, NULL, 'Lessee registered via app', 'jose@gmail.com', '2026-10-12 14:05:37'),
 (178, 30, 'Lessee registered & phone verified via app', 'chrisdanielacot305@gmai.com', '2026-10-12 14:45:54'),
 (179, 2, 'login', '', '2026-10-12 15:48:04'),
-(180, 22, 'Tenant Submitted Payment', '₱2300 for Monthly Rent (Ref: 1029481920)', '2026-10-12 15:49:00'),
-(181, 22, 'Updated profile details', 'Jeremy Gonzales (jeremy@gmail.com, 09266931720)', '2026-10-12 15:49:32'),
+(180, NULL, 'Tenant Submitted Payment', '₱2300 for Monthly Rent (Ref: 1029481920)', '2026-10-12 15:49:00'),
+(181, NULL, 'Updated profile details', 'Jeremy Gonzales (jeremy@gmail.com, 09266931720)', '2026-10-12 15:49:32'),
 (182, 2, 'Confirmed Tenant Payment', '₱2,300.00 from Jeremy Gonzales', '2026-10-12 15:49:54'),
 (183, 30, 'Updated profile details', 'Chris Acot (chrisdanielacot305@gmail.com, 09945884126)', '2026-10-12 15:58:14'),
 (184, 2, 'Approved application', 'Chris Acot', '2026-10-12 15:59:55'),
@@ -310,12 +310,12 @@ INSERT INTO `audit_logs` (`id`, `actor_id`, `action`, `details`, `created_at`) V
 (208, 2, 'login', '', '2026-10-19 07:47:00'),
 (209, 32, 'Lessee registered & phone verified via app', 'roger@gmail.com', '2026-10-19 07:56:19'),
 (210, 2, 'Approved application', 'Roger Intong', '2026-10-19 08:01:23'),
-(211, 33, 'register', 'New lessor: Ayala Malls', '2026-10-19 08:09:03'),
-(212, 33, 'login (OTP verified)', '', '2026-10-19 08:09:27'),
+(211, NULL, 'register', 'New lessor: Ayala Malls', '2026-10-19 08:09:03'),
+(212, NULL, 'login (OTP verified)', '', '2026-10-19 08:09:27'),
 (213, 1, 'login', '', '2026-10-19 08:10:06'),
 (214, 1, 'Approved lessor verification', 'Lessor #33', '2026-10-19 08:10:17'),
-(215, 33, 'login', '', '2026-10-19 08:10:48'),
-(216, 33, 'Submitted property for verification', 'Ayala', '2026-10-19 08:11:52'),
+(215, NULL, 'login', '', '2026-10-19 08:10:48'),
+(216, NULL, 'Submitted property for verification', 'Ayala', '2026-10-19 08:11:52'),
 (217, 1, 'Approved property verification', 'Property #6', '2026-10-19 08:12:00'),
 (218, 2, 'login', '', '2026-10-19 14:36:27'),
 (219, 2, 'Approved application', 'Chris Acot', '2026-10-19 14:36:46'),
@@ -511,7 +511,54 @@ INSERT INTO `audit_logs` (`id`, `actor_id`, `action`, `details`, `created_at`) V
 (409, 1, 'Approved property verification', 'Property #14', '2026-10-22 23:05:27'),
 (410, 37, 'register', 'New lessor: Lux Tower', '2026-10-22 23:18:20'),
 (411, 37, 'login (OTP verified)', '', '2026-10-22 23:18:40'),
-(412, 1, 'Approved lessor ID 37', '', '2026-10-22 23:29:40');
+(412, 1, 'Approved lessor ID 37', '', '2026-10-22 23:29:40'),
+(413, 37, 'login', '', '2026-10-22 23:40:24'),
+(414, 38, 'register', 'New lessor: Flower TOwer', '2026-10-22 23:43:50'),
+(415, 38, 'login (OTP verified)', '', '2026-10-22 23:44:09'),
+(416, 1, 'Approved lessor ID 38', '', '2026-10-22 23:44:19'),
+(417, 1, 'Approved property verification', 'Property #13', '2026-10-22 23:50:10'),
+(418, 2, 'login', '', '2026-10-22 23:51:45'),
+(419, 2, 'Updated property details', 'The J&R Commercial Center', '2026-10-22 23:52:03'),
+(420, 2, 'Updated property details', 'MS City Bacolod', '2026-10-22 23:52:09'),
+(421, 2, 'Updated property details', 'Atrium Commercial Plaza', '2026-10-22 23:52:20'),
+(422, 2, 'Updated property details', 'The J&R Commercial Center', '2026-10-22 23:54:09'),
+(423, 2, 'Updated property details', 'MS City Bacolod', '2026-10-22 23:58:39'),
+(424, 2, 'Updated property details', 'MS City Bacolod', '2026-10-22 23:59:01'),
+(425, 2, 'Updated property details', 'The J&R Commercial Center', '2026-10-22 23:59:13'),
+(426, 2, 'Updated property details', 'Atrium Commercial Plaza', '2026-10-22 23:59:32'),
+(427, 2, 'Updated property details', 'Atrium Commercial Plaza', '2026-10-23 00:53:47'),
+(428, 12, 'login', '', '2026-10-23 01:02:47'),
+(429, 1, 'login', '', '2026-10-23 01:08:56'),
+(430, 39, 'Lessee registered & phone verified via app', 'george@gmail.com', '2026-10-23 01:14:08'),
+(431, 12, 'login', '', '2026-10-23 02:13:42'),
+(432, 1, 'login', '', '2026-10-23 02:14:23'),
+(433, 1, 'Active user', 'jakeperalta@gmail.com', '2026-10-23 02:14:43'),
+(434, 1, 'login', '', '2026-10-23 02:14:51'),
+(435, 12, 'login', '', '2026-10-23 02:15:06'),
+(436, 1, 'login', '', '2026-10-23 04:40:15'),
+(437, 34, 'login', '', '2026-10-23 04:41:15'),
+(438, 2, 'login', '', '2026-10-23 04:49:24'),
+(439, 2, 'Advanced maintenance ticket', '[Plumbing - Water leakage] testing → Under Review', '2026-10-23 04:49:43'),
+(440, 2, 'Advanced maintenance ticket', '[Plumbing - Water leakage] testing → Approved', '2026-10-23 04:50:20'),
+(441, 2, 'Advanced maintenance ticket', '[Plumbing - Water leakage] testing → Contractor Assigned', '2026-10-23 04:50:52'),
+(442, 2, 'Updated property details', 'MS City Bacolod', '2026-10-23 04:56:22'),
+(443, 2, 'Approved installment plan', '2 payments', '2026-10-23 04:58:27'),
+(444, 2, 'Confirmed Tenant Payment', '₱2,000.00 from Chris Acot', '2026-10-23 05:07:16'),
+(445, 30, 'Tenant Submitted Payment', '₱5000 for Monthly Rent (Ref: 1234567890)', '2026-10-23 05:09:37'),
+(446, 2, 'Confirmed Tenant Payment', '₱5,000.00 from Chris Acot', '2026-10-23 05:09:43'),
+(447, 2, 'Logged pending rent payment', '₱9000 via cash for Chris Acot', '2026-10-23 05:11:10'),
+(448, 2, 'Confirmed Tenant Payment', '₱9,000.00 from Chris Acot', '2026-10-23 05:11:27'),
+(449, 2, 'Advanced maintenance ticket', '[Plumbing - Water leakage] testing → Scheduled', '2026-10-23 05:12:15'),
+(450, 2, 'Advanced maintenance ticket', '[Plumbing - Water leakage] testing → In Progress', '2026-10-23 05:12:18'),
+(451, 2, 'Issued violation', 'Noise Complaint — strike 2', '2026-10-23 05:12:41'),
+(452, 1, 'Suspended user', 'george@gmail.com', '2026-10-23 05:15:27'),
+(453, 1, 'Active user', 'george@gmail.com', '2026-10-23 05:15:29'),
+(454, 1, 'Active user', 'jason@gmail.com', '2026-10-23 05:15:33'),
+(455, 1, 'Suspended user', 'jason@gmail.com', '2026-10-23 05:15:36'),
+(456, 1, 'Suspended user', 'chrisdanielacot305@gmail.com', '2026-10-23 05:15:43'),
+(457, 1, 'Active user', 'chrisdanielacot305@gmail.com', '2026-10-23 05:15:50'),
+(458, 1, 'Suspended user', 'chrisdanielacot305@gmail.com', '2026-10-23 05:15:53'),
+(459, 12, 'login', '', '2026-10-23 05:17:27');
 
 -- --------------------------------------------------------
 
@@ -593,7 +640,8 @@ INSERT INTO `installment_requests` (`id`, `lessor_id`, `tenant_id`, `reason`, `p
 (4, 34, 13, 'Kitchen Accidental Fire', '2 payments', 40000.00, 'pending', '2026-10-21 00:52:43', 1, 2, NULL, NULL, 0, 0),
 (5, 34, 13, 'Costly renovation', '2 payments', 65000.00, 'pending', '2026-10-21 01:16:10', 1, 2, NULL, NULL, 0, 0),
 (6, 34, 13, 'testing', '3 payments', 3500.00, 'approved', '2026-10-21 05:04:29', 1, 2, NULL, NULL, 0, 0),
-(7, 34, 12, 'Seasonal Business Slowdown', '2 payments', 20000.00, 'approved', '2026-10-21 19:01:19', 1, 2, NULL, NULL, 0, 0);
+(7, 34, 12, 'Seasonal Business Slowdown', '2 payments', 20000.00, 'approved', '2026-10-21 19:01:19', 1, 2, NULL, NULL, 0, 0),
+(8, 2, 8, 'Cash flow delay this month', '2 payments', 5000.00, 'approved', '2026-10-23 04:58:18', 1, 2, NULL, NULL, 0, 0);
 
 -- --------------------------------------------------------
 
@@ -650,11 +698,11 @@ INSERT INTO `lessor_profiles` (`user_id`, `business_permit_path`, `sec_dti_path`
 (2, NULL, NULL, NULL, NULL, NULL, NULL, 1, '2026-08-21 02:33:07'),
 (4, 'uploads/verification/4/business_permit_77f52372.png', 'uploads/verification/4/sec_dti_ac9c0fb6.png', 'uploads/verification/4/bir_cert_055d3d64.png', 'uploads/verification/4/land_title_191e3c3f.png', 'uploads/verification/4/gov_id_8b50f31c.png', NULL, 1, '2026-08-22 06:14:27'),
 (6, 'uploads/verification/6/business_permit_b9265cfc.jpg', 'uploads/verification/6/sec_dti_14341017.jpg', 'uploads/verification/6/bir_cert_a60de5f8.jpg', 'uploads/verification/6/land_title_f401abd3.png', 'uploads/verification/6/gov_id_9e8bc6e2.jpg', NULL, 1, '2026-08-23 07:52:15'),
-(33, 'uploads/verification/33/business_permit_756d8101.png', 'uploads/verification/33/sec_dti_26f9ead2.pdf', 'uploads/verification/33/bir_cert_fd813552.jpg', 'uploads/verification/33/land_title_5ae417a2.png', 'uploads/verification/33/gov_id_36d2d8b0.png', NULL, 1, '2026-10-19 08:10:17'),
 (34, 'uploads/verification/34/business_permit_97e1da93.png', 'uploads/verification/34/sec_dti_dd5c7b6d.png', 'uploads/verification/34/bir_cert_a027ea4f.png', 'uploads/verification/34/land_title_40e5bbaf.png', 'uploads/verification/34/gov_id_da4eb2fd.png', NULL, 1, '2026-10-20 16:15:31'),
 (35, 'uploads/verification/35/business_permit_9764bd12.png', 'uploads/verification/35/sec_dti_419161f4.png', 'uploads/verification/35/bir_cert_79a5bc68.png', 'uploads/verification/35/land_title_c8f6fd25.png', 'uploads/verification/35/gov_id_102b6922.png', NULL, 1, '2026-10-21 05:56:43'),
 (36, 'uploads/verification/36/business_permit_5987a525.png', 'uploads/verification/36/sec_dti_c14cefb2.png', 'uploads/verification/36/bir_cert_cfbe587c.png', 'uploads/verification/36/land_title_abb9f4f5.png', 'uploads/verification/36/gov_id_154aa5b6.png', NULL, 1, '2026-10-22 23:05:17'),
-(37, 'uploads/verification/37/business_permit_d69c94ab.png', 'uploads/verification/37/sec_dti_a3180853.png', 'uploads/verification/37/bir_cert_8ecd7cea.png', 'uploads/verification/37/land_title_47b77b1b.png', 'uploads/verification/37/gov_id_51b6ad2c.png', NULL, 1, '2026-10-22 23:29:40');
+(37, 'uploads/verification/37/business_permit_d69c94ab.png', 'uploads/verification/37/sec_dti_a3180853.png', 'uploads/verification/37/bir_cert_8ecd7cea.png', 'uploads/verification/37/land_title_47b77b1b.png', 'uploads/verification/37/gov_id_51b6ad2c.png', NULL, 1, '2026-10-22 23:29:40'),
+(38, 'uploads/verification/38/business_permit_6243f954.png', 'uploads/verification/38/sec_dti_c7c7065c.png', 'uploads/verification/38/bir_cert_97cc11fd.png', 'uploads/verification/38/land_title_0e6f834b.png', 'uploads/verification/38/gov_id_323bd5b7.png', NULL, 1, '2026-10-22 23:44:19');
 
 -- --------------------------------------------------------
 
@@ -695,7 +743,8 @@ INSERT INTO `maintenance_tickets` (`id`, `lessor_id`, `tenant_id`, `category`, `
 (9, 34, 13, 'hvac', 'high', 'leakage from the ventilation', 3, 'Johnny Bravo', NULL, '2026-10-22 19:28:09', '2026-10-21 23:28:09', NULL, NULL, NULL),
 (10, 34, 16, 'structural', 'high', 'Wall cracks appear', 1, NULL, NULL, '2026-10-22 14:31:20', '2026-10-21 23:31:20', NULL, NULL, NULL),
 (11, 34, 19, 'hvac', 'urgent', '[Air Conditioning - Not cooling] Waay mn ni ga andar nga aircon!!!', 4, 'Raymund Trespic', '[\"uploads\\/maintenance\\/11\\/photo_c91ed671.jpg\"]', NULL, '2026-10-22 00:22:58', NULL, NULL, NULL),
-(12, 2, 10, 'cleaning', 'urgent', '[Cleanliness - Trash disposal] Ang basura please ga tambak na', 0, NULL, '[\"uploads\\/maintenance\\/12\\/photo_359ef739.png\"]', NULL, '2026-10-22 00:46:57', NULL, NULL, NULL);
+(12, 2, 10, 'cleaning', 'urgent', '[Cleanliness - Trash disposal] Ang basura please ga tambak na', 0, NULL, '[\"uploads\\/maintenance\\/12\\/photo_359ef739.png\"]', NULL, '2026-10-22 00:46:57', NULL, NULL, NULL),
+(13, 2, 8, 'plumbing', 'medium', '[Plumbing - Water leakage] testing', 5, 'John Doe', '[\"uploads\\/maintenance\\/13\\/photo_ba86fd95.jpg\"]', NULL, '2026-10-23 04:48:43', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -762,7 +811,11 @@ INSERT INTO `messages` (`id`, `thread_id`, `sender`, `notice_type`, `body`, `sen
 (43, 9, 'lessor', NULL, 'kape kape', '2026-10-22 00:27:28'),
 (44, 8, 'tenant', NULL, '🛠️ Maintenance Report (#SL-00012)\nCategory: Cleanliness • Trash disposal\nDescription: Ang basura please ga tambak na\nAttachments: 1 photo(s) attached\nStatus: Pending Review', '2026-10-22 00:46:58'),
 (45, 7, 'lessor', NULL, 'tiyi', '2026-10-22 03:06:15'),
-(46, 9, 'lessor', 'Payment Reminder', 'Pay', '2026-10-22 06:42:34');
+(46, 9, 'lessor', 'Payment Reminder', 'Pay', '2026-10-22 06:42:34'),
+(47, 8, 'tenant', NULL, 'hello pa follow up pls ang payment thank you', '2026-10-23 02:25:47'),
+(48, 5, 'tenant', NULL, '🛠️ Maintenance Report (#SL-00013)\nCategory: Plumbing • Water leakage\nDescription: testing\nAttachments: 1 photo(s) attached\nStatus: Pending Review', '2026-10-23 04:48:43'),
+(49, 5, 'tenant', NULL, '📋 Payment Restructuring Request\nPlan: 2 payments\nReason: Cash flow delay this month\nSchedule:\n• Payment 1 (50%): ₱2,500 (Oct 31, 2026)\n• Payment 2 (50%): ₱2,500 (Nov 15, 2026)\nStatus: Pending Review (48h Cooling-off Active)', '2026-10-23 04:58:18'),
+(50, 5, 'lessor', 'Infraction Notice', '⚠️ OFFICIAL NOTICE OF INFRACTION (STRIKE 2 OF 3)\nCategory: Noise Complaint\nPenalty Injected: ₱500.00 late/infraction penalty added to billing statement.\n\nA formal citation has been officially recorded against your lease agreement. Please review the citation details and disciplinary policy under your account.', '2026-10-23 05:12:41');
 
 -- --------------------------------------------------------
 
@@ -844,21 +897,18 @@ INSERT INTO `notification_recipients` (`id`, `notification_id`, `user_id`, `read
 (2, 4, 35, NULL),
 (3, 5, 34, '2026-10-22 03:20:32'),
 (4, 6, 34, '2026-10-22 03:22:44'),
-(5, 8, 33, NULL),
 (6, 8, 35, NULL),
 (7, 8, 34, NULL),
 (8, 8, 6, NULL),
-(9, 8, 2, NULL),
-(10, 9, 33, NULL),
+(9, 8, 2, '2026-10-23 05:13:44'),
 (11, 9, 35, NULL),
 (12, 9, 34, NULL),
 (13, 9, 6, NULL),
-(14, 9, 2, NULL),
-(15, 10, 33, NULL),
+(14, 9, 2, '2026-10-23 05:13:38'),
 (16, 10, 35, NULL),
 (17, 10, 34, NULL),
 (18, 10, 6, NULL),
-(19, 10, 2, NULL);
+(19, 10, 2, '2026-10-23 05:13:32');
 
 -- --------------------------------------------------------
 
@@ -905,7 +955,9 @@ INSERT INTO `payments` (`id`, `tenant_id`, `lessor_id`, `amount`, `method`, `not
 (18, 13, 34, 2000.00, '', NULL, '2026-10-21', 34, '2026-10-21 22:32:09', 'approved', NULL, NULL, NULL),
 (19, 18, 34, 2500.00, 'gcash', '[PENDING] Offline manual entry', '2026-10-21', NULL, '2026-10-21 22:54:21', 'approved', NULL, NULL, NULL),
 (20, 19, 34, 10000.00, 'bank_transfer', '[PENDING] Target: Monthly Rent | Ref: 23019931', '2026-10-22', NULL, '2026-10-22 00:23:24', 'approved', NULL, NULL, NULL),
-(21, 10, 2, 2000.00, 'bank_transfer', '[PENDING] Target: Monthly Rent | Ref: 213213213', '2026-10-22', NULL, '2026-10-22 00:47:11', 'approved', NULL, NULL, NULL);
+(21, 10, 2, 2000.00, 'bank_transfer', '[VERIFIED] Target: Monthly Rent | Ref: 213213213', '2026-10-22', 2, '2026-10-22 00:47:11', 'approved', NULL, NULL, NULL),
+(22, 10, 2, 5000.00, 'bank_transfer', '[VERIFIED] Target: Monthly Rent | Ref: 1234567890', '2026-10-23', 2, '2026-10-23 05:09:37', 'approved', NULL, NULL, NULL),
+(23, 8, 2, 9000.00, 'cash', '[VERIFIED] Offline manual entry', '2026-10-23', 2, '2026-10-23 05:11:10', 'approved', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -974,28 +1026,24 @@ CREATE TABLE `properties` (
   `tax_dec_path` varchar(255) DEFAULT NULL,
   `photos_path` varchar(255) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `occupancy_status` enum('available','occupied','reserved','under_maintenance') NOT NULL DEFAULT 'available',
-  `building_name` varchar(150) DEFAULT NULL,
-  `unit_number` varchar(50) DEFAULT NULL,
-  `floor_level` varchar(50) DEFAULT NULL
+  `occupancy_status` enum('available','occupied','reserved','under_maintenance') NOT NULL DEFAULT 'available'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `properties`
 --
 
-INSERT INTO `properties` (`id`, `lessor_id`, `name`, `type`, `address`, `latitude`, `longitude`, `asking_rent`, `floor_area`, `lease_term`, `escalation`, `description`, `status`, `title_doc_path`, `tax_dec_path`, `photos_path`, `created_at`, `occupancy_status`, `building_name`, `unit_number`, `floor_level`) VALUES
-(1, 2, 'Atrium Commercial Plaza', 'Commercial Lot', 'Lacson Street, Bacolod City', 10.6812024, 122.9551428, 2000.00, NULL, NULL, NULL, NULL, 'verified', 'uploads/properties/1/title_doc_97bf08ad.jpg', 'uploads/properties/1/tax_dec_253bc4b8.jpg', 'uploads/properties/1/photos_37ca3a94.jpg', '2026-08-21 02:59:19', 'available', NULL, NULL, NULL),
-(4, 2, 'MS City Bacolod', 'Commercial Lot', 'MS City Bacolod, Bacolod, 6100 Negros Occidental', 10.6718045, 122.9443041, 5000.00, NULL, NULL, NULL, NULL, 'verified', 'uploads/properties/4/title_doc_f73183f9.png', 'uploads/properties/4/tax_dec_1d65cb1f.png', NULL, '2026-09-23 13:25:34', 'available', NULL, NULL, NULL),
-(5, 2, 'The J&R Commercial Center', 'Retail', 'Vista Street, Brgy. Alijis, Bacolod City', 10.6451105, 122.9403127, 3000.00, NULL, NULL, NULL, NULL, 'verified', 'uploads/properties/5/title_doc_d87ad8e1.jpg', 'uploads/properties/5/tax_dec_a844b423.jpg', NULL, '2026-09-23 13:35:54', 'available', NULL, NULL, NULL),
-(6, 33, 'Ayala', 'Retail', 'Lacson Street', 10.6788409, 122.9505881, 10000.00, NULL, NULL, NULL, NULL, 'verified', 'uploads/properties/6/title_doc_5feaf8f7.png', 'uploads/properties/6/tax_dec_b828b881.png', NULL, '2026-10-19 08:11:52', 'available', NULL, NULL, NULL),
-(7, 34, 'Mattel\'s Buidling', 'Office', '88 Locsin A. Palanca Avenue, Bacolod City, Western Visayas, Philippines', 10.6724620, 122.9426982, 100000.00, '1000', '1', '3%', NULL, 'verified', 'uploads/properties/7/title_doc_33a37df7.png', 'uploads/properties/7/tax_dec_0b60f19b.jpg', NULL, '2026-10-20 16:30:39', 'available', NULL, NULL, NULL),
-(8, 34, 'BeeHive', 'Coworking Space', '108-C Locsin A. Palanca Ave, Bacolod City', 10.6785042, 122.9496882, 200000.00, NULL, NULL, NULL, NULL, 'verified', 'uploads/properties/8/title_doc_f9f31492.png', 'uploads/properties/8/tax_dec_5d986ee3.png', NULL, '2026-10-20 17:43:22', 'available', NULL, NULL, NULL),
-(9, 34, 'NotScoobs', 'Warehouse', 'Warehouse No. 4, Delta Logistics Compound, Bredco Port Area, Bacolod City, Western Visayas, Philippines', 10.6776207, 122.9463404, 10000.00, NULL, NULL, NULL, NULL, 'verified', 'uploads/properties/9/title_doc_ef5e3208.png', 'uploads/properties/9/tax_dec_a3da4e61.png', NULL, '2026-10-20 17:54:12', 'available', NULL, NULL, NULL),
-(11, 35, 'Building 2', 'Retail', 'test', NULL, NULL, 500000.00, NULL, NULL, NULL, NULL, 'verified', 'uploads/properties/11/title_doc_8cbb3371.png', 'uploads/properties/11/tax_dec_d5763f9a.png', NULL, '2026-10-21 06:11:36', 'available', NULL, NULL, NULL),
-(12, 4, 'Glenn\'s Team', 'Office', 'NEW YORK', 10.6676089, 122.9626143, 20000.00, NULL, NULL, NULL, NULL, 'verified', 'uploads/properties/12/title_doc_66fd16e6.png', 'uploads/properties/12/tax_dec_68665814.png', NULL, '2026-10-21 23:32:00', 'available', NULL, NULL, NULL),
-(13, 34, 'CyberPunk', 'Office', '42 Sampaguita Street, Barangay Estefania, Bacolod City, Negros Occidental, 6100, Philippines', 10.6709827, 122.9645354, 250000.00, '2000', '2', '4%', 'Prime office space in Bacolod CIty', 'pending', 'uploads/properties/13/title_doc_b576aa19.png', 'uploads/properties/13/tax_dec_59de8dbf.png', NULL, '2026-10-22 19:08:28', 'available', NULL, NULL, NULL),
-(14, 34, 'CyberPunk', 'Office', '42 Sampaguita Street, Barangay Estefania, Bacolod City, Negros Occidental, 6100, Philippines', 10.6709827, 122.9645354, 250000.00, '2000', '2', '4%', 'Prime office space in Bacolod CIty', 'verified', 'uploads/properties/14/title_doc_6f6057ff.png', 'uploads/properties/14/tax_dec_88d89750.png', NULL, '2026-10-22 19:15:39', 'available', NULL, NULL, NULL);
+INSERT INTO `properties` (`id`, `lessor_id`, `name`, `type`, `address`, `latitude`, `longitude`, `asking_rent`, `floor_area`, `lease_term`, `escalation`, `description`, `status`, `title_doc_path`, `tax_dec_path`, `photos_path`, `created_at`, `occupancy_status`) VALUES
+(1, 2, 'Atrium Commercial Plaza', 'Commercial Lot', 'Lacson Street, Bacolod City', 10.6812024, 122.9551428, 2000.00, '5 x 5', '1', '5', NULL, 'verified', 'uploads/properties/1/title_doc_97bf08ad.jpg', 'uploads/properties/1/tax_dec_253bc4b8.jpg', 'uploads/properties/1/photos_37ca3a94.jpg', '2026-08-21 02:59:19', 'available'),
+(4, 2, 'MS City Bacolod', 'Commercial Lot', 'MS City Bacolod, Bacolod, 6100 Negros Occidental', 10.6718045, 122.9443041, 5000.00, '500', '1', '2', NULL, 'verified', 'uploads/properties/4/title_doc_f73183f9.png', 'uploads/properties/4/tax_dec_1d65cb1f.png', NULL, '2026-09-23 13:25:34', 'available'),
+(5, 2, 'The J&R Commercial Center', 'Retail', 'Vista Street, Brgy. Alijis, Bacolod City', 10.6451105, 122.9403127, 3000.00, '1 x 1', '1', '2', NULL, 'verified', 'uploads/properties/5/title_doc_d87ad8e1.jpg', 'uploads/properties/5/tax_dec_a844b423.jpg', NULL, '2026-09-23 13:35:54', 'available'),
+(7, 34, 'Mattel\'s Buidling', 'Office', '88 Locsin A. Palanca Avenue, Bacolod City, Western Visayas, Philippines', 10.6724620, 122.9426982, 100000.00, '1000', '1', '3%', NULL, 'verified', 'uploads/properties/7/title_doc_33a37df7.png', 'uploads/properties/7/tax_dec_0b60f19b.jpg', NULL, '2026-10-20 16:30:39', 'available'),
+(8, 34, 'BeeHive', 'Coworking Space', '108-C Locsin A. Palanca Ave, Bacolod City', 10.6785042, 122.9496882, 200000.00, NULL, NULL, NULL, NULL, 'verified', 'uploads/properties/8/title_doc_f9f31492.png', 'uploads/properties/8/tax_dec_5d986ee3.png', NULL, '2026-10-20 17:43:22', 'available'),
+(9, 34, 'NotScoobs', 'Warehouse', 'Warehouse No. 4, Delta Logistics Compound, Bredco Port Area, Bacolod City, Western Visayas, Philippines', 10.6776207, 122.9463404, 10000.00, NULL, NULL, NULL, NULL, 'verified', 'uploads/properties/9/title_doc_ef5e3208.png', 'uploads/properties/9/tax_dec_a3da4e61.png', NULL, '2026-10-20 17:54:12', 'available'),
+(11, 35, 'Building 2', 'Retail', 'test', NULL, NULL, 500000.00, NULL, NULL, NULL, NULL, 'verified', 'uploads/properties/11/title_doc_8cbb3371.png', 'uploads/properties/11/tax_dec_d5763f9a.png', NULL, '2026-10-21 06:11:36', 'available'),
+(12, 4, 'Glenn\'s Team', 'Office', 'NEW YORK', 10.6676089, 122.9626143, 20000.00, NULL, NULL, NULL, NULL, 'verified', 'uploads/properties/12/title_doc_66fd16e6.png', 'uploads/properties/12/tax_dec_68665814.png', NULL, '2026-10-21 23:32:00', 'available'),
+(13, 34, 'CyberPunk', 'Office', '42 Sampaguita Street, Barangay Estefania, Bacolod City, Negros Occidental, 6100, Philippines', 10.6709827, 122.9645354, 250000.00, '2000', '2', '4%', 'Prime office space in Bacolod CIty', 'verified', 'uploads/properties/13/title_doc_b576aa19.png', 'uploads/properties/13/tax_dec_59de8dbf.png', NULL, '2026-10-22 19:08:28', 'available'),
+(14, 34, 'CyberPunk', 'Office', '42 Sampaguita Street, Barangay Estefania, Bacolod City, Negros Occidental, 6100, Philippines', 10.6709827, 122.9645354, 250000.00, '2000', '2', '4%', 'Prime office space in Bacolod CIty', 'verified', 'uploads/properties/14/title_doc_6f6057ff.png', 'uploads/properties/14/tax_dec_88d89750.png', NULL, '2026-10-22 19:15:39', 'available');
 
 -- --------------------------------------------------------
 
@@ -1018,7 +1066,6 @@ INSERT INTO `property_photos` (`id`, `property_id`, `photo_path`, `uploaded_at`)
 (2, 1, 'uploads/properties/1/photo_3fa34348.jpg', '2026-09-14 12:52:31'),
 (3, 4, 'uploads/properties/4/photo_16c39c8d.jpg', '2026-09-23 13:25:34'),
 (4, 5, 'uploads/properties/5/photo_200efb27.jpg', '2026-09-23 13:35:54'),
-(5, 6, 'uploads/properties/6/photo_2a4a1d19.jpg', '2026-10-19 08:11:52'),
 (6, 7, 'uploads/properties/7/photo_20c334f6.webp', '2026-10-20 16:30:39'),
 (7, 8, 'uploads/properties/8/photo_dffcd817.jpg', '2026-10-20 17:43:22'),
 (8, 9, 'uploads/properties/9/photo_0ed29efc.jpg', '2026-10-20 17:54:12'),
@@ -1084,7 +1131,7 @@ INSERT INTO `tenants` (`id`, `lessor_id`, `property_id`, `application_id`, `less
 (4, 2, 1, 5, NULL, 'Daniel Pastor', NULL, NULL, NULL, NULL, '2026-09-06 15:01:51', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
 (5, 2, 1, 6, 12, 'Jake Peralta', 'Uncle Bro Cafe', NULL, NULL, NULL, '2026-09-07 10:03:01', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
 (6, 2, 1, 8, 17, 'Charmain Acot', NULL, NULL, NULL, NULL, '2026-09-14 12:32:28', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
-(7, 2, 5, 11, 22, 'Jeremy Gonzales', NULL, NULL, NULL, NULL, '2026-09-28 10:48:16', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
+(7, 2, 5, 11, NULL, 'Jeremy Gonzales', NULL, NULL, NULL, NULL, '2026-09-28 10:48:16', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
 (8, 2, 4, 12, 30, 'Chris Acot', NULL, NULL, NULL, NULL, '2026-10-12 15:59:55', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
 (9, 2, 5, 15, 32, 'Roger Intong', NULL, NULL, NULL, NULL, '2026-10-19 08:01:23', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
 (10, 2, 5, 13, 30, 'Chris Acot', NULL, NULL, NULL, NULL, '2026-10-19 14:36:46', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
@@ -1135,26 +1182,24 @@ INSERT INTO `users` (`id`, `role`, `status`, `company_name`, `full_name`, `email
 (7, 'lessee', 'active', NULL, 'glenn', 'witness.22.15@gmail.com', '123456789', '$2y$10$wRXV/KSPpzMW1DwdSqmLJu4AWxPDSbhUkqGprZQPQpKjGCrO7OCMa', '6b6d6103c433884bb22083a687d56f013b9ef800090b200c89e2f9f5bc42aebe', NULL, NULL, '2026-08-27 01:01:54', '2026-08-27 01:01:54', NULL, NULL),
 (8, 'lessee', 'active', NULL, 'glenngwapo', 'paolopastorcot305@gmail.com', '09649454588', '$2y$10$S.HX8Fdw.foiE.P.UiM4vuZACi/o5X5m5V7O7CjhCocNfgcSf/KZS', '56cf9e21c7a26e381914ca2d070443b59fed3367c9b15916d2253f2a003517d7', NULL, NULL, '2026-08-27 01:36:11', '2026-08-27 01:36:11', NULL, NULL),
 (11, 'lessee', 'active', NULL, 'jm', 'it.prolifemanagement@gmail.com', '688686', '$2y$10$RLnytSI9nOSeF6wGjN2pHuXyQv7loqcTDewbwjkIpyUVrCBFlEYEy', '7ff2e5cd78e6ce9c86fafcb37f4f0bab50fd6a3acc3ff3b28d9f5465f5c696da', NULL, NULL, '2026-09-07 05:34:38', '2026-09-07 05:34:38', NULL, NULL),
-(12, 'lessee', 'suspended', NULL, 'Jake Peralta', 'jakeperalta@gmail.com', '09123141146', '$2y$10$bbfDBJyaOx6adVzjLmCxwe2kPEaWvg6vpVGj48xEqUeTZ6JYsS4jW', '87d0d74d516cda9ef0a09b8997d4093a3db444a3a8e82d75f0b6a4c3687f2ee3', NULL, NULL, '2026-09-07 10:00:21', '2026-10-22 05:36:42', NULL, NULL),
+(12, 'lessee', 'active', NULL, 'Jake Peralta', 'jakeperalta@gmail.com', '09123141146', '$2y$10$bbfDBJyaOx6adVzjLmCxwe2kPEaWvg6vpVGj48xEqUeTZ6JYsS4jW', 'daf7cb5efa8265913da70bc933032bded3ab6dbe9c8f1795cbe89af25d05ddd4', NULL, NULL, '2026-09-07 10:00:21', '2026-10-23 04:39:17', NULL, NULL),
 (13, 'lessee', 'active', NULL, 'John Sazon', 'johnsazon@gmail.com', '09945884122', '$2y$10$42L/ToWnbwHocHQbFzcI6edodd3dt4CMnS/FyAPA.CppA6C1OyicC', '85425aead077c44f4aa287f70aca9d1794a9166646dbf52e51404bb05a94bbfd', NULL, NULL, '2026-09-07 13:48:40', '2026-09-08 00:44:53', NULL, NULL),
 (14, 'lessee', 'active', NULL, 'Holt Raymund', 'holt@gmail.com', '09266982730', '$2y$10$PMnMN9NGUEkkrSCyqs5g1uBBmuwRQHqe.GyZNaCcqiLUrBVUEFM0C', '0604c2fffb69cfaa6c297c9566a16e4d519f8beea49c532f1f65a05b864f0948', NULL, NULL, '2026-09-12 04:33:22', '2026-09-12 04:33:22', NULL, NULL),
 (17, 'lessee', 'active', NULL, 'Charmain Acot', 'charmaine@gmail.com', '09937481293', '$2y$10$t0AQW/DB63EKZBQVJj2QI.dcgzK9t2FjUAtzHkYmrQHiutqVMQX5S', '363147476a08922748fc2dab03f23a2eba9b9b6e5d64f60beb60cb06807e00df', NULL, NULL, '2026-09-14 11:12:40', '2026-09-14 13:44:14', NULL, NULL),
 (18, 'lessee', 'active', NULL, 'James Bondey', 'james@gmail.com', '0994531876', '$2y$10$QGmDDX6G0YFC2V4sdafrWuqLUmzDuVj/bu58XjLR8JvDjJ3g/GJ4W', '12ef6f54535db9ba5905befbf85becdf8586dde3d45a4762481801a67a72b6d6', NULL, NULL, '2026-09-14 13:05:28', '2026-09-14 13:05:28', NULL, NULL),
 (19, 'lessee', 'active', NULL, 'Glenn Sazon Jr.', 'glennsazon@gmail.com', '09686867213', '$2y$10$0xEGPeSH1i3m2f3PlpubNui65x6E9I/jkKdvsUp1R5qJ0jnz8TG0e', '4b65c43977e184c87dc49674175b8089e1ffc68ae9f7fd326be6cd87c1f93355', NULL, NULL, '2026-09-21 15:24:54', '2026-09-21 15:24:54', NULL, NULL),
-(22, 'lessee', 'active', NULL, 'Jeremy Gonzales', 'jeremy@gmail.com', '09266931720', '$2y$10$4DCLhQDTDPAZdV7oRW53bO75qMAQ1i7V9w0AqRATsXg.aqQ0LI2Wy', '0e2197e92010df270d8afb167b9c66a3b84344d9a52ece6879a880bba274c2d7', NULL, NULL, '2026-09-22 15:21:50', '2026-10-19 05:07:50', NULL, NULL),
 (23, 'lessee', 'active', NULL, 'Garry Patrick', 'garry@gmail.com', '094587613425', '$2y$10$fk4YDWYslexpNqotT5xjm.uL9RsX4p0IfAlSFrdZr/52akJha.CCS', 'df83fc685353a883d472c25639f68f7a43f0c49c4217384d1705279aa0d2c0da', NULL, NULL, '2026-09-22 15:34:44', '2026-09-22 15:36:40', NULL, NULL),
 (24, 'lessee', 'active', NULL, 'gwapo ako', 'gwapoako@gmail.com', '09543453234', '$2y$10$k5me1/ZUoCXCPUssDqOz9.au8XfYdU84t19Anttok16AB3Qq.6vyu', 'a46c2d27cc8dbd9c17dd6cd039fe1d5ac43dbe4a7f1d9a11028fc756959724e4', NULL, NULL, '2026-09-28 05:04:12', '2026-10-22 06:45:54', NULL, NULL),
-(25, 'lessee', 'suspended', NULL, 'Jason Yap', 'jason@gmail.com', '92664319734', '$2y$10$F8PtzAcLZkKYA0bjoD2II./SWu15qB16haAVZOeybSartuiY4f1Sm', 'aedbcd1058a386eff7b42f84ab5191e0acaec020d3a0f61a510c7139d4f868b3', NULL, NULL, '2026-09-29 00:56:06', '2026-10-22 19:44:02', NULL, NULL),
-(26, 'lessee', 'active', NULL, 'George Washington', 'george@gmail.com', '099288847162', '$2y$10$rfWBaoeTu1V4xRDX/Xfd6OyJQycRlk5u0LhmCHEfwM6Y0pYajTyMq', '6c7d267784bc2425822e5adda87e23b2cefa9d4febe31e6f451df16ca83ea680', NULL, NULL, '2026-10-05 01:24:23', '2026-10-12 16:08:28', NULL, NULL),
-(29, 'lessee', 'active', NULL, 'Jose Rizzler', 'jose@gmail.com', '09266931720', '$2y$10$YqXl36YGWkW1oPZaaQRPBOr4yO1SUCF5RtmnsE3sF35.VOASIWeBy', 'ad6de78bbe9abded9321123614325d071992700a1ee20a2a33c44459185eeab0', NULL, NULL, '2026-10-12 14:05:37', '2026-10-22 19:47:24', NULL, NULL),
-(30, 'lessee', 'active', NULL, 'Chris Acot', 'chrisdanielacot305@gmail.com', '09945884126', '$2y$10$dvTOlZBQm5H1KUekjkaIseSK3wV3JBaFUv.CicPEEfqbCMsU6bI8W', '8be880b36103137bb135d515afcb5d53c11634c5ef0bc5984236ed7e75320211', NULL, NULL, '2026-10-12 14:45:54', '2026-10-22 21:44:26', NULL, NULL),
+(25, 'lessee', 'suspended', NULL, 'Jason Yap', 'jason@gmail.com', '92664319734', '$2y$10$F8PtzAcLZkKYA0bjoD2II./SWu15qB16haAVZOeybSartuiY4f1Sm', 'aedbcd1058a386eff7b42f84ab5191e0acaec020d3a0f61a510c7139d4f868b3', NULL, NULL, '2026-09-29 00:56:06', '2026-10-23 05:15:36', NULL, NULL),
+(30, 'lessee', 'suspended', NULL, 'Chris Acot', 'chrisdanielacot305@gmail.com', '09945884126', '$2y$10$dvTOlZBQm5H1KUekjkaIseSK3wV3JBaFUv.CicPEEfqbCMsU6bI8W', '993bb2cd00b22488872317986cc0c6a850aa7c199c7a02331dd9e18a551699fe', NULL, NULL, '2026-10-12 14:45:54', '2026-10-23 14:53:01', NULL, NULL),
 (31, 'lessee', 'active', NULL, 'Anton', 'anton@gmail.com', '09673254411', '$2y$10$8zAYf8Lwq7gpAWQRpQ/77.cjXedW.a7.XhoOhC0ud/RSmH/LBw9ai', 'eca80432a9131de51c1637b63377159bf49056972e6ba5f64cf3251f1ccfb0d4', NULL, NULL, '2026-10-19 05:09:01', '2026-10-19 05:09:01', NULL, NULL),
-(32, 'lessee', 'active', NULL, 'Roger Intong', 'roger@gmail.com', '09770260508', '$2y$10$/76JrEkBCZHnwHtlcomV5eZPBAmR7hPd4zAZCJiLBei0QPrrdAQua', '53bb0657f8ed91022cbc23f5b5a4f5f2094a888850743ce6f8d84e46ecd2e0bf', NULL, NULL, '2026-10-19 07:56:19', '2026-10-22 06:32:11', NULL, NULL),
-(33, 'lessor', 'active', 'Ayala Malls', 'Alex Ayala', 's2301876@usls.edu.ph', '09266931720', '$2y$10$hAWM4rOiBaZMoo8sBodyTuKFJcQeOxTXehL1639OQDAbMbMFHOigC', NULL, NULL, NULL, '2026-10-19 08:09:03', '2026-10-19 08:10:17', NULL, NULL),
+(32, 'lessee', 'active', NULL, 'Roger Intong', 'roger@gmail.com', '09770260508', '$2y$10$/76JrEkBCZHnwHtlcomV5eZPBAmR7hPd4zAZCJiLBei0QPrrdAQua', 'fd492d91bf9ee587b03ce516f97b9725d52a34da0281c06c948a0ee752540ab3', NULL, NULL, '2026-10-19 07:56:19', '2026-10-23 01:19:51', NULL, NULL),
 (34, 'lessor', 'active', 'Mattel Cosmetic', 'Aireys Ann Ibugan', 'aireysanni@gmail.com', '09052119399', '$2y$10$BCMa03V1nq1dyJ3ERTBdee4qTnRqHmR3UesqQ6dND4Tzk2vetkSMW', NULL, NULL, NULL, '2026-10-20 15:56:43', '2026-10-21 05:50:33', NULL, NULL),
 (35, 'lessor', 'active', 'Gether\'s Business', 'Gether Medel', 'g.medel@usls.edu.ph', '09457250735', '$2y$10$C0gYcyF5XgsD2pnQJKfYq.GNXpbbujREFkKDDCO7Q/tbidXMER6Hi', NULL, NULL, NULL, '2026-10-21 05:54:16', '2026-10-21 06:00:20', NULL, NULL),
 (36, 'lessor', 'active', 'Barroness Tower', 'Dame Barroness', 'damebarroness@gmail.com', '09052119399', '$2y$10$2HPWzDvxsjCBWjOgzhlRz.tvMo9Pl4.NmFjiKs7EgM4cfYbhz24CS', NULL, NULL, NULL, '2026-10-22 19:14:30', '2026-10-22 23:05:17', NULL, NULL),
-(37, 'lessor', 'active', 'Lux Tower', 'Aireys Ann', 'sirensaireys63@gmail.com', '09052119399', '$2y$10$6orxB4qW57JO1Tv/MmEqpOfYIMZmDisJkLHWPoJGzCVVdUC8XH9FK', NULL, NULL, NULL, '2026-10-22 23:18:20', '2026-10-22 23:29:40', NULL, NULL);
+(37, 'lessor', 'active', 'Lux Tower', 'Aireys Ann', 'sirensaireys63@gmail.com', '09052119399', '$2y$10$6orxB4qW57JO1Tv/MmEqpOfYIMZmDisJkLHWPoJGzCVVdUC8XH9FK', NULL, NULL, NULL, '2026-10-22 23:18:20', '2026-10-22 23:29:40', NULL, NULL),
+(38, 'lessor', 'active', 'Flower TOwer', 'Aireys Ann', 's2301268@usls.edu.ph', '09052119399', '$2y$10$Ak9l0aC1fxF.BdP1Y573NuEbFr4l4/5IgofK1uHK/746cHJTMfX36', NULL, NULL, NULL, '2026-10-22 23:43:50', '2026-10-22 23:44:19', NULL, NULL),
+(39, 'lessee', 'active', NULL, 'George Jeremy', 'george@gmail.com', '09266931720', '$2y$10$9xoBTB0Vc4MCkDE5rKo6vu08vWOQ14vEbS85q3EWN1Dwr8G2piZLO', '72c47872ddbff09b063d4354cae44c435ce47467573645e28b8b744bc5a5fe2d', NULL, NULL, '2026-10-23 01:14:08', '2026-10-23 05:15:29', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1186,7 +1231,8 @@ INSERT INTO `violations` (`id`, `lessor_id`, `tenant_id`, `category`, `strike`, 
 (3, 2, 8, 'Safety Violation', 1, 1, '2026-10-19 04:57:19', NULL, NULL, 0.00, NULL),
 (4, 34, 18, 'Noise Complaint', 1, 0, '2026-10-22 00:03:33', NULL, NULL, 0.00, NULL),
 (5, 34, 19, 'Noise Complaint', 1, 1, '2026-10-22 00:28:03', NULL, NULL, 0.00, NULL),
-(6, 34, 19, 'Lease Violation', 2, 1, '2026-10-22 06:41:20', NULL, NULL, 0.00, NULL);
+(6, 34, 19, 'Lease Violation', 2, 1, '2026-10-22 06:41:20', NULL, NULL, 0.00, NULL),
+(7, 2, 8, 'Noise Complaint', 2, 1, '2026-10-23 05:12:41', NULL, NULL, 0.00, NULL);
 
 --
 -- Indexes for dumped tables
@@ -1367,7 +1413,7 @@ ALTER TABLE `applications`
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=413;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=460;
 
 --
 -- AUTO_INCREMENT for table `deposits`
@@ -1385,7 +1431,7 @@ ALTER TABLE `disputes`
 -- AUTO_INCREMENT for table `installment_requests`
 --
 ALTER TABLE `installment_requests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `lease_checklist_acknowledgments`
@@ -1397,13 +1443,13 @@ ALTER TABLE `lease_checklist_acknowledgments`
 -- AUTO_INCREMENT for table `maintenance_tickets`
 --
 ALTER TABLE `maintenance_tickets`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `messages`
 --
 ALTER TABLE `messages`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
 
 --
 -- AUTO_INCREMENT for table `message_threads`
@@ -1427,7 +1473,7 @@ ALTER TABLE `notification_recipients`
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `properties`
@@ -1457,13 +1503,13 @@ ALTER TABLE `tenants`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=40;
 
 --
 -- AUTO_INCREMENT for table `violations`
 --
 ALTER TABLE `violations`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- Constraints for dumped tables

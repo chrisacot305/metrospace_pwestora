@@ -191,7 +191,7 @@ $sentLog = $sentLog->fetchAll();
         </span>
       </div>
       <select id="buildingFilter" onchange="switchBuilding(this.value)" style="width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); font-size:12.5px; font-weight:600; background:#fff; color:var(--ink-900); cursor:pointer;">
-        <option value="" <?= ($selectedPropertyId === null) ? 'selected' : '' ?>>🏢 All Buildings (<?= count($allTenants) ?>)</option>
+        <option value="" <?= ($selectedPropertyId === null) ? 'selected' : '' ?>>All Buildings (<?= count($allTenants) ?>)</option>
         <?php foreach ($properties as $prop): 
           $countInProp = count(array_filter($allTenants, fn($t) => (int)$t['property_id'] === (int)$prop['id']));
         ?>

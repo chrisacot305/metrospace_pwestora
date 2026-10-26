@@ -105,6 +105,11 @@ class LuxuryRentCard extends StatelessWidget {
     this.overdueSubtext,
   });
 
+  String get _displayTenantName {
+    final cleaned = tenantName.replaceAll(RegExp(r'\s*\([^)]*\)\s*$'), '').trim();
+    return cleaned.isNotEmpty ? cleaned : 'Active Lease';
+  }
+
   String _formatMoney(num val) {
     final str = val.toStringAsFixed(0);
     final buffer = StringBuffer();
@@ -270,7 +275,7 @@ class LuxuryRentCard extends StatelessWidget {
                                   child: Text(
                                     (propertyName != null && propertyName!.isNotEmpty)
                                         ? propertyName!
-                                        : (tenantName.isNotEmpty ? tenantName : 'Commercial Space'),
+                                        : (_displayTenantName.isNotEmpty ? _displayTenantName : 'Commercial Space'),
                                     style: const TextStyle(
                                       fontSize: 18.5,
                                       fontWeight: FontWeight.w900,
@@ -553,7 +558,7 @@ class LuxuryRentCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            tenantName.isNotEmpty ? tenantName : 'Active Lease',
+                            _displayTenantName,
                             style: const TextStyle(
                               fontSize: 13.5,
                               fontWeight: FontWeight.w800,

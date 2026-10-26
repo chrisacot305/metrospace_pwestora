@@ -52,7 +52,6 @@ function analytics_bar(string $label, $value, int $max, string $color, string $s
 }
 ?>
 <h2 style="margin:0 0 4px;">Analytics</h2>
-<p style="color:var(--ink-500); margin:0 0 20px;">Live metrics computed from your own portfolio data.</p>
 
 <div class="card-grid">
   <div class="card">

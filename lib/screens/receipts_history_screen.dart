@@ -99,20 +99,40 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
         ? ref
         : 'REF-${raw['id'] ?? (dt.millisecondsSinceEpoch % 100000000)}';
 
+    final method = (raw['method'] ?? '').toString().toLowerCase();
+    final isDepositAuto = method == 'security_deposit' || note.contains('[AUTO-DEPOSIT]') || note.toLowerCase().contains('security deposit');
+
+    final rawStatus = (raw['status'] ?? '').toString().toLowerCase();
+    final isPending = !isDepositAuto && (rawStatus == 'pending' ||
+        note.toUpperCase().contains('[PENDING]') ||
+        note.toLowerCase().contains('pending verification'));
+    final status = isDepositAuto ? 'approved' : (isPending ? 'pending' : (rawStatus.isNotEmpty ? rawStatus : 'approved'));
+
+    final title = isDepositAuto
+        ? 'Automated Escrow Rent Settlement'
+        : (isPending
+            ? (isOverdue ? 'Past Due Payment (Pending)' : 'Payment Pending Verification')
+            : (isOverdue ? 'Past Due Payment' : 'Payment Successful'));
+
+    final typeLabel = isDepositAuto
+        ? 'Security Deposit (Escrow Auto-Cover)'
+        : (isPending
+            ? (isOverdue ? 'Past Due Payment · Pending Verification' : 'Rent Payment · Pending Verification')
+            : (isOverdue ? 'Past Due Payment (Beyond Due Date)' : 'Verified Rent Payment'));
+
     return {
       'id': raw['id'],
       'amount': amt,
       'is_overdue': isOverdue,
-      'title': isOverdue ? 'Past Due Payment' : 'Successful payment...',
-      'type_label': isOverdue
-          ? 'Past Due Payment (Beyond Due Date)'
-          : 'Successful payment...',
+      'is_deposit_auto': isDepositAuto,
+      'title': title,
+      'type_label': typeLabel,
       'date_header': formattedDate,
       'time_str': formattedTime,
       'full_datetime': '$formattedDate · $formattedTime',
       'ref_no': refNo,
       'paid_at_raw': rawDate.isNotEmpty ? rawDate : dt.toIso8601String(),
-      'status': (raw['status'] ?? 'approved').toString().toLowerCase(),
+      'status': status,
     };
   }
 
@@ -896,6 +916,8 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
 
   Widget _buildTransactionTile(Map<String, dynamic> tx, int index, int total) {
     final isOverdue = tx['is_overdue'] == true;
+    final isPending = tx['status'] == 'pending';
+    final isDepositAuto = tx['is_deposit_auto'] == true;
     final title = tx['title'] as String;
     final amount = (tx['amount'] as num?)?.toDouble() ?? 0.0;
     final timeStr = tx['time_str'] as String;
@@ -916,16 +938,32 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: isOverdue ? const Color(0xFFFEF2F2) : const Color(0xFFEFF6FF),
+                color: isDepositAuto
+                    ? const Color(0xFFEFF6FF)
+                    : (isPending
+                        ? const Color(0xFFF1F5F9)
+                        : (isOverdue ? const Color(0xFFFEF2F2) : const Color(0xFFEFF6FF))),
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isOverdue ? const Color(0xFFFCA5A5) : const Color(0xFFBFDBFE),
+                  color: isDepositAuto
+                      ? const Color(0xFFBFDBFE)
+                      : (isPending
+                          ? const Color(0xFFCBD5E1)
+                          : (isOverdue ? const Color(0xFFFCA5A5) : const Color(0xFFBFDBFE))),
                   width: 1,
                 ),
               ),
               child: Icon(
-                isOverdue ? Icons.error_outline_rounded : Icons.arrow_outward_rounded,
-                color: isOverdue ? const Color(0xFFEF4444) : const Color(0xFF005CEE),
+                isDepositAuto
+                    ? Icons.shield_rounded
+                    : (isPending
+                        ? Icons.schedule_rounded
+                        : (isOverdue ? Icons.error_outline_rounded : Icons.arrow_outward_rounded)),
+                color: isDepositAuto
+                    ? const Color(0xFF0A1832)
+                    : (isPending
+                        ? const Color(0xFF475569)
+                        : (isOverdue ? const Color(0xFFEF4444) : const Color(0xFF005CEE))),
                 size: 20,
               ),
             ),
@@ -936,15 +974,64 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w800,
-                      color: isOverdue ? const Color(0xFFB91C1C) : AppColors.midnightNavy,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            color: isDepositAuto
+                                ? AppColors.midnightNavy
+                                : (isPending
+                                    ? const Color(0xFF475569)
+                                    : (isOverdue ? const Color(0xFFB91C1C) : AppColors.midnightNavy)),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isDepositAuto) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(color: const Color(0xFFBFDBFE)),
+                          ),
+                          child: const Text(
+                            'ESCROW',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF005CEE),
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ] else if (isPending) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(5),
+                            border: Border.all(color: const Color(0xFFCBD5E1)),
+                          ),
+                          child: const Text(
+                            'PENDING',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF475569),
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 3),
                   Text(
@@ -983,13 +1070,17 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
 
   void _showGcashReceipt(Map<String, dynamic> tx) {
     final isOverdue = tx['is_overdue'] == true;
-    final typeLabel =
-        tx['type_label'] as String? ??
-        (isOverdue ? 'Past Due Payment' : 'Successful payment...');
+    final isPending = tx['status'] == 'pending';
+    final isDepositAuto = tx['is_deposit_auto'] == true;
+    final typeLabel = tx['type_label'] as String? ??
+        (isDepositAuto
+            ? 'Security Deposit (Escrow Auto-Cover)'
+            : (isPending
+                ? 'Rent Payment · Pending Verification'
+                : (isOverdue ? 'Past Due Payment' : 'Verified Rent Payment')));
     final amount = (tx['amount'] as num?)?.toDouble() ?? 0.0;
     final dateTime = tx['full_datetime'] as String? ?? '';
     final refNo = tx['ref_no'] as String? ?? '';
-    final isPending = tx['status'] == 'pending';
 
     showModalBottomSheet(
       context: context,
@@ -1038,12 +1129,16 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                     // Top Receipt Header Banner
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 14,
+                        horizontal: 16,
+                        vertical: 12,
                       ),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF005CEE), // Classic GCash Blue
-                        borderRadius: BorderRadius.only(
+                      decoration: BoxDecoration(
+                        color: isDepositAuto
+                            ? const Color(0xFF0A1832) // Luxury Midnight Navy for Escrow Auto
+                            : (isPending
+                                ? const Color(0xFF1E3A5F) // Refined Slate Navy for Pending
+                                : (isOverdue ? const Color(0xFFDC2626) : const Color(0xFF005CEE))), // Classic GCash Blue
+                        borderRadius: const BorderRadius.only(
                           topLeft: Radius.circular(20),
                           topRight: Radius.circular(20),
                         ),
@@ -1051,36 +1146,49 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: const [
-                              Icon(
-                                Icons.receipt_long_rounded,
-                                color: Colors.white,
-                                size: 18,
-                              ),
-                              SizedBox(width: 8),
-                              Text(
-                                'Transaction Receipt',
-                                style: TextStyle(
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isDepositAuto
+                                      ? Icons.shield_rounded
+                                      : (isPending ? Icons.pending_actions_rounded : Icons.receipt_long_rounded),
                                   color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13,
-                                  letterSpacing: 0.2,
+                                  size: 18,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    isDepositAuto
+                                        ? 'Escrow Settlement Receipt'
+                                        : (isPending ? 'Pending Receipt' : 'Transaction Receipt'),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13,
+                                      letterSpacing: 0.2,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
+                              color: Colors.white.withValues(alpha: 0.22),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              isPending ? 'PENDING' : 'COMPLETED',
+                              isDepositAuto
+                                  ? 'AUTO-SETTLED'
+                                  : (isPending ? 'PENDING' : 'COMPLETED'),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -1097,37 +1205,56 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                       padding: const EdgeInsets.fromLTRB(22, 22, 22, 20),
                       child: Column(
                         children: [
-                          // Success Check Icon Circle
+                          // Status Icon Circle
                           Container(
                             width: 58,
                             height: 58,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: isOverdue
-                                  ? const Color(0xFFFEF2F2)
-                                  : const Color(0xFFECFDF5),
+                              color: isDepositAuto
+                                  ? const Color(0xFFEFF6FF)
+                                  : (isPending
+                                      ? const Color(0xFFF1F5F9)
+                                      : (isOverdue
+                                          ? const Color(0xFFFEF2F2)
+                                          : const Color(0xFFECFDF5))),
                               border: Border.all(
-                                color: isOverdue
-                                    ? const Color(0xFFFCA5A5)
-                                    : const Color(0xFFA7F3D0),
+                                color: isDepositAuto
+                                    ? const Color(0xFFBFDBFE)
+                                    : (isPending
+                                        ? const Color(0xFFCBD5E1)
+                                        : (isOverdue
+                                            ? const Color(0xFFFCA5A5)
+                                            : const Color(0xFFA7F3D0))),
                                 width: 2,
                               ),
                             ),
                             child: Icon(
-                              Icons.check_rounded,
+                              isDepositAuto
+                                  ? Icons.shield_rounded
+                                  : (isPending
+                                      ? Icons.schedule_rounded
+                                      : (isOverdue ? Icons.priority_high_rounded : Icons.check_rounded)),
                               size: 34,
-                              color: isOverdue
-                                  ? const Color(0xFFEF4444)
-                                  : const Color(0xFF10B981),
+                              color: isDepositAuto
+                                  ? const Color(0xFF0A1832)
+                                  : (isPending
+                                      ? const Color(0xFF475569)
+                                      : (isOverdue
+                                          ? const Color(0xFFEF4444)
+                                          : const Color(0xFF10B981))),
                             ),
                           ),
                           const SizedBox(height: 12),
 
                           // Transaction Title
                           Text(
-                            isOverdue
-                                ? 'Past Due Payment'
-                                : 'Payment Successful',
+                            isDepositAuto
+                                ? 'Rent Payment Covered'
+                                : (isPending
+                                    ? (isOverdue ? 'Past Due Payment (Pending)' : 'Payment Pending Verification')
+                                    : (isOverdue ? 'Past Due Payment' : 'Payment Successful')),
+                            textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w900,
@@ -1135,6 +1262,26 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                               letterSpacing: -0.3,
                             ),
                           ),
+                          if (isPending) ...[
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: const Color(0xFFCBD5E1)),
+                              ),
+                              child: const Text(
+                                'Awaiting lessor verification before balance is credited',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF475569),
+                                ),
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 4),
 
                           // Date & Time
@@ -1176,18 +1323,69 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                           ),
                           const SizedBox(height: 18),
 
-                          // Basic Details Table Rows
+                          // Clean 3-Line Details
                           _buildReceiptRow(
-                            label: 'Transaction Type',
+                            label: 'Payment Method',
                             valueWidget: Text(
-                              typeLabel,
+                              isDepositAuto
+                                  ? 'Security Deposit (Escrow)'
+                                  : typeLabel,
                               textAlign: TextAlign.end,
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: isOverdue
-                                    ? const Color(0xFFDC2626)
-                                    : const Color(0xFF0F172A),
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.midnightNavy,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          _buildReceiptRow(
+                            label: 'Date and Time',
+                            valueWidget: Text(
+                              dateTime,
+                              textAlign: TextAlign.end,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          _buildReceiptRow(
+                            label: 'Reference Number',
+                            valueWidget: InkWell(
+                              onTap: () {
+                                Clipboard.setData(ClipboardData(text: refNo));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Reference number copied to clipboard!'),
+                                    duration: Duration(seconds: 2),
+                                  ),
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(6),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    refNo,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF005CEE),
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(
+                                    Icons.copy_rounded,
+                                    size: 14,
+                                    color: Color(0xFF005CEE),
+                                  ),
+                                ],
                               ),
                             ),
                           ),

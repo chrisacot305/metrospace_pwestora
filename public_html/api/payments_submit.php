@@ -70,8 +70,11 @@ if (!$tenant) {
 }
 
 $targetLabel = match ($target) {
+    'security_deposit'   => 'Security Deposit Top-Up',
     'restructuring_plan' => 'Restructuring Plan',
     'both'               => 'Both (Rent + Restructuring)',
+    'overdue_october'    => 'Overdue Rent + Strike Penalty',
+    'full_balance'       => 'Full Balance (Overdue + Advance)',
     default              => 'Monthly Rent',
 };
 
@@ -84,6 +87,22 @@ $insert = $pdo->prepare(
 $insert->execute([$tenant['tenant_id'], $tenant['lessor_id'], $amount, 'bank_transfer', $note]);
 
 $paymentId = (int) $pdo->lastInsertId();
+
+// Post official digital payment receipt into in-app chat thread
+try {
+    $threadStmt = $pdo->prepare('SELECT id FROM message_threads WHERE lessor_id = ? AND tenant_id = ?');
+    $threadStmt->execute([$tenant['lessor_id'], $tenant['tenant_id']]);
+    $threadId = $threadStmt->fetchColumn();
+    if (!$threadId) {
+        $pdo->prepare('INSERT INTO message_threads (lessor_id, tenant_id) VALUES (?, ?)')->execute([$tenant['lessor_id'], $tenant['tenant_id']]);
+        $threadId = (int)$pdo->lastInsertId();
+    }
+    $receiptMsg = "🧾 DIGITAL PAYMENT RECEIPT\n\nPayment Ref: {$referenceNo}\nAmount Submitted: ₱" . number_format($amount, 2) . "\nTarget: {$targetLabel}\nDate: " . date('M d, Y h:i A') . "\nStatus: ⏳ Submitted for Verification\n\nYour payment has been received and submitted for lessor verification. Thank you!";
+    $pdo->prepare("INSERT INTO messages (thread_id, sender, notice_type, body) VALUES (?, 'tenant', 'Payment Receipt', ?)")
+        ->execute([$threadId, $receiptMsg]);
+} catch (Throwable $msgErr) {
+    error_log('Receipt message error: ' . $msgErr->getMessage());
+}
 
 audit_log($pdo, $lessee['id'], 'Tenant Submitted Payment', "₱$amount for $targetLabel (Ref: $referenceNo)");
 

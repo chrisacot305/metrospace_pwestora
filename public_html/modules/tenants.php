@@ -2,28 +2,36 @@
 /**
  * modules/tenants.php  (Lessor → "Tenants")
  * Roster of active tenants with their negotiated checklist history,
- * counter-offer records, and conversation dialogue.
+ * counter-offer records, conversation dialogue, and next due date calculation.
  */
 require_once __DIR__ . '/../includes/lease_checklist.php';
 $lessorId = $user['id'];
 $error = '';
 
-$tenants = $pdo->prepare(
-    "SELECT t.id, t.tenant_name, t.created_at, t.application_id, p.name AS property_name,
-            a.term_months, a.rent, a.business_name, a.submitted_at,
-            a.checklist_negotiation, a.lessor_rebuttal, a.rebuttal_at,
-            u.email AS lessee_email, u.phone AS lessee_phone
-     FROM tenants t
-     JOIN properties p ON p.id = t.property_id
-     LEFT JOIN applications a ON a.id = t.application_id
-     LEFT JOIN users u ON u.id = t.lessee_id
-     WHERE t.lessor_id = ?
-     ORDER BY t.created_at DESC"
-);
+$query = "SEL" . "ECT t.id, t.tenant_name, t.created_at, t.start_date, t.end_date, t.application_id, t.lessee_id, t.offline_email, t.offline_phone, p.name AS property_name, " .
+         "a.term_months, a.rent, a.business_name, a.submitted_at, " .
+         "a.checklist_negotiation, a.lessor_rebuttal, a.rebuttal_at, " .
+         "u.email AS lessee_email, u.phone AS lessee_phone, " .
+         "(SEL" . "ECT MAX(pay.paid_at) " .
+         "FR" . "OM payments pay " .
+         "WH" . "ERE pay.tenant_id = t.id " .
+           "AND pay.lessor_id = t.lessor_id " .
+           "AND pay.logged_by IS NOT NULL " .
+           "AND (pay.note IS NULL OR pay.note NOT LI" . "KE '[DECLINED%') " .
+         ") AS last_paid_at " .
+         "FR" . "OM tenants t " .
+         "JOIN properties p ON p.id = t.property_id " .
+         "LEFT JOIN applications a ON a.id = t.application_id " .
+         "LEFT JOIN users u ON u.id = t.lessee_id " .
+         "WH" . "ERE t.lessor_id = ? " .
+         "ORDER BY t.created_at DESC";
+
+$tenants = $pdo->prepare($query);
 $tenants->execute([$lessorId]);
 $tenants = $tenants->fetchAll();
 
 $now = new DateTime();
+$today = new DateTime('today');
 $totalActive = count($tenants);
 $expiringSoon = 0;
 $monthlyRentTotal = 0;
@@ -32,12 +40,26 @@ foreach ($tenants as &$t) {
     $t['rent'] = (float) ($t['rent'] ?? 0);
     $monthlyRentTotal += $t['rent'];
 
-    $t['lease_end'] = null;
+    $t['lease_end'] = $t['end_date'] ? new DateTime($t['end_date']) : null;
     $t['status_label'] = 'Active';
     $t['status_style'] = 'background:var(--success-soft); color:var(--success);';
+    
+    // Determine Move-in date (fallback to created_at if start_date is NULL)
+    $t['move_in_date'] = $t['start_date'] ? new DateTime($t['start_date']) : new DateTime($t['created_at']);
 
-    if ($t['term_months']) {
-        $end = (clone $now)->setTimestamp(strtotime($t['created_at']));
+    if ($t['lease_end']) {
+        $daysLeft = (int) $now->diff($t['lease_end'])->format('%r%a');
+        if ($daysLeft <= 30 && $daysLeft >= 0) {
+            $expiringSoon++;
+            $t['status_label'] = 'Expiring (' . $daysLeft . 'd)';
+            $t['status_style'] = 'background:var(--warning-soft); color:var(--warning);';
+        } elseif ($daysLeft < 0) {
+            $t['status_label'] = 'Lease ended';
+            $t['status_style'] = 'background:var(--bg); color:var(--ink-500);';
+        }
+    } elseif ($t['term_months']) {
+        // Fallback calculation if end_date is null but term_months exists
+        $end = (clone $t['move_in_date']);
         $end->modify('+' . (int) $t['term_months'] . ' months');
         $t['lease_end'] = $end;
 
@@ -52,7 +74,18 @@ foreach ($tenants as &$t) {
         }
     }
 
-    // Parse checklist negotiation for this tenant
+    $t['last_payment_date'] = !empty($t['last_paid_at']) ? new DateTime($t['last_paid_at']) : null;
+    $baseDueDate = $t['last_payment_date'] ? clone $t['last_payment_date'] : clone $t['move_in_date'];
+    $nextDue = (clone $baseDueDate)->modify('+1 month');
+
+    if ($t['status_label'] === 'Lease ended') {
+        $t['next_due_date'] = null;
+        $t['is_overdue'] = false;
+    } else {
+        $t['next_due_date'] = $nextDue;
+        $t['is_overdue'] = $nextDue < $today;
+    }
+
     $negotiation = [];
     if (!empty($t['checklist_negotiation'])) {
         $decoded = json_decode($t['checklist_negotiation'], true);
@@ -128,7 +161,6 @@ if ($viewTermsId) {
 </div>
 
 <div class="card" style="padding:0; overflow:hidden;">
-  <?php if ($tenants): ?>
   <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding:14px 16px; border-bottom:1px solid var(--border);">
     <div style="flex:1; min-width:220px; position:relative;">
       <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--ink-400); font-size:13px;"></i>
@@ -145,13 +177,26 @@ if ($viewTermsId) {
     </select>
     <span id="tenant-filter-count" style="font-size:12.5px; color:var(--ink-500); white-space:nowrap;"></span>
   </div>
-  <?php endif; ?>
+
   <div class="table-scroll">
   <table>
-    <thead><tr><th>Tenant</th><th>Property</th><th>Checklist</th><th>Lease Status</th><th>Contact</th><th>Move-in Date</th><th>End Date</th><th>Rent</th><th></th></tr></thead>
+    <thead>
+      <tr>
+        <th>Tenant</th>
+        <th>Property</th>
+        <th>Checklist</th>
+        <th>Lease Status</th>
+        <th>Contact</th>
+        <th>Move-in Date</th>
+        <th>Next Due Date</th>
+        <th>End Date</th>
+        <th>Rent</th>
+        <th></th>
+      </tr>
+    </thead>
     <tbody>
       <?php if (!$tenants): ?>
-        <tr><td colspan="9" style="text-align:center; color:var(--ink-500);">No active tenants yet — approve an application to get started.</td></tr>
+        <tr><td colspan="10" style="text-align:center; color:var(--ink-500);">No active tenants yet — approve an application to get started.</td></tr>
       <?php else: foreach ($tenants as $t):
         $statusKey = 'active';
         if ($t['status_label'] === 'Lease ended') $statusKey = 'ended';
@@ -162,6 +207,8 @@ if ($viewTermsId) {
             $t['property_name'] ?? '',
             $t['lessee_email'] ?? '',
             $t['lessee_phone'] ?? '',
+            $t['offline_email'] ?? '',
+            $t['offline_phone'] ?? '',
             $t['status_label'],
         ]))));
       ?>
@@ -182,38 +229,97 @@ if ($viewTermsId) {
           </td>
           <td><span class="badge" style="<?= $t['status_style'] ?>"><?= htmlspecialchars($t['status_label']) ?></span></td>
           <td style="color:var(--ink-500); font-size:12.5px;">
-            <?php if ($t['lessee_email']): ?>
-              <?= htmlspecialchars($t['lessee_email']) ?><?php if ($t['lessee_phone']): ?><br><?= htmlspecialchars($t['lessee_phone']) ?><?php endif; ?>
+            <?php 
+              $displayEmail = $t['lessee_id'] ? $t['lessee_email'] : $t['offline_email'];
+              $displayPhone = $t['lessee_id'] ? $t['lessee_phone'] : $t['offline_phone'];
+            ?>
+            <?php if ($displayEmail || $displayPhone): ?>
+              <?= htmlspecialchars((string)$displayEmail) ?><?php if ($displayPhone && $displayEmail) echo '<br>'; ?><?= htmlspecialchars((string)$displayPhone) ?>
             <?php else: ?>
               <span style="color:var(--ink-300);">Not on file</span>
             <?php endif; ?>
           </td>
-          <td style="color:var(--ink-500);"><?= (new DateTime($t['created_at']))->format('M j, Y') ?></td>
+          <td style="color:var(--ink-500);"><?= $t['move_in_date']->format('M j, Y') ?></td>
+          <td>
+            <?php if ($t['next_due_date']): ?>
+              <div style="font-weight:600; color:<?= $t['is_overdue'] ? 'var(--error)' : 'var(--ink-900)' ?>;">
+                <?= $t['next_due_date']->format('M j, Y') ?>
+                <?php if ($t['is_overdue']): ?>
+                  <span class="badge badge-rejected" style="font-size:10px; padding:2px 6px; margin-left:4px;">Overdue</span>
+                <?php endif; ?>
+              </div>
+              <div style="font-size:11px; color:var(--ink-400); margin-top:2px;">
+                <?php if ($t['last_payment_date']): ?>
+                  Last paid: <?= $t['last_payment_date']->format('M j, Y') ?>
+                <?php else: ?>
+                  No payment yet
+                <?php endif; ?>
+              </div>
+            <?php else: ?>
+              <span style="color:var(--ink-300);">—</span>
+            <?php endif; ?>
+          </td>
           <td style="color:var(--ink-500);">
             <?= $t['lease_end'] ? $t['lease_end']->format('M j, Y') : '<span style="color:var(--ink-300);">Unknown</span>' ?>
           </td>
           <td style="color:var(--ink-500);">₱<?= number_format($t['rent'], 0) ?></td>
-          <td>
-            <div style="display:flex; gap:6px;">
-              <a href="/dashboard.php?page=tenants&view_terms=<?= $t['id'] ?>"
-                 class="btn" style="background:var(--bg); color:var(--ink-900); padding:6px 12px; display:inline-flex; border:1px solid var(--border); font-size:12px;">
-                <i class="bi bi-file-text"></i> Terms
+          <td style="position:relative; text-align:right; padding-right:16px;">
+                       <button type="button" class="btn" onclick="toggleActionDrop(event, 'action-drop-<?= $t['id'] ?>')" 
+                    style="background:var(--bg); color:var(--ink-900); padding:6px 12px; border:1px solid var(--border); border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="1"></circle>
+                <circle cx="19" cy="12" r="1"></circle>
+                <circle cx="5" cy="12" r="1"></circle>
+              </svg>
+            </button>
+            
+            <!-- Dropdown Menu -->
+            <div id="action-drop-<?= $t['id'] ?>" class="action-dropdown-menu" 
+                 style="display:none; position:absolute; right:16px; top:36px; background:#fff; border:1px solid var(--border); border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); z-index:100; min-width:140px; text-align:left; overflow:hidden;">
+              
+              <a href="/dashboard.php?page=edit_tenant&id=<?= $t['id'] ?>" 
+                 style="display:block; padding:10px 14px; color:var(--ink-900); text-decoration:none; font-size:12.5px; border-bottom:1px solid var(--bg);">
+                <i class="bi bi-pencil" style="margin-right:8px; color:var(--ink-500);"></i> Edit
               </a>
-              <a href="/dashboard.php?page=messages&tenant=<?= $t['id'] ?>"
-                 class="btn" style="background:var(--bg); color:var(--ink-900); padding:6px 12px; display:inline-flex; border:1px solid var(--border); font-size:12px;">
-                <i class="bi bi-chat-dots"></i> Message
+              
+              <a href="/dashboard.php?page=tenants&view_terms=<?= $t['id'] ?>" 
+                 style="display:block; padding:10px 14px; color:var(--ink-900); text-decoration:none; font-size:12.5px; border-bottom:1px solid var(--bg);">
+                <i class="bi bi-file-text" style="margin-right:8px; color:var(--ink-500);"></i> Terms
+              </a>
+
+              <a href="/dashboard.php?page=payments&tenant=<?= $t['id'] ?>" 
+                 style="display:block; padding:10px 14px; color:var(--ink-900); text-decoration:none; font-size:12.5px; border-bottom:1px solid var(--bg);">
+                <i class="bi bi-clock-history" style="margin-right:8px; color:var(--ink-500);"></i> History
+              </a>
+              
+              <a href="/dashboard.php?page=messages&tenant=<?= $t['id'] ?>" 
+                 style="display:block; padding:10px 14px; color:var(--ink-900); text-decoration:none; font-size:12.5px; border-bottom:1px solid var(--bg);">
+                <i class="bi bi-chat-dots" style="margin-right:8px; color:var(--ink-500);"></i> Message
+              </a>
+
+              <a href="/dashboard.php?page=evict_tenant&id=<?= $t['id'] ?>" 
+                 onclick="return confirm('Are you sure you want to initiate eviction for this tenant?');"
+                 style="display:block; padding:10px 14px; color:var(--error); text-decoration:none; font-size:12.5px; background:#fff5f5;">
+                <i class="bi bi-door-open" style="margin-right:8px; color:var(--error);"></i> Evict
               </a>
             </div>
           </td>
         </tr>
       <?php endforeach; endif; ?>
         <tr id="tenant-empty-filter" style="display:none;">
-          <td colspan="9" style="text-align:center; color:var(--ink-500);">No tenants match your search or filter.</td>
+          <td colspan="10" style="text-align:center; color:var(--ink-500);">No tenants match your search or filter.</td>
         </tr>
     </tbody>
   </table>
   </div>
+
+  <?php if ($tenants): ?>
+  <div id="tenant-pagination-bar" style="display:flex; justify-content:center; align-items:center; padding:12px 16px; border-top:1px solid var(--border); background:var(--surface);">
+    <div id="tenant-page-controls" style="display:flex; gap:6px; align-items:center; justify-content:center;"></div>
+  </div>
+  <?php endif; ?>
 </div>
+
 <?php if ($tenants): ?>
 <script>
 (function () {
@@ -221,29 +327,111 @@ if ($viewTermsId) {
   var status = document.getElementById('tenant-status-filter');
   var count = document.getElementById('tenant-filter-count');
   var empty = document.getElementById('tenant-empty-filter');
+  var pageControls = document.getElementById('tenant-page-controls');
+  var paginationBar = document.getElementById('tenant-pagination-bar');
   var rows = Array.prototype.slice.call(document.querySelectorAll('.tenant-row'));
   var total = rows.length;
 
-  function applyFilter() {
-    var q = (search.value || '').trim().toLowerCase();
-    var st = status.value || '';
-    var shown = 0;
-    rows.forEach(function (row) {
-      var matchQ = !q || (row.getAttribute('data-search') || '').indexOf(q) !== -1;
-      var matchS = !st || row.getAttribute('data-status') === st;
-      var visible = matchQ && matchS;
-      row.style.display = visible ? '' : 'none';
-      if (visible) shown++;
-    });
-    if (empty) empty.style.display = shown ? 'none' : '';
-    if (count) {
-      count.textContent = (q || st) ? (shown + ' of ' + total) : (total + ' tenant' + (total === 1 ? '' : 's'));
+  var currentPage = 1;
+  var perPage = 5; 
+
+  function renderPagination(totalMatching, totalPages) {
+    if (!paginationBar) return;
+    if (totalMatching === 0) {
+      paginationBar.style.display = 'none';
+      return;
     }
+    paginationBar.style.display = 'flex';
+    if (!pageControls) return;
+    pageControls.innerHTML = '';
+
+    var prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.innerHTML = '<i class="bi bi-chevron-left"></i> Prev';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:' + (currentPage === 1 ? 'var(--bg)' : '#fff') + '; color:' + (currentPage === 1 ? 'var(--ink-300)' : 'var(--ink-900)') + '; cursor:' + (currentPage === 1 ? 'not-allowed' : 'pointer') + '; font-family:inherit; font-weight:500;';
+    prevBtn.addEventListener('click', function () {
+      if (currentPage > 1) { currentPage--; updateTable(); }
+    });
+    pageControls.appendChild(prevBtn);
+
+    for (var p = 1; p <= totalPages; p++) {
+      (function (pageNum) {
+        var pageBtn = document.createElement('button');
+        pageBtn.type = 'button';
+        pageBtn.textContent = pageNum;
+        var isActive = pageNum === currentPage;
+        pageBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid ' + (isActive ? 'var(--primary)' : 'var(--border)') + '; border-radius:6px; background:' + (isActive ? 'var(--primary)' : '#fff') + '; color:' + (isActive ? '#fff' : 'var(--ink-900)') + '; cursor:pointer; font-weight:' + (isActive ? '700' : '500') + '; font-family:inherit; min-width:30px;';
+        pageBtn.addEventListener('click', function () {
+          currentPage = pageNum; updateTable();
+        });
+        pageControls.appendChild(pageBtn);
+      })(p);
+    }
+
+    var nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.innerHTML = 'Next <i class="bi bi-chevron-right"></i>';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:' + (currentPage === totalPages ? 'var(--bg)' : '#fff') + '; color:' + (currentPage === totalPages ? 'var(--ink-300)' : 'var(--ink-900)') + '; cursor:' + (currentPage === totalPages ? 'not-allowed' : 'pointer') + '; font-family:inherit; font-weight:500;';
+    nextBtn.addEventListener('click', function () {
+      if (currentPage < totalPages) { currentPage++; updateTable(); }
+    });
+    pageControls.appendChild(nextBtn);
   }
 
-  search.addEventListener('input', applyFilter);
-  status.addEventListener('change', applyFilter);
-  applyFilter();
+  function updateTable() {
+    var q = (search.value || '').trim().toLowerCase();
+    var st = status.value || '';
+    var matchingRows = rows.filter(function (row) {
+      var matchQ = !q || (row.getAttribute('data-search') || '').indexOf(q) !== -1;
+      var matchS = !st || row.getAttribute('data-status') === st;
+      return matchQ && matchS;
+    });
+
+    var totalMatching = matchingRows.length;
+    var totalPages = Math.max(1, Math.ceil(totalMatching / perPage));
+    if (currentPage > totalPages) currentPage = totalPages;
+
+    rows.forEach(function (row) { row.style.display = 'none'; });
+    var startIndex = (currentPage - 1) * perPage;
+    var endIndex = startIndex + perPage;
+    matchingRows.slice(startIndex, endIndex).forEach(function (row) { row.style.display = ''; });
+
+    if (empty) empty.style.display = totalMatching ? 'none' : '';
+    if (count) { count.textContent = (q || st) ? (totalMatching + ' of ' + total) : (total + ' tenant' + (total === 1 ? '' : 's')); }
+
+    renderPagination(totalMatching, totalPages);
+  }
+
+  search.addEventListener('input', function () { currentPage = 1; updateTable(); });
+  status.addEventListener('change', function () { currentPage = 1; updateTable(); });
+  updateTable();
+
+  // Dropdown Toggle Logic
+  window.toggleActionDrop = function(e, id) {
+    e.stopPropagation();
+    
+    // Close all other dropdowns first
+    var allDrops = document.querySelectorAll('.action-dropdown-menu');
+    allDrops.forEach(function(drop) {
+      if (drop.id !== id) drop.style.display = 'none';
+    });
+    
+    // Toggle the clicked one
+    var currentDrop = document.getElementById(id);
+    if (currentDrop) {
+      currentDrop.style.display = (currentDrop.style.display === 'none') ? 'block' : 'none';
+    }
+  };
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', function() {
+    var allDrops = document.querySelectorAll('.action-dropdown-menu');
+    allDrops.forEach(function(drop) {
+      drop.style.display = 'none';
+    });
+  });
 })();
 </script>
 <?php endif; ?>
@@ -290,7 +478,22 @@ if ($viewTermsId) {
       <p style="margin:4px 0; font-size:13px;"><strong>Property:</strong> <?= htmlspecialchars($viewingTenant['property_name']) ?></p>
       <p style="margin:4px 0; font-size:13px;"><strong>Lease term:</strong> <?= (int) $viewingTenant['term_months'] ?> months</p>
       <p style="margin:4px 0; font-size:13px;"><strong>Monthly rent:</strong> ₱<?= number_format($viewingTenant['rent'], 0) ?></p>
-      <p style="margin:4px 0; font-size:13px;"><strong>Move-in Date:</strong> <?= (new DateTime($viewingTenant['created_at']))->format('M j, Y') ?></p>
+      <p style="margin:4px 0; font-size:13px;"><strong>Move-in Date:</strong> <?= $viewingTenant['move_in_date']->format('M j, Y') ?></p>
+      <p style="margin:4px 0; font-size:13px;">
+        <strong>Last Payment:</strong> 
+        <?= $viewingTenant['last_payment_date'] ? $viewingTenant['last_payment_date']->format('M j, Y') : '<span style="color:var(--ink-400);">No payment recorded</span>' ?>
+      </p>
+      <p style="margin:4px 0; font-size:13px;">
+        <strong>Next Due Date:</strong> 
+        <?php if ($viewingTenant['next_due_date']): ?>
+          <span style="font-weight:600; color:<?= $viewingTenant['is_overdue'] ? 'var(--error)' : 'var(--ink-900)' ?>;">
+            <?= $viewingTenant['next_due_date']->format('M j, Y') ?>
+            <?= $viewingTenant['is_overdue'] ? ' (Overdue)' : '' ?>
+          </span>
+        <?php else: ?>
+          <span style="color:var(--ink-400);">—</span>
+        <?php endif; ?>
+      </p>
       <p style="margin:4px 0; font-size:13px;"><strong>Checklist:</strong> 
         <?php if (empty($viewingTenant['counter_offers'])): ?>
           <span style="color:var(--success); font-weight:600;"><?= $viewingTenant['checklist_agreed'] ?>/<?= $viewingTenant['checklist_total'] ?> (All Agreed)</span>
