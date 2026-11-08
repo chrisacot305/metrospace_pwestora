@@ -91,9 +91,13 @@ class TicketDetailScreen extends StatelessWidget {
                       children: [
                         const Icon(Icons.engineering_outlined, size: 16, color: AppColors.ink500),
                         const SizedBox(width: 6),
-                        Text(
-                          'Contractor: ${ticket['contractor']}',
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink700),
+                        Expanded(
+                          child: Text(
+                            'Contractor: ${ticket['contractor']}',
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.ink700),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),

@@ -448,7 +448,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           : const Color(0xFFF7F8FA),
       body: RefreshIndicator(
         onRefresh: _refresh,
-        color: AppColors.midnightNavy,
+        color: isDark ? AppColors.electricBlue : AppColors.midnightNavy,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
@@ -472,7 +472,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Image.asset(
-                          'img/Frame 2.png',
+                          isDark ? 'img/invert.png' : 'img/Frame 2.png',
                           width: 26,
                           height: 26,
                           fit: BoxFit.contain,
@@ -663,7 +663,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       return Column(
                         children: [
                           SizedBox(
-                            height: 232,
+                            height: 236,
                             child: PageView.builder(
                               controller: _cardPageController,
                               physics: const BouncingScrollPhysics(),
@@ -1391,50 +1391,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required VoidCallback onTap,
     bool isDark = false,
   }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF1E1E1E)
-                    : const Color(0xFFF3F4F6),
-                shape: BoxShape.circle,
-                border: isDark
-                    ? Border.all(color: const Color(0xFF262626), width: 1)
-                    : null,
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1E1E1E)
+                      : const Color(0xFFF3F4F6),
+                  shape: BoxShape.circle,
+                  border: isDark
+                      ? Border.all(color: const Color(0xFF262626), width: 1)
+                      : null,
+                ),
+                child: Center(
+                  child:
+                      iconWidget ??
+                      Icon(
+                        icon,
+                        color: isDark ? Colors.white : const Color(0xFF111418),
+                        size: 21,
+                      ),
+                ),
               ),
-              child: Center(
-                child:
-                    iconWidget ??
-                    Icon(
-                      icon,
-                      color: isDark ? Colors.white : const Color(0xFF111418),
-                      size: 21,
-                    ),
+              const SizedBox(height: 7),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? const Color(0xFF94A3B8)
+                        : const Color(0xFF4B5563),
+                    letterSpacing: -0.1,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
-                color: isDark
-                    ? const Color(0xFF94A3B8)
-                    : const Color(0xFF4B5563),
-                letterSpacing: -0.1,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1508,13 +1514,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            Text(
-              trailing,
-              style: TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white : const Color(0xFF111418),
-                letterSpacing: -0.3,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                trailing,
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : const Color(0xFF111418),
+                  letterSpacing: -0.3,
+                ),
               ),
             ),
           ],

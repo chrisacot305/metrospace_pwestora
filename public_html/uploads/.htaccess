@@ -1,0 +1,8 @@
+# uploads/ — user files. Never run scripts here, never list folders.
+Options -Indexes -ExecCGI
+<FilesMatch "\.(php|php[0-9]?|phtml|phar|pl|py|cgi|sh|htaccess|html?|svg|js)$">
+    Require all denied
+</FilesMatch>
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>

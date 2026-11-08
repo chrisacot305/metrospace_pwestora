@@ -209,7 +209,7 @@ class _PersonalInfoScreenState extends State<PersonalInfoScreen> {
                                 } catch (e) {
                                   setSheetState(() {
                                     saving = false;
-                                    sheetError = e.toString().replaceFirst('Exception: ', '');
+                                    sheetError = ApiService.errorMessage(e);
                                   });
                                 }
                               },

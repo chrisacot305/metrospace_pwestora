@@ -4,12 +4,12 @@
  * No auth required — shown before/during registration.
  * Response: { "ok": true, "items": [ { key, label, text }, ... ] }
  */
-require __DIR__ . '/_bootstrap.php';
-require_once __DIR__ . '/../includes/lease_checklist.php';
+require __DIR__ . '/../app/init_api.php';
+$LEASE_CHECKLIST_ITEMS = App\Services\LeaseChecklist::items();
 
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    json_error('Use GET.', 405);
-}
+use Api\Http\Request;
+
+Request::requireMethod('GET');
 
 $items = [];
 foreach ($LEASE_CHECKLIST_ITEMS as $key => $item) {

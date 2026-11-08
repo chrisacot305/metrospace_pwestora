@@ -388,6 +388,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
   }
 
   Future<void> _selectTargetDate() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final picked = await showDatePicker(
       context: context,
       initialDate: _targetMoveInDate,
@@ -395,13 +396,22 @@ class _ApplyScreenState extends State<ApplyScreen> {
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.primary,
-              onPrimary: Colors.white,
-              onSurface: AppColors.ink900,
-            ),
-          ),
+          data: isDark
+              ? ThemeData.dark().copyWith(
+                  colorScheme: const ColorScheme.dark(
+                    primary: AppColors.electricBlue,
+                    onPrimary: Colors.white,
+                    surface: AppColors.navyCard,
+                    onSurface: Colors.white,
+                  ),
+                )
+              : Theme.of(context).copyWith(
+                  colorScheme: const ColorScheme.light(
+                    primary: AppColors.primary,
+                    onPrimary: Colors.white,
+                    onSurface: AppColors.ink900,
+                  ),
+                ),
           child: child!,
         );
       },
@@ -436,9 +446,10 @@ class _ApplyScreenState extends State<ApplyScreen> {
   }
 
   void _showPickOptions(String key, String title) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: isDark ? AppColors.navyCard : AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -451,12 +462,19 @@ class _ApplyScreenState extends State<ApplyScreen> {
             children: [
               Text(
                 'Attach $title',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppColors.ink900),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: isDark ? Colors.white : AppColors.ink900,
+                ),
               ),
               const SizedBox(height: 6),
-              const Text(
+              Text(
                 'Upload a clear photo or scanned image of your document.',
-                style: TextStyle(fontSize: 12.5, color: AppColors.ink500),
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: isDark ? AppColors.ink400 : AppColors.ink500,
+                ),
               ),
               const SizedBox(height: 18),
               ListTile(
@@ -464,29 +482,50 @@ class _ApplyScreenState extends State<ApplyScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.accentSoft,
+                    color: isDark
+                        ? const Color(0xFF1E3A8A).withValues(alpha: 0.35)
+                        : AppColors.accentSoft,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.camera_alt_outlined, color: AppColors.electricBlue),
                 ),
-                title: const Text('Take Photo with Camera', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                title: Text(
+                  'Take Photo with Camera',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: isDark ? Colors.white : AppColors.ink900,
+                  ),
+                ),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   _pickDocument(key, ImageSource.camera);
                 },
               ),
-              const Divider(height: 1),
+              Divider(
+                height: 1,
+                color: isDark ? AppColors.navyBorder : AppColors.border,
+              ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.accentSoft,
+                    color: isDark
+                        ? const Color(0xFF1E3A8A).withValues(alpha: 0.35)
+                        : AppColors.accentSoft,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.photo_library_outlined, color: AppColors.electricBlue),
                 ),
-                title: const Text('Choose from Photo Gallery', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                title: Text(
+                  'Choose from Photo Gallery',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    color: isDark ? Colors.white : AppColors.ink900,
+                  ),
+                ),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   _pickDocument(key, ImageSource.gallery);
@@ -550,7 +589,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
       HapticFeedback.mediumImpact();
       setState(() => _submitted = true);
     } catch (e) {
-      setState(() => _error = e.toString().replaceAll('ApiException: ', ''));
+      setState(() => _error = ApiService.errorMessage(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -558,8 +597,10 @@ class _ApplyScreenState extends State<ApplyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     if (_submitted) {
-      return _buildSuccessScreen();
+      return _buildSuccessScreen(isDark);
     }
 
     String appBarTitle = 'Commercial Proposal';
@@ -567,10 +608,16 @@ class _ApplyScreenState extends State<ApplyScreen> {
     if (_currentStep == 2) appBarTitle = 'Negotiate Contract Terms';
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: isDark ? AppColors.midnightNavy : AppColors.bg,
       appBar: AppBar(
-        title: Text(appBarTitle),
-        backgroundColor: AppColors.surface,
+        title: Text(
+          appBarTitle,
+          style: TextStyle(
+            color: isDark ? Colors.white : AppColors.ink900,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        backgroundColor: isDark ? AppColors.navySurface : AppColors.surface,
         elevation: 0,
         leading: AppBackButton(
           onPressed: () {
@@ -592,15 +639,15 @@ class _ApplyScreenState extends State<ApplyScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Step Timeline Header (1 ─── 2 ─── 3)
-              _buildTimelineStepper(),
+              _buildTimelineStepper(isDark),
               const SizedBox(height: 20),
 
               if (_currentStep == 0)
-                _buildStepOneForm()
+                _buildStepOneForm(isDark)
               else if (_currentStep == 1)
-                _buildStepTwoDocuments()
+                _buildStepTwoDocuments(isDark)
               else
-                _buildStepThreeChecklist(),
+                _buildStepThreeChecklist(isDark),
             ],
           ),
         ),
@@ -609,7 +656,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
   }
 
   // Connected Timeline Stepper (1 ─── 2 ─── 3)
-  Widget _buildTimelineStepper() {
+  Widget _buildTimelineStepper(bool isDark) {
     final steps = [
       {'num': 1, 'label': 'Proposal'},
       {'num': 2, 'label': 'Documents'},
@@ -619,12 +666,12 @@ class _ApplyScreenState extends State<ApplyScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: isDark ? AppColors.navyCard : AppColors.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: isDark ? AppColors.navyBorder : AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.03),
+            color: isDark ? Colors.black.withValues(alpha: 0.3) : AppColors.primary.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -641,7 +688,9 @@ class _ApplyScreenState extends State<ApplyScreen> {
                 height: 3,
                 margin: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
-                  color: isLineActive ? AppColors.electricBlue : AppColors.border,
+                  color: isLineActive
+                      ? AppColors.electricBlue
+                      : (isDark ? AppColors.navyBorder : AppColors.border),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -666,11 +715,11 @@ class _ApplyScreenState extends State<ApplyScreen> {
                     color: isDone
                         ? AppColors.electricBlue
                         : isActive
-                            ? AppColors.primary
-                            : AppColors.borderLight,
+                            ? (isDark ? AppColors.electricBlue : AppColors.primary)
+                            : (isDark ? AppColors.navySurface : AppColors.borderLight),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isActive ? AppColors.electricBlue : Colors.transparent,
+                      color: isActive ? (isDark ? Colors.white : AppColors.electricBlue) : Colors.transparent,
                       width: 2,
                     ),
                     boxShadow: (isActive || isDone)
@@ -689,7 +738,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                         : Text(
                             '${stepData['num']}',
                             style: TextStyle(
-                              color: isActive ? Colors.white : AppColors.ink500,
+                              color: isActive ? Colors.white : (isDark ? AppColors.ink300 : AppColors.ink500),
                               fontWeight: FontWeight.w900,
                               fontSize: 13,
                             ),
@@ -702,7 +751,9 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: (isActive || isDone) ? FontWeight.w800 : FontWeight.w600,
-                    color: (isActive || isDone) ? AppColors.ink900 : AppColors.ink400,
+                    color: (isActive || isDone)
+                        ? (isDark ? Colors.white : AppColors.ink900)
+                        : (isDark ? AppColors.ink400 : AppColors.ink400),
                   ),
                 ),
               ],
@@ -713,7 +764,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
     );
   }
 
-  Widget _buildStepOneForm() {
+  Widget _buildStepOneForm(bool isDark) {
     final formattedDate =
         '${_targetMoveInDate.month}/${_targetMoveInDate.day}/${_targetMoveInDate.year}';
 
@@ -725,7 +776,12 @@ class _ApplyScreenState extends State<ApplyScreen> {
           // 1. Property & Fixed Rate Hero Card
           Container(
             padding: const EdgeInsets.all(18),
-            decoration: AppDecorations.card(radius: 20, shadow: true),
+            decoration: AppDecorations.card(
+              color: isDark ? AppColors.navyCard : AppColors.surface,
+              border: Border.all(color: isDark ? AppColors.navyBorder : AppColors.border.withValues(alpha: 0.85)),
+              radius: 20,
+              shadow: true,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -761,7 +817,11 @@ class _ApplyScreenState extends State<ApplyScreen> {
                           const SizedBox(height: 2),
                           Text(
                             widget.propertyName,
-                            style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: AppColors.ink900),
+                            style: TextStyle(
+                              fontSize: 15.5,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white : AppColors.ink900,
+                            ),
                           ),
                         ],
                       ),
@@ -774,9 +834,9 @@ class _ApplyScreenState extends State<ApplyScreen> {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.bg,
+                    color: isDark ? AppColors.navySurface : AppColors.bg,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: isDark ? AppColors.navyBorder : AppColors.border),
                   ),
                   child: Column(
                     children: [
@@ -786,17 +846,21 @@ class _ApplyScreenState extends State<ApplyScreen> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
+                              Text(
                                 'Monthly Base Rent',
-                                style: TextStyle(fontSize: 11.5, color: AppColors.ink500, fontWeight: FontWeight.w600),
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: isDark ? AppColors.ink300 : AppColors.ink500,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Text(
                                 '₱${_effectiveRent.toStringAsFixed(0)} / mo',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.w900,
-                                  color: AppColors.ink900,
+                                  color: isDark ? Colors.white : AppColors.ink900,
                                   letterSpacing: -0.3,
                                 ),
                               ),
@@ -805,17 +869,21 @@ class _ApplyScreenState extends State<ApplyScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppColors.accentSoft,
+                              color: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.4) : AppColors.accentSoft,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.verified_rounded, size: 13, color: AppColors.electricBlue),
-                                SizedBox(width: 4),
+                                const Icon(Icons.verified_rounded, size: 13, color: AppColors.electricBlue),
+                                const SizedBox(width: 4),
                                 Text(
                                   'Fixed Listed Rate',
-                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.electricBlue),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue,
+                                  ),
                                 ),
                               ],
                             ),
@@ -824,15 +892,18 @@ class _ApplyScreenState extends State<ApplyScreen> {
                       ),
                       if (_customRateMode) ...[
                         const SizedBox(height: 12),
-                        const Divider(height: 1),
+                        Divider(height: 1, color: isDark ? AppColors.navyBorder : AppColors.border),
                         const SizedBox(height: 10),
                         TextFormField(
                           controller: _customRentCtrl,
                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          style: TextStyle(color: isDark ? Colors.white : AppColors.ink900),
                           decoration: InputDecoration(
                             isDense: true,
                             labelText: 'Propose Counter-Offer Rate (₱ PHP)',
+                            labelStyle: TextStyle(color: isDark ? AppColors.ink300 : AppColors.ink500),
                             prefixText: '₱ ',
+                            prefixStyle: TextStyle(color: isDark ? Colors.white : AppColors.ink900),
                             suffixIcon: IconButton(
                               icon: const Icon(Icons.check_circle, color: AppColors.electricBlue, size: 20),
                               onPressed: () {
@@ -860,10 +931,10 @@ class _ApplyScreenState extends State<ApplyScreen> {
                     },
                     child: Text(
                       _customRateMode ? 'Cancel custom rate' : 'Propose counter-offer rate / discount',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.electricBlue,
+                        color: isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue,
                       ),
                     ),
                   ),
@@ -881,18 +952,30 @@ class _ApplyScreenState extends State<ApplyScreen> {
           // 2. Business Concept & Category Card
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: AppDecorations.card(radius: 20, shadow: true),
+            decoration: AppDecorations.card(
+              color: isDark ? AppColors.navyCard : AppColors.surface,
+              border: Border.all(color: isDark ? AppColors.navyBorder : AppColors.border.withValues(alpha: 0.85)),
+              radius: 20,
+              shadow: true,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Business Concept Category',
-                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.ink900),
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : AppColors.ink900,
+                  ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Helps the lessor prevent tenant conflict and verify stall suitability.',
-                  style: TextStyle(fontSize: 11.5, color: AppColors.ink500),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: isDark ? AppColors.ink400 : AppColors.ink500,
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -912,7 +995,9 @@ class _ApplyScreenState extends State<ApplyScreen> {
                           Icon(
                             icon,
                             size: 15,
-                            color: isSelected ? AppColors.electricBlue : AppColors.ink500,
+                            color: isSelected
+                                ? (isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue)
+                                : (isDark ? AppColors.ink400 : AppColors.ink500),
                           ),
                           const SizedBox(width: 6),
                           Text(label),
@@ -922,15 +1007,19 @@ class _ApplyScreenState extends State<ApplyScreen> {
                       onSelected: (selected) {
                         if (selected) setState(() => _selectedCategory = label);
                       },
-                      selectedColor: AppColors.accentSoft,
-                      backgroundColor: AppColors.bg,
+                      selectedColor: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.5) : AppColors.accentSoft,
+                      backgroundColor: isDark ? AppColors.navySurface : AppColors.bg,
                       labelStyle: TextStyle(
                         fontSize: 12,
                         fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                        color: isSelected ? AppColors.electricBlue : AppColors.ink700,
+                        color: isSelected
+                            ? (isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue)
+                            : (isDark ? Colors.white70 : AppColors.ink700),
                       ),
                       side: BorderSide(
-                        color: isSelected ? AppColors.electricBlue : AppColors.border,
+                        color: isSelected
+                            ? AppColors.electricBlue
+                            : (isDark ? AppColors.navyBorder : AppColors.border),
                         width: isSelected ? 1.4 : 1,
                       ),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -940,17 +1029,29 @@ class _ApplyScreenState extends State<ApplyScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                const Text(
+                Text(
                   'Brand / Store Name',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.ink900),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : AppColors.ink900,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 TextFormField(
                   controller: _businessCtrl,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
+                  style: TextStyle(color: isDark ? Colors.white : AppColors.ink900),
+                  decoration: InputDecoration(
                     hintText: 'e.g. Daily Grind Cafe & Bakes',
-                    prefixIcon: Icon(Icons.storefront_outlined, color: AppColors.ink500, size: 20),
+                    hintStyle: TextStyle(color: isDark ? AppColors.ink400 : AppColors.ink500),
+                    prefixIcon: Icon(
+                      Icons.storefront_outlined,
+                      color: isDark ? AppColors.ink300 : AppColors.ink500,
+                      size: 20,
+                    ),
+                    filled: isDark,
+                    fillColor: isDark ? AppColors.navySurface : null,
                   ),
                   validator: (v) => (v == null || v.isEmpty) ? 'Please enter your brand or business name' : null,
                 ),
@@ -962,18 +1063,30 @@ class _ApplyScreenState extends State<ApplyScreen> {
           // 3. Lease Duration & Target Move-In Date Card
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: AppDecorations.card(radius: 20, shadow: true),
+            decoration: AppDecorations.card(
+              color: isDark ? AppColors.navyCard : AppColors.surface,
+              border: Border.all(color: isDark ? AppColors.navyBorder : AppColors.border.withValues(alpha: 0.85)),
+              radius: 20,
+              shadow: true,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Proposed Lease Duration (Term)',
-                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.ink900),
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white : AppColors.ink900,
+                  ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Multi-year lease commitments are favored by commercial space lessors.',
-                  style: TextStyle(fontSize: 11.5, color: AppColors.ink500),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: isDark ? AppColors.ink400 : AppColors.ink500,
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -990,10 +1103,14 @@ class _ApplyScreenState extends State<ApplyScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             decoration: BoxDecoration(
-                              color: isSelected ? AppColors.accentSoft : AppColors.bg,
+                              color: isSelected
+                                  ? (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.5) : AppColors.accentSoft)
+                                  : (isDark ? AppColors.navySurface : AppColors.bg),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: isSelected ? AppColors.electricBlue : AppColors.border,
+                                color: isSelected
+                                    ? AppColors.electricBlue
+                                    : (isDark ? AppColors.navyBorder : AppColors.border),
                                 width: isSelected ? 1.5 : 1,
                               ),
                             ),
@@ -1003,7 +1120,9 @@ class _ApplyScreenState extends State<ApplyScreen> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                  color: isSelected ? AppColors.electricBlue : AppColors.ink700,
+                                  color: isSelected
+                                      ? (isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue)
+                                      : (isDark ? Colors.white70 : AppColors.ink700),
                                 ),
                               ),
                             ),
@@ -1016,9 +1135,13 @@ class _ApplyScreenState extends State<ApplyScreen> {
                 const SizedBox(height: 20),
 
                 // Target Move-in Date Tile
-                const Text(
+                Text(
                   'Target Move-In / Turnover Date',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.ink900),
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : AppColors.ink900,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 InkWell(
@@ -1027,24 +1150,45 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: AppColors.bg,
+                      color: isDark ? AppColors.navySurface : AppColors.bg,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: isDark ? AppColors.navyBorder : AppColors.border),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.calendar_today_rounded, size: 18, color: AppColors.primary),
+                        Icon(
+                          Icons.calendar_today_rounded,
+                          size: 18,
+                          color: isDark ? const Color(0xFF60A5FA) : AppColors.primary,
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Planned Occupancy', style: TextStyle(fontSize: 10.5, color: AppColors.ink500)),
-                              Text(formattedDate, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.ink900)),
+                              Text(
+                                'Planned Occupancy',
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: isDark ? AppColors.ink400 : AppColors.ink500,
+                                ),
+                              ),
+                              Text(
+                                formattedDate,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? Colors.white : AppColors.ink900,
+                                ),
+                              ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.ink400),
+                        Icon(
+                          Icons.arrow_forward_ios_rounded,
+                          size: 14,
+                          color: isDark ? AppColors.ink400 : AppColors.ink400,
+                        ),
                       ],
                     ),
                   ),
@@ -1060,13 +1204,19 @@ class _ApplyScreenState extends State<ApplyScreen> {
                       Icon(
                         _requestFitOutGrace ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
                         size: 20,
-                        color: _requestFitOutGrace ? AppColors.electricBlue : AppColors.ink400,
+                        color: _requestFitOutGrace
+                            ? AppColors.electricBlue
+                            : (isDark ? AppColors.ink400 : AppColors.ink400),
                       ),
                       const SizedBox(width: 8),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Request 15-day rent-free fit-out / setup period before opening',
-                          style: TextStyle(fontSize: 12, color: AppColors.ink700, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? AppColors.ink300 : AppColors.ink700,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
@@ -1084,7 +1234,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
               onPressed: _proceedToDocuments,
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: AppColors.primary,
+                backgroundColor: isDark ? AppColors.electricBlue : AppColors.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               child: const Row(
@@ -1103,7 +1253,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
     );
   }
 
-  Widget _buildStepTwoDocuments() {
+  Widget _buildStepTwoDocuments(bool isDark) {
     final attachedCount = _uploadedDocs.length;
 
     return Column(
@@ -1113,12 +1263,12 @@ class _ApplyScreenState extends State<ApplyScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: isDark ? AppColors.navyCard : AppColors.surface,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: isDark ? AppColors.navyBorder : AppColors.border),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.03),
+                color: isDark ? Colors.black.withValues(alpha: 0.25) : AppColors.primary.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -1132,24 +1282,31 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.accentSoft,
+                      color: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.4) : AppColors.accentSoft,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(Icons.shield_outlined, size: 20, color: AppColors.electricBlue),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           'Lessor Screening & Verification',
-                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.ink900),
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : AppColors.ink900,
+                          ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
                           'Attaching verification documents speeds up review.',
-                          style: TextStyle(fontSize: 11.5, color: AppColors.ink500),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: isDark ? AppColors.ink400 : AppColors.ink500,
+                          ),
                         ),
                       ],
                     ),
@@ -1162,7 +1319,9 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: attachedCount > 0 ? AppColors.accentSoft : AppColors.borderLight,
+                      color: attachedCount > 0
+                          ? (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.4) : AppColors.accentSoft)
+                          : (isDark ? AppColors.navySurface : AppColors.borderLight),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -1171,7 +1330,9 @@ class _ApplyScreenState extends State<ApplyScreen> {
                         Icon(
                           attachedCount > 0 ? Icons.check_circle : Icons.attach_file_rounded,
                           size: 13,
-                          color: attachedCount > 0 ? AppColors.electricBlue : AppColors.ink500,
+                          color: attachedCount > 0
+                              ? (isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue)
+                              : (isDark ? AppColors.ink400 : AppColors.ink500),
                         ),
                         const SizedBox(width: 5),
                         Text(
@@ -1179,7 +1340,9 @@ class _ApplyScreenState extends State<ApplyScreen> {
                           style: TextStyle(
                             fontSize: 11.5,
                             fontWeight: FontWeight.w700,
-                            color: attachedCount > 0 ? AppColors.electricBlue : AppColors.ink700,
+                            color: attachedCount > 0
+                                ? (isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue)
+                                : (isDark ? Colors.white70 : AppColors.ink700),
                           ),
                         ),
                       ],
@@ -1190,17 +1353,25 @@ class _ApplyScreenState extends State<ApplyScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.borderLight,
+                        color: isDark ? AppColors.navySurface : AppColors.borderLight,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.cloud_done_outlined, size: 12, color: AppColors.ink500),
-                          SizedBox(width: 4),
+                          Icon(
+                            Icons.cloud_done_outlined,
+                            size: 12,
+                            color: isDark ? AppColors.ink400 : AppColors.ink500,
+                          ),
+                          const SizedBox(width: 4),
                           Text(
                             'Draft auto-saved',
-                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: AppColors.ink500),
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppColors.ink400 : AppColors.ink500,
+                            ),
                           ),
                         ],
                       ),
@@ -1231,17 +1402,19 @@ class _ApplyScreenState extends State<ApplyScreen> {
             margin: const EdgeInsets.only(bottom: 14),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: isDark ? AppColors.navyCard : AppColors.surface,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: isUploaded ? AppColors.electricBlue.withValues(alpha: 0.6) : AppColors.border,
+                color: isUploaded
+                    ? AppColors.electricBlue.withValues(alpha: 0.6)
+                    : (isDark ? AppColors.navyBorder : AppColors.border),
                 width: isUploaded ? 1.5 : 1,
               ),
               boxShadow: [
                 BoxShadow(
                   color: isUploaded
                       ? AppColors.electricBlue.withValues(alpha: 0.08)
-                      : AppColors.primary.withValues(alpha: 0.03),
+                      : (isDark ? Colors.black.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.03)),
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
@@ -1256,12 +1429,14 @@ class _ApplyScreenState extends State<ApplyScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: isUploaded ? AppColors.accentSoft : AppColors.borderLight,
+                        color: isUploaded
+                            ? (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.4) : AppColors.accentSoft)
+                            : (isDark ? AppColors.navySurface : AppColors.borderLight),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
                         isUploaded ? Icons.check_circle_rounded : icon,
-                        color: isUploaded ? AppColors.electricBlue : AppColors.primary,
+                        color: isUploaded ? AppColors.electricBlue : (isDark ? const Color(0xFF60A5FA) : AppColors.primary),
                         size: 22,
                       ),
                     ),
@@ -1275,24 +1450,32 @@ class _ApplyScreenState extends State<ApplyScreen> {
                               Expanded(
                                 child: Text(
                                   title,
-                                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.ink900),
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: isDark ? Colors.white : AppColors.ink900,
+                                  ),
                                 ),
                               ),
                               if (isUploaded)
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                                   decoration: BoxDecoration(
-                                    color: AppColors.accentSoft,
+                                    color: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.4) : AppColors.accentSoft,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: const Row(
+                                  child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.check_rounded, color: AppColors.electricBlue, size: 12),
-                                      SizedBox(width: 3),
+                                      const Icon(Icons.check_rounded, color: AppColors.electricBlue, size: 12),
+                                      const SizedBox(width: 3),
                                       Text(
                                         'Attached',
-                                        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: AppColors.electricBlue),
+                                        style: TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -1302,7 +1485,11 @@ class _ApplyScreenState extends State<ApplyScreen> {
                           const SizedBox(height: 3),
                           Text(
                             subtitle,
-                            style: const TextStyle(fontSize: 11.5, color: AppColors.ink500, height: 1.35),
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: isDark ? AppColors.ink400 : AppColors.ink500,
+                              height: 1.35,
+                            ),
                           ),
                         ],
                       ),
@@ -1315,9 +1502,9 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.bg,
+                      color: isDark ? AppColors.navySurface : AppColors.bg,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: isDark ? AppColors.navyBorder : AppColors.border),
                     ),
                     child: Row(
                       children: [
@@ -1339,7 +1526,11 @@ class _ApplyScreenState extends State<ApplyScreen> {
                                 doc.filename,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.ink900),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Colors.white : AppColors.ink900,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               const Row(
@@ -1361,10 +1552,21 @@ class _ApplyScreenState extends State<ApplyScreen> {
                             padding: const EdgeInsets.symmetric(horizontal: 8),
                             visualDensity: VisualDensity.compact,
                           ),
-                          child: const Text('Replace', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.electricBlue)),
+                          child: Text(
+                            'Replace',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              color: isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue,
+                            ),
+                          ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close_rounded, color: AppColors.ink500, size: 18),
+                          icon: Icon(
+                            Icons.close_rounded,
+                            color: isDark ? AppColors.ink300 : AppColors.ink500,
+                            size: 18,
+                          ),
                           tooltip: 'Remove',
                           visualDensity: VisualDensity.compact,
                           onPressed: () async {
@@ -1381,13 +1583,24 @@ class _ApplyScreenState extends State<ApplyScreen> {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: () => _showPickOptions(key, title),
-                      icon: const Icon(Icons.cloud_upload_outlined, size: 18),
-                      label: Text('Attach $title', style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+                      icon: Icon(
+                        Icons.cloud_upload_outlined,
+                        size: 18,
+                        color: isDark ? const Color(0xFF60A5FA) : AppColors.primary,
+                      ),
+                      label: Text(
+                        'Attach $title',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : AppColors.ink900,
+                        ),
+                      ),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        backgroundColor: AppColors.bg,
-                        side: const BorderSide(color: AppColors.border),
-                        foregroundColor: AppColors.primary,
+                        backgroundColor: isDark ? AppColors.navySurface : AppColors.bg,
+                        side: BorderSide(color: isDark ? AppColors.navyBorder : AppColors.border),
+                        foregroundColor: isDark ? Colors.white : AppColors.primary,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
@@ -1406,7 +1619,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
             onPressed: _proceedToChecklist,
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: AppColors.primary,
+              backgroundColor: isDark ? AppColors.electricBlue : AppColors.primary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
             child: const Row(
@@ -1431,7 +1644,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
     );
   }
 
-  Widget _buildStepThreeChecklist() {
+  Widget _buildStepThreeChecklist(bool isDark) {
     final agreedCount = _checklistClauses.where((c) => c['agreed'] == true).length;
     final rebuttalCount = _checklistClauses.length - agreedCount;
 
@@ -1442,12 +1655,12 @@ class _ApplyScreenState extends State<ApplyScreen> {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: isDark ? AppColors.navyCard : AppColors.surface,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: isDark ? AppColors.navyBorder : AppColors.border),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withValues(alpha: 0.03),
+                color: isDark ? Colors.black.withValues(alpha: 0.25) : AppColors.primary.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -1460,22 +1673,33 @@ class _ApplyScreenState extends State<ApplyScreen> {
                 children: [
                   Container(
                     padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(color: AppColors.accentSoft, borderRadius: BorderRadius.circular(8)),
-                    child: const Icon(Icons.handshake_outlined, size: 18, color: AppColors.primary),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.4) : AppColors.accentSoft,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(Icons.handshake_outlined, size: 18, color: isDark ? const Color(0xFF60A5FA) : AppColors.primary),
                   ),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       'Interactive Contract Negotiation',
-                      style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.ink900),
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : AppColors.ink900,
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Check each clause to accept standard commercial lease terms. If you disagree with any item, uncheck it and input your counter-offer note directly.',
-                style: TextStyle(fontSize: 12, color: AppColors.ink500, height: 1.4),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? AppColors.ink400 : AppColors.ink500,
+                  height: 1.4,
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -1483,12 +1707,16 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.accentSoft,
+                      color: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.4) : AppColors.accentSoft,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '$agreedCount Standard Agreed',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: AppColors.electricBlue),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -1496,7 +1724,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
+                        color: isDark ? AppColors.electricBlue : AppColors.primary,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -1527,15 +1755,19 @@ class _ApplyScreenState extends State<ApplyScreen> {
             margin: const EdgeInsets.only(bottom: 14),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: isDark ? AppColors.navyCard : AppColors.surface,
               borderRadius: BorderRadius.circular(18),
               border: Border.all(
-                color: isAgreed ? AppColors.border : AppColors.electricBlue,
+                color: isAgreed
+                    ? (isDark ? AppColors.navyBorder : AppColors.border)
+                    : AppColors.electricBlue,
                 width: isAgreed ? 1 : 1.5,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: isAgreed ? AppColors.primary.withValues(alpha: 0.03) : AppColors.electricBlue.withValues(alpha: 0.06),
+                  color: isAgreed
+                      ? (isDark ? Colors.black.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.03))
+                      : AppColors.electricBlue.withValues(alpha: 0.06),
                   blurRadius: 10,
                   offset: const Offset(0, 3),
                 ),
@@ -1569,10 +1801,14 @@ class _ApplyScreenState extends State<ApplyScreen> {
                         width: 26,
                         height: 26,
                         decoration: BoxDecoration(
-                          color: isAgreed ? AppColors.primary : Colors.white,
+                          color: isAgreed
+                              ? (isDark ? AppColors.electricBlue : AppColors.primary)
+                              : (isDark ? AppColors.navySurface : Colors.white),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: isAgreed ? AppColors.primary : AppColors.electricBlue,
+                            color: isAgreed
+                                ? (isDark ? AppColors.electricBlue : AppColors.primary)
+                                : AppColors.electricBlue,
                             width: 1.8,
                           ),
                         ),
@@ -1589,7 +1825,11 @@ class _ApplyScreenState extends State<ApplyScreen> {
                               Expanded(
                                 child: Text(
                                   clause['label'] as String,
-                                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w800, color: AppColors.ink900),
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: isDark ? Colors.white : AppColors.ink900,
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -1597,8 +1837,8 @@ class _ApplyScreenState extends State<ApplyScreen> {
                                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                                 decoration: BoxDecoration(
                                   color: (isMandatory || isAgreed)
-                                      ? AppColors.accentSoft
-                                      : AppColors.primary,
+                                      ? (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.4) : AppColors.accentSoft)
+                                      : (isDark ? AppColors.electricBlue : AppColors.primary),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
@@ -1609,7 +1849,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                                     fontSize: 10.5,
                                     fontWeight: FontWeight.w800,
                                     color: (isMandatory || isAgreed)
-                                        ? AppColors.electricBlue
+                                        ? (isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue)
                                         : Colors.white,
                                   ),
                                 ),
@@ -1619,7 +1859,11 @@ class _ApplyScreenState extends State<ApplyScreen> {
                           const SizedBox(height: 6),
                           Text(
                             clause['standard'] as String,
-                            style: const TextStyle(fontSize: 12, color: AppColors.ink500, height: 1.4),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? AppColors.ink300 : AppColors.ink500,
+                              height: 1.4,
+                            ),
                           ),
                         ],
                       ),
@@ -1633,21 +1877,25 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.bg,
+                      color: isDark ? AppColors.navySurface : AppColors.bg,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.electricBlue.withValues(alpha: 0.25)),
+                      border: Border.all(color: AppColors.electricBlue.withValues(alpha: 0.35)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.edit_note_rounded, size: 16, color: AppColors.electricBlue),
+                            Icon(Icons.edit_note_rounded, size: 16, color: isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 'Propose Counter-Terms / Custom Request:',
-                                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppColors.primary),
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? const Color(0xFF60A5FA) : AppColors.primary,
+                                ),
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
@@ -1657,21 +1905,21 @@ class _ApplyScreenState extends State<ApplyScreen> {
                         TextFormField(
                           controller: ctrl,
                           maxLines: 2,
-                          style: const TextStyle(fontSize: 12.5, color: AppColors.ink900),
+                          style: TextStyle(fontSize: 12.5, color: isDark ? Colors.white : AppColors.ink900),
                           onChanged: (_) => _saveDraft(),
                           decoration: InputDecoration(
                             isDense: true,
                             hintText: clause['defaultCounterPlaceholder'] as String? ?? 'Specify your requested terms...',
-                            hintStyle: const TextStyle(fontSize: 12, color: AppColors.ink500),
-                            fillColor: Colors.white,
+                            hintStyle: TextStyle(fontSize: 12, color: isDark ? AppColors.ink400 : AppColors.ink500),
+                            fillColor: isDark ? AppColors.navyCard : Colors.white,
                             filled: true,
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: AppColors.border),
+                              borderSide: BorderSide(color: isDark ? AppColors.navyBorder : AppColors.border),
                             ),
                             enabledBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(color: AppColors.border),
+                              borderSide: BorderSide(color: isDark ? AppColors.navyBorder : AppColors.border),
                             ),
                             focusedBorder: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -1695,18 +1943,26 @@ class _ApplyScreenState extends State<ApplyScreen> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: isDark ? AppColors.navyCard : AppColors.surface,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: isDark ? AppColors.navyBorder : AppColors.border),
           ),
           child: Row(
             children: [
-              const Icon(Icons.attach_file_rounded, size: 18, color: AppColors.primary),
+              Icon(
+                Icons.attach_file_rounded,
+                size: 18,
+                color: isDark ? const Color(0xFF60A5FA) : AppColors.primary,
+              ),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   '${_uploadedDocs.length} verification document(s) will be submitted with this application.',
-                  style: const TextStyle(fontSize: 12, color: AppColors.ink700, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? AppColors.ink300 : AppColors.ink700,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],
@@ -1720,7 +1976,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
             onPressed: _loading ? null : _submit,
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: AppColors.primary,
+              backgroundColor: isDark ? AppColors.electricBlue : AppColors.primary,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
             child: _loading
@@ -1768,12 +2024,18 @@ class _ApplyScreenState extends State<ApplyScreen> {
     );
   }
 
-  Widget _buildSuccessScreen() {
+  Widget _buildSuccessScreen(bool isDark) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: isDark ? AppColors.midnightNavy : AppColors.bg,
       appBar: AppBar(
-        title: const Text('Proposal Sent'),
-        backgroundColor: AppColors.surface,
+        title: Text(
+          'Proposal Sent',
+          style: TextStyle(
+            color: isDark ? Colors.white : AppColors.ink900,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        backgroundColor: isDark ? AppColors.navySurface : AppColors.surface,
         elevation: 0,
       ),
       body: Padding(
@@ -1784,36 +2046,52 @@ class _ApplyScreenState extends State<ApplyScreen> {
             Container(
               width: 80,
               height: 80,
-              decoration: AppDecorations.squircle(color: AppColors.successSoft, radius: 24),
+              decoration: AppDecorations.squircle(
+                color: isDark ? const Color(0xFF064E3B) : AppColors.successSoft,
+                radius: 24,
+              ),
               child: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 48),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Application & Checklist Sent!',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppColors.ink900, letterSpacing: -0.4),
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: isDark ? Colors.white : AppColors.ink900,
+                letterSpacing: -0.4,
+              ),
             ),
             const SizedBox(height: 10),
             Text(
               'Your commercial lease proposal, verification documents, and negotiated terms for ${widget.propertyName} have been submitted to the lessor.',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13.5, color: AppColors.ink500, height: 1.45),
+              style: TextStyle(
+                fontSize: 13.5,
+                color: isDark ? AppColors.ink400 : AppColors.ink500,
+                height: 1.45,
+              ),
             ),
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: isDark ? AppColors.navyCard : AppColors.surface,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: isDark ? AppColors.navyBorder : AppColors.border),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.lock_outline_rounded, size: 18, color: AppColors.warning),
-                  SizedBox(width: 10),
+                  const Icon(Icons.lock_outline_rounded, size: 18, color: AppColors.warning),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Confidentiality Lock is active on the auto-generated contract until initial deposit is finalized.',
-                      style: TextStyle(fontSize: 11.5, color: AppColors.ink700, fontWeight: FontWeight.w600),
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: isDark ? AppColors.ink300 : AppColors.ink700,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -1843,7 +2121,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                 label: const Text('View Negotiation & Contract Status', style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700)),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: isDark ? AppColors.electricBlue : AppColors.primary,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
               ),
@@ -1853,7 +2131,14 @@ class _ApplyScreenState extends State<ApplyScreen> {
               width: double.infinity,
               child: TextButton(
                 onPressed: () => Navigator.of(context)..pop()..pop(),
-                child: const Text('Back to Browse Spaces', style: TextStyle(fontSize: 14, color: AppColors.ink500, fontWeight: FontWeight.w600)),
+                child: Text(
+                  'Back to Browse Spaces',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? const Color(0xFF60A5FA) : AppColors.ink500,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           ],

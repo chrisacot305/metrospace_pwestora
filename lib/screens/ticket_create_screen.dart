@@ -176,7 +176,7 @@ class _TicketCreateScreenState extends State<TicketCreateScreen> {
       if (!mounted) return;
       _showSuccessDialog(ticketId);
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() => _error = ApiService.errorMessage(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -434,9 +434,9 @@ class _TicketCreateScreenState extends State<TicketCreateScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 0.94,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 0.86,
                 ),
                 itemCount: _categories.length,
                 itemBuilder: (context, index) {
@@ -716,45 +716,55 @@ class _TicketCreateScreenState extends State<TicketCreateScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: const [
-                Text(
-                  'Attach Photo',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.ink900,
+            Expanded(
+              child: Row(
+                children: const [
+                  Text(
+                    'Attach Photo',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.ink900,
+                    ),
                   ),
-                ),
-                SizedBox(width: 4),
-                Text(
-                  '*',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.error,
+                  SizedBox(width: 4),
+                  Text(
+                    '*',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.error,
+                    ),
                   ),
-                ),
-                SizedBox(width: 6),
-                Text(
-                  '(At least 1 required)',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.ink500,
+                  SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      '(At least 1 required)',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.ink500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-            if (_attachedPhotos.isNotEmpty)
-              Text(
-                '${_attachedPhotos.length} photo${_attachedPhotos.length > 1 ? 's' : ''} added',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.electricBlue,
+            if (_attachedPhotos.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '${_attachedPhotos.length} photo${_attachedPhotos.length > 1 ? 's' : ''} added',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.electricBlue,
+                  ),
                 ),
               ),
+            ],
           ],
         ),
         if (_validateDetails && _attachedPhotos.isEmpty) ...[
@@ -1010,27 +1020,33 @@ class _TicketCreateScreenState extends State<TicketCreateScreen> {
                     child: Icon(_selectedCategoryIcon, color: Colors.white, size: 22),
                   ),
                   const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        _selectedCategoryLabel,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.ink900,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _selectedCategoryLabel,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink900,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _selectedSymptom,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.ink500,
+                        const SizedBox(height: 2),
+                        Text(
+                          _selectedSymptom,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.ink500,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -1041,12 +1057,16 @@ class _TicketCreateScreenState extends State<TicketCreateScreen> {
                   children: [
                     const Icon(Icons.location_on_outlined, size: 16, color: AppColors.electricBlue),
                     const SizedBox(width: 6),
-                    Text(
-                      propertyName,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.ink700,
+                    Expanded(
+                      child: Text(
+                        propertyName,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.ink700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -1154,11 +1174,11 @@ class _TicketCreateScreenState extends State<TicketCreateScreen> {
 
               Row(
                 children: [
-                  _buildPriorityChip('medium', 'Normal', AppColors.electricBlue),
+                  Expanded(child: _buildPriorityChip('medium', 'Normal', AppColors.electricBlue)),
                   const SizedBox(width: 8),
-                  _buildPriorityChip('high', 'High', AppColors.warning),
+                  Expanded(child: _buildPriorityChip('high', 'High', AppColors.warning)),
                   const SizedBox(width: 8),
-                  _buildPriorityChip('urgent', 'Urgent', AppColors.error),
+                  Expanded(child: _buildPriorityChip('urgent', 'Urgent', AppColors.error)),
                 ],
               ),
             ],

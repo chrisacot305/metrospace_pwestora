@@ -915,6 +915,7 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
   }
 
   Widget _buildTransactionTile(Map<String, dynamic> tx, int index, int total) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final isOverdue = tx['is_overdue'] == true;
     final isPending = tx['status'] == 'pending';
     final isDepositAuto = tx['is_deposit_auto'] == true;
@@ -939,17 +940,17 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
               height: 40,
               decoration: BoxDecoration(
                 color: isDepositAuto
-                    ? const Color(0xFFEFF6FF)
+                    ? (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.3) : const Color(0xFFEFF6FF))
                     : (isPending
-                        ? const Color(0xFFF1F5F9)
-                        : (isOverdue ? const Color(0xFFFEF2F2) : const Color(0xFFEFF6FF))),
+                        ? (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9))
+                        : (isOverdue ? (isDark ? const Color(0xFF7F1D1D).withValues(alpha: 0.3) : const Color(0xFFFEF2F2)) : (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.3) : const Color(0xFFEFF6FF)))),
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: isDepositAuto
-                      ? const Color(0xFFBFDBFE)
+                      ? (isDark ? const Color(0xFF1E40AF) : const Color(0xFFBFDBFE))
                       : (isPending
-                          ? const Color(0xFFCBD5E1)
-                          : (isOverdue ? const Color(0xFFFCA5A5) : const Color(0xFFBFDBFE))),
+                          ? (isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1))
+                          : (isOverdue ? (isDark ? const Color(0xFF991B1B) : const Color(0xFFFCA5A5)) : (isDark ? const Color(0xFF1E40AF) : const Color(0xFFBFDBFE)))),
                   width: 1,
                 ),
               ),
@@ -960,10 +961,10 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                         ? Icons.schedule_rounded
                         : (isOverdue ? Icons.error_outline_rounded : Icons.arrow_outward_rounded)),
                 color: isDepositAuto
-                    ? const Color(0xFF0A1832)
+                    ? (isDark ? const Color(0xFF60A5FA) : const Color(0xFF0A1832))
                     : (isPending
-                        ? const Color(0xFF475569)
-                        : (isOverdue ? const Color(0xFFEF4444) : const Color(0xFF005CEE))),
+                        ? (isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569))
+                        : (isOverdue ? (isDark ? const Color(0xFFF87171) : const Color(0xFFEF4444)) : (isDark ? const Color(0xFF60A5FA) : const Color(0xFF005CEE)))),
                 size: 20,
               ),
             ),
@@ -983,10 +984,10 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                             fontSize: 13.5,
                             fontWeight: FontWeight.w800,
                             color: isDepositAuto
-                                ? AppColors.midnightNavy
+                                ? (isDark ? Colors.white : AppColors.midnightNavy)
                                 : (isPending
-                                    ? const Color(0xFF475569)
-                                    : (isOverdue ? const Color(0xFFB91C1C) : AppColors.midnightNavy)),
+                                    ? (isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569))
+                                    : (isOverdue ? (isDark ? const Color(0xFFF87171) : const Color(0xFFB91C1C)) : (isDark ? Colors.white : AppColors.midnightNavy))),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -997,16 +998,16 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
+                            color: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.3) : const Color(0xFFEFF6FF),
                             borderRadius: BorderRadius.circular(5),
-                            border: Border.all(color: const Color(0xFFBFDBFE)),
+                            border: Border.all(color: isDark ? const Color(0xFF1E40AF) : const Color(0xFFBFDBFE)),
                           ),
-                          child: const Text(
+                          child: Text(
                             'ESCROW',
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF005CEE),
+                              color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF005CEE),
                               letterSpacing: 0.3,
                             ),
                           ),
@@ -1016,16 +1017,16 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
+                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(5),
-                            border: Border.all(color: const Color(0xFFCBD5E1)),
+                            border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1)),
                           ),
-                          child: const Text(
+                          child: Text(
                             'PENDING',
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF475569),
+                              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
                               letterSpacing: 0.3,
                             ),
                           ),
@@ -1036,10 +1037,10 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                   const SizedBox(height: 3),
                   Text(
                     '$timeStr • Ref: $refNo',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF64748B),
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -1055,12 +1056,12 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
               style: TextStyle(
                 fontSize: 14.5,
                 fontWeight: FontWeight.w900,
-                color: isOverdue ? const Color(0xFFDC2626) : const Color(0xFF0F172A),
+                color: isOverdue ? (isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626)) : (isDark ? Colors.white : const Color(0xFF0F172A)),
                 letterSpacing: -0.3,
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF94A3B8)),
+            Icon(Icons.chevron_right_rounded, size: 18, color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8)),
           ],
         ),
       ),
@@ -1559,31 +1560,32 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final filteredTransactions = _getFilteredAndSortedTransactions();
     final grouped = _groupByDate(filteredTransactions);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Transactions',
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w900,
-                color: AppColors.midnightNavy,
+                color: isDark ? Colors.white : AppColors.midnightNavy,
                 letterSpacing: -0.3,
               ),
             ),
             if ((widget.lease['property_name'] ?? widget.lease['business_name'] ?? '').toString().isNotEmpty)
               Text(
                 (widget.lease['property_name'] ?? widget.lease['business_name']).toString(),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
-                  color: Color(0xFF64748B),
+                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -1591,10 +1593,10 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
           ],
         ),
         centerTitle: true,
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        leading: const AppBackButton(),
+        leading: AppBackButton(isDark: isDark),
         actions: [
           // Filter & Sort Trigger Icon with Active Indicator Pip
           Stack(
@@ -1602,7 +1604,7 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
             children: [
               IconButton(
                 tooltip: 'Filter & Sort Timeline',
-                icon: const Icon(Icons.tune_rounded, color: Color(0xFF0F172A)),
+                icon: Icon(Icons.tune_rounded, color: isDark ? Colors.white : const Color(0xFF0F172A)),
                 onPressed: _showFilterSortSheet,
               ),
               if (_dateFilter != 'all' || _sortAscending)
@@ -1622,13 +1624,13 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
           ),
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.ink700),
+            icon: Icon(Icons.refresh_rounded, color: isDark ? const Color(0xFF94A3B8) : AppColors.ink700),
             onPressed: _loadTransactions,
           ),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Container(color: const Color(0xFFE2E8F0), height: 1),
+          child: Container(color: isDark ? const Color(0xFF262626) : const Color(0xFFE2E8F0), height: 1),
         ),
       ),
       body: Column(
@@ -1637,9 +1639,9 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
           if (_dateFilter != 'all' || _sortAscending)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: const BoxDecoration(
-                color: Color(0xFFEFF6FF),
-                border: Border(bottom: BorderSide(color: Color(0xFFBFDBFE))),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.3) : const Color(0xFFEFF6FF),
+                border: Border(bottom: BorderSide(color: isDark ? const Color(0xFF1E40AF) : const Color(0xFFBFDBFE))),
               ),
               child: Row(
                 children: [
@@ -1690,19 +1692,19 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                 ? Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(
+                      children: [
+                        const Icon(
                           Icons.receipt_long_outlined,
                           size: 56,
                           color: Color(0xFF94A3B8),
                         ),
-                        SizedBox(height: 12),
+                        const SizedBox(height: 12),
                         Text(
                           'No transactions recorded yet',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF64748B),
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                           ),
                         ),
                       ],
@@ -1721,19 +1723,19 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                             color: Color(0xFF94A3B8),
                           ),
                           const SizedBox(height: 12),
-                          const Text(
+                          Text(
                             'No receipts found for this timeline',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF0F172A),
+                              color: isDark ? Colors.white : const Color(0xFF0F172A),
                             ),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             'No payments match "$_filterLabel". Try choosing another date range.',
                             textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                            style: TextStyle(fontSize: 13, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
                           ),
                           const SizedBox(height: 16),
                           TextButton(
@@ -1771,10 +1773,10 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                               padding: const EdgeInsets.only(left: 4, top: 10, bottom: 8),
                               child: Text(
                                 dateKey,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(0xFF475569),
+                                  color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
                                   letterSpacing: 0.1,
                                 ),
                               ),
@@ -1783,12 +1785,12 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                             // Fast Zero-Lag Group Card (Flat Column, No Nested ListView)
                             Container(
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: isDark ? const Color(0xFF141414) : Colors.white,
                                 borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                border: Border.all(color: isDark ? const Color(0xFF262626) : const Color(0xFFE2E8F0)),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                                    color: isDark ? Colors.black.withValues(alpha: 0.2) : const Color(0xFF0F172A).withValues(alpha: 0.03),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -1798,12 +1800,12 @@ class _ReceiptsHistoryScreenState extends State<ReceiptsHistoryScreen> {
                                 children: [
                                   for (int i = 0; i < items.length; i++) ...[
                                     if (i > 0)
-                                      const Divider(
+                                      Divider(
                                         height: 1,
                                         thickness: 0.8,
                                         indent: 56,
                                         endIndent: 16,
-                                        color: Color(0xFFF1F5F9),
+                                        color: isDark ? const Color(0xFF262626) : const Color(0xFFF1F5F9),
                                       ),
                                     _buildTransactionTile(items[i], i, items.length),
                                   ],

@@ -124,16 +124,16 @@ class LuxuryRentCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const totalHeight = 224.0;
-    const frontCardTop = 26.0;
-    const notchWidth = 152.0;
-    const notchHeight = 52.0;
-
     final status = (activeArrangement?['status'] ?? '').toString().toLowerCase();
     final planLabel = (activeArrangement?['plan_label'] ?? '').toString();
     final isApproved = status == 'approved';
     final isPending = status == 'pending';
     final hasRestructuring = isApproved || isPending;
+
+    final totalHeight = hasRestructuring ? 244.0 : 224.0;
+    const frontCardTop = 26.0;
+    const notchWidth = 152.0;
+    const notchHeight = 52.0;
 
     final numParts = planLabel.contains('3') ? 3 : 2;
     final splitAmount = rentAmount / numParts;
@@ -344,115 +344,134 @@ class LuxuryRentCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Left Side: Monthly Rent
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isOverdue ? 'Total Outstanding' : 'Monthly Rent',
-                              style: TextStyle(
-                                fontSize: 11.5,
-                                height: 1.2,
-                                fontWeight: FontWeight.w600,
-                                color: isPart1
-                                    ? Colors.white.withValues(alpha: 0.35)
-                                    : Colors.white.withValues(alpha: 0.75),
-                                letterSpacing: 0.1,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              '₱${_formatMoney(rentAmount)}',
-                              style: TextStyle(
-                                fontSize: hasRestructuring ? 26 : 32,
-                                height: 1.1,
-                                fontWeight: FontWeight.w900,
-                                color: isPart1
-                                    ? Colors.white.withValues(alpha: 0.32)
-                                    : Colors.white,
-                                letterSpacing: hasRestructuring ? -0.6 : -1.0,
-                              ),
-                            ),
-                            if (isOverdue && overdueSubtext != null && overdueSubtext!.isNotEmpty) ...[
-                              const SizedBox(height: 3),
+                        Flexible(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Text(
-                                overdueSubtext!,
+                                isOverdue ? 'Total Outstanding' : 'Monthly Rent',
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 11.5,
                                   height: 1.2,
                                   fontWeight: FontWeight.w600,
-                                  color: Colors.white.withValues(alpha: 0.75),
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ] else if (hasRestructuring) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                isPart1 ? 'Deferred (Part 1)' : 'Active Due',
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  height: 1.2,
-                                  fontWeight: FontWeight.w500,
                                   color: isPart1
-                                      ? Colors.white.withValues(alpha: 0.30)
-                                      : Colors.white.withValues(alpha: 0.65),
+                                      ? Colors.white.withValues(alpha: 0.35)
+                                      : Colors.white.withValues(alpha: 0.75),
+                                  letterSpacing: 0.1,
                                 ),
                               ),
-                            ],
-                          ],
-                        ),
-
-                        // Right Side: Beside Monthly Rent is Restructuring Plan (or Due Date if no plan)
-                        if (hasRestructuring)
-                          InkWell(
-                            onTap: onArrangementTap,
-                            borderRadius: BorderRadius.circular(10),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'Restructuring Plan',
+                              const SizedBox(height: 4),
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  '₱${_formatMoney(rentAmount)}',
                                   style: TextStyle(
-                                    fontSize: 11.5,
+                                    fontSize: hasRestructuring ? 26 : 32,
+                                    height: 1.1,
+                                    fontWeight: FontWeight.w900,
+                                    color: isPart1
+                                        ? Colors.white.withValues(alpha: 0.32)
+                                        : Colors.white,
+                                    letterSpacing: hasRestructuring ? -0.6 : -1.0,
+                                  ),
+                                ),
+                              ),
+                              if (isOverdue && overdueSubtext != null && overdueSubtext!.isNotEmpty) ...[
+                                const SizedBox(height: 3),
+                                Text(
+                                  overdueSubtext!,
+                                  style: TextStyle(
+                                    fontSize: 11,
                                     height: 1.2,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white.withValues(alpha: 0.75),
-                                    letterSpacing: 0.1,
+                                    letterSpacing: 0.2,
                                   ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
+                              ] else if (hasRestructuring) ...[
                                 const SizedBox(height: 4),
                                 Text(
-                                  '₱${_formatMoney(splitAmount)}',
-                                  style: const TextStyle(
-                                    fontSize: 26,
-                                    height: 1.1,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white,
-                                    letterSpacing: -0.6,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  isApproved
-                                      ? (isPart1 ? 'Next due — $dueMonth' : 'Final installment')
-                                      : 'Next due — $dueMonth (Pending)',
+                                  isPart1 ? 'Deferred (Part 1)' : 'Active Due',
                                   style: TextStyle(
                                     fontSize: 10.5,
                                     height: 1.2,
                                     fontWeight: FontWeight.w500,
-                                    color: Colors.white.withValues(alpha: 0.65),
+                                    color: isPart1
+                                        ? Colors.white.withValues(alpha: 0.30)
+                                        : Colors.white.withValues(alpha: 0.65),
                                   ),
                                 ),
                               ],
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(width: 8),
+
+                        // Right Side: Beside Monthly Rent is Restructuring Plan (or Due Date if no plan)
+                        if (hasRestructuring)
+                          Flexible(
+                            child: InkWell(
+                              onTap: onArrangementTap,
+                              borderRadius: BorderRadius.circular(10),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    'Restructuring Plan',
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      height: 1.2,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white.withValues(alpha: 0.75),
+                                      letterSpacing: 0.1,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerRight,
+                                    child: Text(
+                                      '₱${_formatMoney(splitAmount)}',
+                                      style: const TextStyle(
+                                        fontSize: 26,
+                                        height: 1.1,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                        letterSpacing: -0.6,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    isApproved
+                                        ? (isPart1 ? 'Next due — $dueMonth' : 'Final installment')
+                                        : 'Next due — $dueMonth (Pending)',
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      height: 1.2,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white.withValues(alpha: 0.65),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
                             ),
                           )
                         else
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'Due Date',
+                          Flexible(
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    'Due Date',
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -536,10 +555,11 @@ class LuxuryRentCard extends StatelessWidget {
                               ],
                             ),
                           ),
+                        ),
                       ],
                     ),
 
-                    const SizedBox(height: 14),
+                    SizedBox(height: hasRestructuring ? 8 : 14),
 
                     // Bottom Row: Business / Tenant Name (constrained to never overlap the "+ Pay Rent" button)
                     Padding(

@@ -12,7 +12,7 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObserver {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -35,6 +35,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _otpCtrl.addListener(() {
       if (mounted) setState(() {});
     });
@@ -42,6 +43,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _countdownTimer?.cancel();
     _nameCtrl.dispose();
     _emailCtrl.dispose();
@@ -50,6 +52,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _otpCtrl.dispose();
     _otpFocusNode.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _currentStep == 2) {
+      Future.delayed(const Duration(milliseconds: 120), () {
+        if (mounted && _currentStep == 2) {
+          _focusOtpInput();
+        }
+      });
+    }
+  }
+
+  /// Ensures native soft-keyboard is always brought up when touching OTP type
+  void _focusOtpInput() {
+    if (!mounted || _currentStep != 2) return;
+    if (_otpFocusNode.hasFocus) {
+      _otpFocusNode.unfocus();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _currentStep == 2) {
+          _otpFocusNode.requestFocus();
+          SystemChannels.textInput.invokeMethod('TextInput.show');
+        }
+      });
+    } else {
+      _otpFocusNode.requestFocus();
+      SystemChannels.textInput.invokeMethod('TextInput.show');
+    }
   }
 
   void _startCountdown() {
@@ -90,10 +120,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       });
       _startCountdown();
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _otpFocusNode.requestFocus();
+        _focusOtpInput();
       });
     } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      setState(() => _error = ApiService.errorMessage(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -118,9 +148,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _successNotice = 'A new verification code has been sent!';
       });
       _startCountdown();
-      _otpFocusNode.requestFocus();
+      _focusOtpInput();
     } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      setState(() => _error = ApiService.errorMessage(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -154,7 +184,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         (route) => false,
       );
     } catch (e) {
-      setState(() => _error = e.toString().replaceFirst('Exception: ', ''));
+      setState(() => _error = ApiService.errorMessage(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -173,12 +203,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   /// STEP 1: Registration Credentials Form View
   /// =========================================================================
   Widget _buildCredentialsFormView() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: isDark ? const Color(0xFF000000) : AppColors.bg,
       appBar: AppBar(
-        leading: const AppBackButton(),
+        leading: AppBackButton(isDark: isDark),
         title: const Text('Create Account'),
-        backgroundColor: AppColors.surface,
+        backgroundColor: isDark ? const Color(0xFF121212) : AppColors.surface,
         elevation: 0,
       ),
       body: SafeArea(
@@ -199,18 +230,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         height: 68,
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: isDark ? const Color(0xFF161616) : Colors.white,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF262626) : AppColors.border.withValues(alpha: 0.8),
+                          ),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.08),
+                              color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
                               blurRadius: 16,
                               offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                        child: Image.asset('img/Frame 2.png', fit: BoxFit.contain),
+                        child: Image.asset(
+                          isDark ? 'img/invert.png' : 'img/Frame 2.png',
+                          fit: BoxFit.contain,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -387,6 +423,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget _buildOtpScreenView() {
     return Scaffold(
       backgroundColor: Colors.white,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -405,7 +442,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Column(
                 children: [
                   Expanded(
@@ -414,13 +451,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 16),
 
                           // 1. Centered Pwestora Logo (Replacing the mandala reference)
                           Center(
                             child: Container(
-                              width: 86,
-                              height: 86,
+                              width: 76,
+                              height: 76,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
                                 color: Colors.white,
@@ -438,19 +475,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ],
                               ),
                               child: Image.asset(
-                                'img/Frame 2.png',
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? 'img/invert.png'
+                                    : 'img/Frame 2.png',
                                 fit: BoxFit.contain,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 26),
+                          const SizedBox(height: 18),
 
                           // 2. Title matching reference
                           const Text(
                             'Enter Your code',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              fontSize: 26,
+                              fontSize: 24,
                               fontWeight: FontWeight.w800,
                               color: AppColors.ink900,
                               letterSpacing: -0.4,
@@ -504,7 +543,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 28),
+                          const SizedBox(height: 20),
 
                           // 4. Error banner if any
                           if (_error != null) ...[
@@ -561,52 +600,70 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           // 6. Interactive 6-Digit Circular Bubbles Row matching reference
                           GestureDetector(
                             behavior: HitTestBehavior.opaque,
-                            onTap: () => _otpFocusNode.requestFocus(),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                // Hidden off-screen/transparent TextField to capture native soft-keyboard input
-                                Opacity(
-                                  opacity: 0.0,
-                                  child: SizedBox(
-                                    width: 1,
-                                    height: 1,
-                                    child: TextField(
-                                      controller: _otpCtrl,
-                                      focusNode: _otpFocusNode,
-                                      keyboardType: TextInputType.number,
-                                      maxLength: 6,
-                                      inputFormatters: [
-                                        FilteringTextInputFormatter.digitsOnly,
-                                        LengthLimitingTextInputFormatter(6),
-                                      ],
-                                      onChanged: (val) {
-                                        if (val.trim().length == 6) {
-                                          _verifyAndRegister();
-                                        }
-                                      },
+                            onTap: _focusOtpInput,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  // Visual Row of 6 Circular Bubbles
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: List.generate(6, (index) {
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                                        child: _buildOtpBubble(index),
+                                      );
+                                    }),
+                                  ),
+
+                                  // Transparent TextField spanning the entire bubble area
+                                  Positioned.fill(
+                                    child: Opacity(
+                                      opacity: 0.0,
+                                      child: TextField(
+                                        controller: _otpCtrl,
+                                        focusNode: _otpFocusNode,
+                                        keyboardType: TextInputType.number,
+                                        autofocus: true,
+                                        showCursor: false,
+                                        enableInteractiveSelection: false,
+                                        maxLength: 6,
+                                        inputFormatters: [
+                                          FilteringTextInputFormatter.digitsOnly,
+                                          LengthLimitingTextInputFormatter(6),
+                                        ],
+                                        decoration: const InputDecoration(
+                                          border: InputBorder.none,
+                                          counterText: '',
+                                          fillColor: Colors.transparent,
+                                          filled: true,
+                                          contentPadding: EdgeInsets.zero,
+                                        ),
+                                        onTap: () {
+                                          SystemChannels.textInput.invokeMethod('TextInput.show');
+                                        },
+                                        onChanged: (val) {
+                                          if (val.trim().length == 6) {
+                                            _verifyAndRegister();
+                                          }
+                                        },
+                                      ),
                                     ),
                                   ),
-                                ),
-
-                                // Visual Row of 6 Circular Bubbles
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: List.generate(6, (index) {
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 5),
-                                      child: _buildOtpBubble(index),
-                                    );
-                                  }),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 36),
+                          const SizedBox(height: 24),
 
                           // 7. "Didn't receive the code? Resend." Text
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                          Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            spacing: 4,
+                            runSpacing: 4,
                             children: [
                               const Text(
                                 "Didn't receive the code? ",
@@ -633,7 +690,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 16),
                         ],
                       ),
                     ),
@@ -641,10 +698,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                   // 8. Large Bottom Pill Submit Button matching reference
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 24, top: 12),
+                    padding: const EdgeInsets.only(bottom: 16, top: 8),
                     child: SizedBox(
                       width: double.infinity,
-                      height: 54,
+                      height: 50,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary, // Exact Midnight Navy brand color from Register Screen
@@ -696,8 +753,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // - Future unfilled digits: Very soft off-white/grey circle with faint border
     if (isEntered) {
       return Container(
-        width: 46,
-        height: 46,
+        width: 44,
+        height: 44,
         decoration: const BoxDecoration(
           color: Color(0xFF2B2B2B), // Solid dark charcoal/navy from screenshot
           shape: BoxShape.circle,
@@ -706,7 +763,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: Text(
           char,
           style: const TextStyle(
-            fontSize: 18,
+            fontSize: 17,
             fontWeight: FontWeight.w700,
             color: Colors.white,
           ),
@@ -716,8 +773,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (isFocused) {
       return Container(
-        width: 46,
-        height: 46,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
@@ -736,7 +793,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         alignment: Alignment.center,
         child: Container(
           width: 2,
-          height: 18,
+          height: 16,
           color: AppColors.primary,
         ),
       );
@@ -744,8 +801,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     // Unfilled bubbles: faint grey background, subtle placeholder dot or '0'
     return Container(
-      width: 46,
-      height: 46,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         color: const Color(0xFFF7F8F9),
         shape: BoxShape.circle,
@@ -758,7 +815,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: Text(
         '0',
         style: TextStyle(
-          fontSize: 16,
+          fontSize: 15,
           fontWeight: FontWeight.w400,
           color: Colors.black.withValues(alpha: 0.18),
         ),

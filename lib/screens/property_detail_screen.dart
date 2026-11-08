@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
+import '../widgets/app_error_view.dart';
 import 'apply_screen.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
@@ -130,33 +131,13 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                 backgroundColor: cardColor,
                 leading: AppBackButton(isDark: isDark),
               ),
-              body: Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 64,
-                        height: 64,
-                        decoration: AppDecorations.squircle(
-                          color: AppColors.errorSoft,
-                        ),
-                        child: const Icon(
-                          Icons.error_outline,
-                          color: AppColors.error,
-                          size: 32,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        snapshot.error.toString(),
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: titleColor),
-                      ),
-                    ],
-                  ),
-                ),
+              body: AppErrorView(
+                error: snapshot.error,
+                onRetry: () {
+                  setState(() {
+                    _future = ApiService.fetchPropertyDetail(widget.propertyId);
+                  });
+                },
               ),
             );
           }
@@ -450,9 +431,15 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             children: [
                               Expanded(
                                 child: _featureItem(
-                                  icon: Icons.storefront_rounded,
-                                  title: (p['type'] ?? 'Commercial').toString(),
-                                  subtitle: 'Space Category',
+                                  icon: Icons.meeting_room_rounded,
+                                  title: () {
+                                    final avail = (p['available_units'] as num?)?.toInt() ??
+                                        (p['occupancy_status'] == 'occupied' ? 0 : 1);
+                                    if (avail <= 0) return 'Fully Occupied';
+                                    if (avail == 1) return '1 Vacant Unit';
+                                    return '$avail Vacant Units';
+                                  }(),
+                                  subtitle: 'Vacant Units',
                                   isDark: isDark,
                                 ),
                               ),
@@ -826,36 +813,40 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            RichText(
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              text: TextSpan(
-                                children: [
-                                  TextSpan(
-                                    text: (askingRent != null && askingRent > 0)
-                                        ? '₱${_formatMoney(askingRent)}'
-                                        : 'Inquire for Rent',
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.w900,
-                                      color: isDark
-                                          ? const Color(0xFF60A5FA)
-                                          : AppColors.primary,
-                                      letterSpacing: -0.3,
-                                      fontFamily: 'Roboto',
-                                    ),
-                                  ),
-                                  if (askingRent != null && askingRent > 0)
+                            FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: RichText(
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                text: TextSpan(
+                                  children: [
                                     TextSpan(
-                                      text: '/mo',
+                                      text: (askingRent != null && askingRent > 0)
+                                          ? '₱${_formatMoney(askingRent)}'
+                                          : 'Inquire for Rent',
                                       style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: subtextColor,
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w900,
+                                        color: isDark
+                                            ? const Color(0xFF60A5FA)
+                                            : AppColors.primary,
+                                        letterSpacing: -0.3,
                                         fontFamily: 'Roboto',
                                       ),
                                     ),
-                                ],
+                                    if (askingRent != null && askingRent > 0)
+                                      TextSpan(
+                                        text: '/mo',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: subtextColor,
+                                          fontFamily: 'Roboto',
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
                           ],
@@ -886,24 +877,27 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                           ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Apply for Space',
-                                style: TextStyle(
-                                  fontSize: 14.5,
-                                  fontWeight: FontWeight.w800,
+                          child: const FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Apply for Space',
+                                  style: TextStyle(
+                                    fontSize: 14.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(width: 6),
+                                Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 16,
                                   color: Colors.white,
                                 ),
-                              ),
-                              SizedBox(width: 6),
-                              Icon(
-                                Icons.arrow_forward_rounded,
-                                size: 16,
-                                color: Colors.white,
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),

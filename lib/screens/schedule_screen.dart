@@ -337,6 +337,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final now = DateTime.now();
     final isCurrentMonth =
         _currentMonth.year == now.year && _currentMonth.month == now.month;
@@ -352,7 +353,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         : _events.where((e) => e['day'] == selectedDay).toList();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF000000) : Colors.white,
       body: SafeArea(
         bottom: false,
         child: CustomScrollView(
@@ -364,22 +365,22 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
                       'Schedule',
                       style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.w900,
-                        color: Color(0xFF0B1B3D),
+                        color: isDark ? Colors.white : const Color(0xFF0B1B3D),
                         letterSpacing: -0.5,
                       ),
                     ),
-                    SizedBox(height: 3),
+                    const SizedBox(height: 3),
                     Text(
                       'See what\'s happening and when.',
                       style: TextStyle(
                         fontSize: 13.5,
-                        color: Color(0xFF64748B),
+                        color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -388,7 +389,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               ),
             ),
 
-            // ================= FULL CALENDAR (NO CARD BACKGROUND, NO EXTRA PADDING) =================
+            // ================= FULL CALENDAR =================
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -400,9 +401,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.chevron_left_rounded,
-                            color: Color(0xFF0B1B3D),
+                            color: isDark ? Colors.white : const Color(0xFF0B1B3D),
                             size: 26,
                           ),
                           onPressed: () => _changeMonth(-1),
@@ -412,10 +413,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           children: [
                             Text(
                               '${_getMonthName(_currentMonth.month)} ${_currentMonth.year}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w800,
-                                color: Color(0xFF0B1B3D),
+                                color: isDark ? Colors.white : const Color(0xFF0B1B3D),
                               ),
                             ),
                             if (!isCurrentMonth) ...[
@@ -429,12 +430,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                   ),
                                   decoration: BoxDecoration(
                                     color: AppColors.electricBlue.withValues(
-                                      alpha: 0.1,
+                                      alpha: 0.15,
                                     ),
                                     borderRadius: BorderRadius.circular(12),
                                     border: Border.all(
                                       color: AppColors.electricBlue.withValues(
-                                        alpha: 0.3,
+                                        alpha: 0.35,
                                       ),
                                     ),
                                   ),
@@ -463,9 +464,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           ],
                         ),
                         IconButton(
-                          icon: const Icon(
+                          icon: Icon(
                             Icons.chevron_right_rounded,
-                            color: Color(0xFF0B1B3D),
+                            color: isDark ? Colors.white : const Color(0xFF0B1B3D),
                             size: 26,
                           ),
                           onPressed: () => _changeMonth(1),
@@ -491,10 +492,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                   child: Text(
                                     d,
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF94A3B8),
+                                      color: isDark
+                                          ? const Color(0xFF64748B)
+                                          : const Color(0xFF94A3B8),
                                     ),
                                   ),
                                 ),
@@ -504,7 +507,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     const SizedBox(height: 6),
 
                     // Full-width Day Grid
-                    _buildLargeCalendarGrid(),
+                    _buildLargeCalendarGrid(isDark: isDark),
 
                     const SizedBox(height: 14),
 
@@ -512,13 +515,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildLegendItem('Rent', AppColors.tagRent),
+                        _buildLegendItem('Rent', AppColors.tagRent, isDark: isDark),
                         _buildLegendItem(
                           'Maintenance',
                           AppColors.tagMaintenance,
+                          isDark: isDark,
                         ),
-                        _buildLegendItem('Building', AppColors.tagBuilding),
-                        _buildLegendItem('Other', AppColors.tagOther),
+                        _buildLegendItem('Building', AppColors.tagBuilding, isDark: isDark),
+                        _buildLegendItem('Other', AppColors.tagOther, isDark: isDark),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -534,12 +538,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Upcoming Events',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
-                        color: Color(0xFF0B1B3D),
+                        color: isDark ? Colors.white : const Color(0xFF0B1B3D),
                         letterSpacing: -0.2,
                       ),
                     ),
@@ -585,32 +589,34 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
+                      color: isDark ? const Color(0xFF121212) : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF262626) : const Color(0xFFE2E8F0),
+                      ),
                     ),
                     child: Column(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.event_available_rounded,
                           size: 38,
-                          color: Color(0xFFCBD5E1),
+                          color: isDark ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
                         ),
                         const SizedBox(height: 10),
                         Text(
                           'No events on ${_getMonthName(_currentMonth.month)} $selectedDay',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF334155),
+                            color: isDark ? Colors.white : const Color(0xFF334155),
                           ),
                         ),
                         const SizedBox(height: 4),
-                        const Text(
+                        Text(
                           'Tap "View all" to see all scheduled events for this month.',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF64748B),
+                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                           ),
                         ),
                       ],
@@ -624,20 +630,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final event = filteredEvents[index];
-                    return _buildEventCard(event);
+                    return _buildEventCard(event, isDark: isDark);
                   }, childCount: filteredEvents.length),
                 ),
               ),
 
             // Bottom space for floating dock
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            const SliverToBoxAdapter(child: SizedBox(height: 120)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLegendItem(String label, Color color) {
+  Widget _buildLegendItem(String label, Color color, {required bool isDark}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -649,17 +655,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         const SizedBox(width: 5),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF64748B),
+            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildLargeCalendarGrid() {
+  Widget _buildLargeCalendarGrid({required bool isDark}) {
     final now = DateTime.now();
     final totalDays = _daysInMonth(_currentMonth);
     final offset = _firstWeekdayOffset(_currentMonth);
@@ -712,19 +718,20 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         } else if (isToday) {
           // Current date ALWAYS remains marked
           boxDecoration = BoxDecoration(
-            color: AppColors.electricBlue.withValues(alpha: 0.12),
+            color: AppColors.electricBlue.withValues(alpha: isDark ? 0.25 : 0.12),
             shape: BoxShape.circle,
             border: Border.all(color: AppColors.electricBlue, width: 2.0),
           );
-          textColor = AppColors.electricBlue;
+          textColor = isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue;
           fontWeight = FontWeight.w900;
         } else if (isSelected) {
           boxDecoration = BoxDecoration(
-            color: const Color(0xFF0B1B3D),
+            color: isDark ? const Color(0xFF1E3A8A) : const Color(0xFF0B1B3D),
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0B1B3D).withValues(alpha: 0.25),
+                color: (isDark ? const Color(0xFF1E3A8A) : const Color(0xFF0B1B3D))
+                    .withValues(alpha: 0.3),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),
@@ -737,7 +744,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             color: Colors.transparent,
             shape: BoxShape.circle,
           );
-          textColor = const Color(0xFF0B1B3D);
+          textColor = isDark ? Colors.white : const Color(0xFF0B1B3D);
           fontWeight = FontWeight.w600;
         }
 
@@ -803,7 +810,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  Widget _buildEventCard(Map<String, dynamic> event) {
+  Widget _buildEventCard(Map<String, dynamic> event, {required bool isDark}) {
     final color = event['color'] as Color;
     final icon = event['icon'] as IconData;
 
@@ -811,9 +818,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: isDark ? const Color(0xFF121212) : const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(
+          color: isDark ? const Color(0xFF262626) : const Color(0xFFE2E8F0),
+        ),
       ),
       child: Row(
         children: [
@@ -822,27 +831,29 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             width: 50,
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              border: Border.all(
+                color: isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE2E8F0),
+              ),
             ),
             child: Column(
               children: [
                 Text(
                   event['month'],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF64748B),
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                   ),
                 ),
                 const SizedBox(height: 1),
                 Text(
                   '${event['day']}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
-                    color: Color(0xFF0B1B3D),
+                    color: isDark ? Colors.white : const Color(0xFF0B1B3D),
                   ),
                 ),
               ],
@@ -855,7 +866,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
+              color: color.withValues(alpha: isDark ? 0.22 : 0.12),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(icon, color: color, size: 22),
@@ -869,18 +880,18 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               children: [
                 Text(
                   event['title'],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF0B1B3D),
+                    color: isDark ? Colors.white : const Color(0xFF0B1B3D),
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   event['subtitle'],
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF64748B),
+                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                     fontWeight: FontWeight.w500,
                   ),
                 ),

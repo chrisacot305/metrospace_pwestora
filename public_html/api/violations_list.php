@@ -1,55 +1,31 @@
 <?php
 /**
- * GET /api/violations_list.php
+ * GET /api/violations_list.php?tenant_id=5   (tenant_id optional — all of your leases if omitted)
  * Header: Authorization: Bearer <token>
- * Response: { "ok": true, "violations": [ { id, category, strike, acknowledged, issued_at }, ... ] }
+ * Response: { "ok": true, "violations": [ { id, tenant_id, lessor_id, lessor_name, category, strike, acknowledged, issued_at }, ... ] }
  */
-require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/../app/init_api.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    json_error('Use GET.', 405);
-}
+use Api\Formatters\Formatter;
+use Api\Http\Request;
+use Api\Repositories\ViolationRepository;
+use Api\Services\TenantResolver;
 
-$lessee = require_lessee_auth($pdo);
+Request::requireMethod('GET');
 
-$tenantIdParam = isset($_GET['tenant_id']) && (int)$_GET['tenant_id'] > 0 ? (int)$_GET['tenant_id'] : 0;
+$lessee     = require_lessee_auth($pdo);
+$tenantId   = Request::positiveInt($_GET['tenant_id'] ?? 0);
+$violations = new ViolationRepository($pdo);
 
-if ($tenantIdParam > 0) {
-    $tenantStmt = $pdo->prepare('SELECT id FROM tenants WHERE lessee_id = ? AND id = ? LIMIT 1');
-    $tenantStmt->execute([$lessee['id'], $tenantIdParam]);
-    $tenantId = $tenantStmt->fetchColumn();
-    if (!$tenantId) {
+if ($tenantId > 0) {
+    // Make sure this lease is really yours before listing it.
+    $tenant = (new TenantResolver($pdo))->forLessee($lessee, $tenantId);
+    if (!$tenant) {
         json_ok(['violations' => []]);
     }
-    $stmt = $pdo->prepare(
-        'SELECT v.id, v.tenant_id, v.lessor_id, u.company_name AS lessor_name,
-                v.category, v.strike, v.acknowledged, v.issued_at
-         FROM violations v
-         JOIN users u ON u.id = v.lessor_id
-         WHERE v.tenant_id = ?
-         ORDER BY v.issued_at DESC'
-    );
-    $stmt->execute([$tenantId]);
+    $rows = $violations->listForTenant((int) $tenant['tenant_id']);
 } else {
-    $stmt = $pdo->prepare(
-        'SELECT v.id, v.tenant_id, v.lessor_id, u.company_name AS lessor_name,
-                v.category, v.strike, v.acknowledged, v.issued_at
-         FROM violations v
-         JOIN users u ON u.id = v.lessor_id
-         JOIN tenants t ON t.id = v.tenant_id
-         WHERE t.lessee_id = ?
-         ORDER BY v.issued_at DESC'
-    );
-    $stmt->execute([$lessee['id']]);
-}
-$violations = $stmt->fetchAll();
-
-foreach ($violations as &$v) {
-    $v['id'] = (int) $v['id'];
-    $v['tenant_id'] = (int) $v['tenant_id'];
-    $v['lessor_id'] = (int) $v['lessor_id'];
-    $v['strike'] = (int) $v['strike'];
-    $v['acknowledged'] = (bool) $v['acknowledged'];
+    $rows = $violations->listForLessee((int) $lessee['id']);
 }
 
-json_ok(['violations' => $violations]);
+json_ok(['violations' => array_map([Formatter::class, 'violation'], $rows)]);

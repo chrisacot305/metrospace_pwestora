@@ -6,6 +6,7 @@ import '../services/api_service.dart';
 import 'violation_notice_sheet.dart';
 import 'violations_screen.dart';
 import 'ticket_detail_screen.dart';
+import 'lease_contract_screen.dart';
 
 class MessagesScreen extends StatefulWidget {
   final Map<String, dynamic>? lease;
@@ -232,7 +233,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Failed to send: $e')));
+        ).showSnackBar(SnackBar(content: Text(ApiService.errorMessage(e))));
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -314,19 +315,20 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F6FB),
+      backgroundColor: isDark ? const Color(0xFF000000) : const Color(0xFFF3F6FB),
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
         elevation: 0,
         scrolledUnderElevation: 0,
         leading: Navigator.canPop(context)
             ? IconButton(
-                icon: const Icon(
+                icon: Icon(
                   Icons.arrow_back_ios_new_rounded,
                   size: 20,
-                  color: Color(0xFF0B1B3D),
+                  color: isDark ? Colors.white : const Color(0xFF0B1B3D),
                 ),
                 onPressed: () => Navigator.of(context).pop(),
               )
@@ -345,7 +347,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     gradient: const LinearGradient(
                       colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
                     ),
-                    border: Border.all(color: Colors.white, width: 2),
+                    border: Border.all(color: isDark ? const Color(0xFF262626) : Colors.white, width: 2),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.08),
@@ -376,7 +378,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                     decoration: BoxDecoration(
                       color: const Color(0xFF10B981), // Online green
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: isDark ? const Color(0xFF121212) : Colors.white, width: 2),
                     ),
                   ),
                 ),
@@ -391,10 +393,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 children: [
                   Text(
                     _lessorName,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF0B1B3D),
+                      color: isDark ? Colors.white : const Color(0xFF0B1B3D),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -402,10 +404,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   const SizedBox(height: 1),
                   Text(
                     _accountSubtitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      color: Color(0xFF64748B),
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -470,7 +472,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                           body, isMe);
                                 } else {
                                   bubbleContent =
-                                      _buildStandardMessageBubble(body, isMe);
+                                      _buildStandardMessageBubble(body, isMe, noticeType: noticeType);
                                 }
 
                                 return GestureDetector(
@@ -519,9 +521,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
                 // Bottom Input Bar (iOS SMS style with + options and pop-in send button)
                 Container(
                   padding: const EdgeInsets.fromLTRB(10, 10, 12, 14),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF121212) : Colors.white,
+                    border: Border(top: BorderSide(color: isDark ? const Color(0xFF262626) : const Color(0xFFE2E8F0))),
                   ),
                   child: Row(
                     children: [
@@ -532,8 +534,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         child: Container(
                           width: 36,
                           height: 36,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF1F5F9),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF1F5F9),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -545,15 +547,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
                       ),
                       const SizedBox(width: 8),
 
-                      // Pill TextField (Pure White, No grey, No hover outline)
+                      // Pill TextField
                       Expanded(
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                             borderRadius: BorderRadius.circular(24),
                             border: Border.all(
-                              color: const Color(0xFFCBD5E1),
+                              color: isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1),
                               width: 1,
                             ),
                           ),
@@ -564,17 +566,17 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             maxLines: 4,
                             textInputAction: TextInputAction.send,
                             onSubmitted: (_) => _sendMessage(),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF0B1B3D),
+                              color: isDark ? Colors.white : const Color(0xFF0B1B3D),
                             ),
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               filled: true,
-                              fillColor: Colors.white,
+                              fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                               isDense: true,
                               hintText: 'Message...',
                               hintStyle: TextStyle(
-                                color: Color(0xFF94A3B8),
+                                color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
                                 fontSize: 13.5,
                               ),
                               border: InputBorder.none,
@@ -582,7 +584,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                               focusedBorder: InputBorder.none,
                               disabledBorder: InputBorder.none,
                               contentPadding:
-                                  EdgeInsets.symmetric(vertical: 10),
+                                  const EdgeInsets.symmetric(vertical: 10),
                             ),
                           ),
                         ),
@@ -642,6 +644,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Widget _buildEmptyState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -653,7 +656,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: AppColors.accentSoft,
+                color: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.25) : AppColors.accentSoft,
                 borderRadius: BorderRadius.circular(22),
               ),
               child: const Icon(
@@ -663,22 +666,22 @@ class _MessagesScreenState extends State<MessagesScreen> {
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
+            Text(
               'Direct Management Chat',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: AppColors.ink900,
+                color: isDark ? Colors.white : AppColors.ink900,
                 letterSpacing: -0.3,
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'No messages yet. Send a direct inquiry or message below to start communicating with your lessor.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
-                color: AppColors.ink500,
+                color: isDark ? const Color(0xFF94A3B8) : AppColors.ink500,
                 height: 1.45,
               ),
             ),
@@ -700,17 +703,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   Widget _buildQuickPromptChip(String prompt) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ActionChip(
       label: Text(
         prompt,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: AppColors.primary,
+          color: isDark ? const Color(0xFF60A5FA) : AppColors.primary,
         ),
       ),
-      backgroundColor: Colors.white,
-      side: const BorderSide(color: Color(0xFFE2E8F0)),
+      backgroundColor: isDark ? const Color(0xFF161616) : Colors.white,
+      side: BorderSide(color: isDark ? const Color(0xFF333333) : const Color(0xFFE2E8F0)),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       onPressed: () {
         _msgCtrl.text = prompt;
@@ -1911,7 +1915,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   // Standard chat bubble (iOS/Messenger style with Pwestora colors)
-  Widget _buildStandardMessageBubble(String body, bool isMe) {
+  Widget _buildStandardMessageBubble(String body, bool isMe, {String? noticeType}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isContractNotice = noticeType == 'Contract Notice' ||
+        noticeType == 'Contract Revision Notice' ||
+        body.contains('OFFICIAL NOTICE: LEASE CONTRACT FINALIZED') ||
+        body.contains('NOTICE: CONTRACT REVISION');
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -1921,7 +1931,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         decoration: BoxDecoration(
-          color: isMe ? const Color(0xFF1E6BFF) : const Color(0xFFE9EEF5),
+          color: isMe
+              ? const Color(0xFF1E6BFF)
+              : (isDark ? const Color(0xFF1C1C1E) : const Color(0xFFE9EEF5)),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(19),
             topRight: const Radius.circular(19),
@@ -1930,16 +1942,78 @@ class _MessagesScreenState extends State<MessagesScreen> {
           ),
           border: isMe
               ? null
-              : Border.all(color: const Color(0xFFE2E8F0), width: 0.6),
+              : Border.all(
+                  color: isDark ? const Color(0xFF2C2C2E) : const Color(0xFFE2E8F0),
+                  width: 0.6,
+                ),
         ),
-        child: Text(
-          body,
-          style: TextStyle(
-            fontSize: 14,
-            height: 1.35,
-            color: isMe ? Colors.white : const Color(0xFF0B1B3D),
-            fontWeight: FontWeight.w500,
-          ),
+        child: Column(
+          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            Text(
+              body,
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.35,
+                color: isMe
+                    ? Colors.white
+                    : (isDark ? Colors.white : const Color(0xFF0B1B3D)),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            if (!isMe && isContractNotice) ...[
+              const SizedBox(height: 10),
+              InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => LeaseContractScreen(
+                        lease: {'tenant_id': _currentTenantId},
+                        onLeaseMayHaveChanged: () => _loadData(silent: true),
+                      ),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF2A2A2E) : Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF3E3E42) : const Color(0xFFCBD5E1),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.description_outlined,
+                        size: 15,
+                        color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF1E6BFF),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Open Lease Agreement',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF1E6BFF),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 13,
+                        color: isDark ? const Color(0xFF60A5FA) : const Color(0xFF1E6BFF),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

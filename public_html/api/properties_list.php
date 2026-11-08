@@ -5,58 +5,23 @@
  * If a Bearer token IS sent, each property also includes "saved": true|false.
  * Response: { "ok": true, "properties": [ { id, name, type, address, lessor_name, cover_photo, saved }, ... ] }
  */
-require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/../app/init_api.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    json_error('Use GET.', 405);
-}
+use Api\Formatters\Formatter;
+use Api\Http\Request;
+use Api\Repositories\PropertyRepository;
+use Api\Repositories\UserRepository;
+use Api\Services\AuthService;
 
-try {
-    $rows = $pdo->query(
-        "SELECT p.id, p.name, p.type, p.address, p.latitude, p.longitude, p.asking_rent,
-                p.floor_area, p.lease_term, p.escalation, p.occupancy_status,
-                u.company_name AS lessor_name,
-                (SELECT pp.photo_path FROM property_photos pp WHERE pp.property_id = p.id ORDER BY pp.id ASC LIMIT 1) AS cover_photo
-         FROM properties p
-         JOIN users u ON u.id = p.lessor_id
-         WHERE p.status = 'verified'
-         ORDER BY p.created_at DESC"
-    )->fetchAll();
-} catch (Exception $e) {
-    // Resilient fallback query with base columns if extended columns are missing
-    $rows = $pdo->query(
-        "SELECT p.id, p.name, p.type, p.address, p.latitude, p.longitude, p.asking_rent,
-                u.company_name AS lessor_name,
-                (SELECT pp.photo_path FROM property_photos pp WHERE pp.property_id = p.id ORDER BY pp.id ASC LIMIT 1) AS cover_photo
-         FROM properties p
-         JOIN users u ON u.id = p.lessor_id
-         WHERE p.status = 'verified'
-         ORDER BY p.created_at DESC"
-    )->fetchAll();
-}
+Request::requireMethod('GET');
 
-// If logged in, work out which of these are already saved — optional, no error if not logged in.
-$savedIds = [];
-$header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-if (preg_match('/Bearer\s+(\S+)/i', $header, $m)) {
-    $userStmt = $pdo->prepare('SELECT id FROM users WHERE api_token = ? AND role = "lessee"');
-    $userStmt->execute([$m[1]]);
-    if ($user = $userStmt->fetch()) {
-        $savedStmt = $pdo->prepare('SELECT property_id FROM saved_properties WHERE user_id = ?');
-        $savedStmt->execute([$user['id']]);
-        $savedIds = $savedStmt->fetchAll(PDO::FETCH_COLUMN);
-    }
-}
+$properties = new PropertyRepository($pdo);
+$rows = $properties->listVerifiedWithLessor();
 
-foreach ($rows as &$r) {
-    $r['building_name'] = $r['building_name'] ?? $r['name'];
-    $r['unit_number'] = $r['unit_number'] ?? null;
-    $r['cover_photo'] = !empty($r['cover_photo']) ? APP_URL . '/' . $r['cover_photo'] : null;
-    $r['latitude'] = $r['latitude'] !== null ? (float) $r['latitude'] : null;
-    $r['longitude'] = $r['longitude'] !== null ? (float) $r['longitude'] : null;
-    $r['asking_rent'] = $r['asking_rent'] !== null ? (float) $r['asking_rent'] : null;
-    $r['saved'] = in_array($r['id'], $savedIds, true);
-}
+// Optional login: mark which listings this lessee has saved.
+$user = (new AuthService(new UserRepository($pdo)))->currentLessee();
+$savedIds = $user ? $properties->savedPropertyIds((int) $user['id']) : [];
+
+$rows = array_map(static fn(array $r) => Formatter::property($r, $savedIds), $rows);
 
 json_ok(['properties' => $rows]);
-

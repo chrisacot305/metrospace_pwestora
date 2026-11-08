@@ -4,7 +4,7 @@
  * Header: Authorization: Bearer <token>
  * Returns current user profile details including phone and email.
  */
-require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/../app/init_api.php';
 
 $user = require_lessee_auth($pdo, true);
 

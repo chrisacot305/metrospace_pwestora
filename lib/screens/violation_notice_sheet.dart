@@ -50,8 +50,11 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
       : (_strike == 2 ? 500.0 : (_strike >= 3 ? 1500.0 : 0.0));
 
   String get _category => widget.violation['category']?.toString() ?? 'Lease Violation';
-  String get _clause => widget.violation['clause']?.toString() ?? 'Clause 8.2 — Commercial Lease Code';
-  String get _description => widget.violation['description']?.toString() ?? 'An infraction of property guidelines was recorded.';
+  String get _contractRef => (widget.violation['contract_ref'] ?? '').toString();
+  String get _clauseText => (widget.violation['clause_text'] ?? '').toString();
+  String get _clauseRef => (widget.violation['clause_ref'] ?? '').toString();
+  String get _clause => _contractRef.isNotEmpty ? '$_contractRef · $_category' : (widget.violation['clause']?.toString() ?? _category);
+  String get _description => widget.violation['description']?.toString() ?? '';
   String get _issuedAt => widget.violation['issued_at']?.toString() ?? 'Recently';
   String? get _imageUrl => widget.violation['image_url']?.toString();
 
@@ -422,10 +425,43 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
                   _clause,
                   style: const TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     color: AppColors.ink900,
                   ),
                 ),
+                if (_clauseText.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    '"$_clauseText"',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: AppColors.ink700,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+                if (_clauseRef.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Legal basis: $_clauseRef',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.ink500,
+                    ),
+                  ),
+                ],
+                if (_description.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _description,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.ink700,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

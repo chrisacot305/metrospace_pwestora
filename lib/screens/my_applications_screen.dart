@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
+import '../widgets/app_error_view.dart';
 import 'lease_contract_screen.dart';
+import 'home_shell.dart';
 
 /// Safely reads a number whether the API sent it as a JSON number or a string.
 num _asNum(dynamic v) {
@@ -12,14 +15,20 @@ num _asNum(dynamic v) {
 class MyApplicationsScreen extends StatefulWidget {
   final Future<void> Function()? onLeaseMayHaveChanged;
   final bool isTab;
-  const MyApplicationsScreen({super.key, this.onLeaseMayHaveChanged, this.isTab = false});
+  const MyApplicationsScreen({
+    super.key,
+    this.onLeaseMayHaveChanged,
+    this.isTab = false,
+  });
 
   @override
   State<MyApplicationsScreen> createState() => _MyApplicationsScreenState();
 }
 
 class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
+  static final Set<String> _globallyDismissedAppIds = {};
   late Future<List<dynamic>> _future;
+  bool _hasShownCelebrationDialog = false;
 
   @override
   void initState() {
@@ -28,29 +37,402 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = ApiService.fetchMyApplications());
+    setState(() {
+      _future = ApiService.fetchMyApplications();
+    });
     await _future;
     if (widget.onLeaseMayHaveChanged != null) {
       await widget.onLeaseMayHaveChanged!();
     }
   }
 
+  Future<void> _checkAndShowCelebration(
+    BuildContext context,
+    Map<String, dynamic> app,
+  ) async {
+    // If not in applicant tab mode (e.g. opened from tenant dashboard), never show
+    if (!widget.isTab || _hasShownCelebrationDialog) return;
+
+    final appId = (app['id'] ?? app['application_id'] ?? '').toString();
+    if (appId.isNotEmpty && _globallyDismissedAppIds.contains(appId)) return;
+
+    // Check if user already has an active lease / is already in tenant view
+    try {
+      final lease = await ApiService.fetchLeaseStatus();
+      if (lease != null) {
+        if (appId.isNotEmpty) {
+          _globallyDismissedAppIds.add(appId);
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('seen_celebration_$appId', true);
+        }
+        return;
+      }
+    } catch (_) {}
+
+    // Check SharedPreferences if already seen / dismissed in past sessions
+    if (appId.isNotEmpty) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        if (prefs.getBool('seen_celebration_$appId') == true) {
+          _globallyDismissedAppIds.add(appId);
+          return;
+        }
+      } catch (_) {}
+    }
+
+    if (!mounted || _hasShownCelebrationDialog) return;
+    _hasShownCelebrationDialog = true;
+    if (appId.isNotEmpty) {
+      _globallyDismissedAppIds.add(appId);
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setBool('seen_celebration_$appId', true);
+      } catch (_) {}
+    }
+
+    if (!mounted || !context.mounted) return;
+    _showAcceptanceCelebrationModal(context, app, appId);
+  }
+
+  void _showAcceptanceCelebrationModal(
+    BuildContext context,
+    Map<String, dynamic> app,
+    String appId,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final propertyName = app['property_name']?.toString() ?? 'Commercial Space';
+    final rent = app['rent'] != null ? '₱${app['rent']} / mo' : '';
+    final businessName = app['business_name']?.toString() ?? '';
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 420),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF11223F) : Colors.white,
+              borderRadius: BorderRadius.circular(26),
+              border: Border.all(
+                color: isDark ? const Color(0xFF1E3A5F) : AppColors.border,
+                width: 1.2,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? Colors.black.withValues(alpha: 0.6)
+                      : const Color(0xFF0A1832).withValues(alpha: 0.15),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Luminous Emerald Icon
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: isDark ? 0.2 : 0.12),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.success.withValues(alpha: isDark ? 0.45 : 0.25),
+                        width: 2,
+                      ),
+                    ),
+                    child: const Center(
+                      child: Icon(
+                        Icons.verified_rounded,
+                        color: AppColors.success,
+                        size: 34,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Status Pill
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.success.withValues(alpha: isDark ? 0.2 : 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'OFFICIALLY ACCEPTED',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.success,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Headline
+                  Text(
+                    'Congratulations!\nYou Have Been Accepted',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      height: 1.25,
+                      letterSpacing: -0.4,
+                      color: isDark ? Colors.white : AppColors.ink900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Subtitle
+                  Text(
+                    'Your application has been approved by the lessor. Your commercial space is officially ready for you!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.4,
+                      color: isDark ? AppColors.ink300 : AppColors.ink500,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Property Preview Tile
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0A193F) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF1E3A5F) : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.electricBlue.withValues(alpha: isDark ? 0.25 : 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.storefront_rounded,
+                            color: AppColors.electricBlue,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                propertyName,
+                                style: TextStyle(
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? Colors.white : AppColors.ink900,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (businessName.isNotEmpty) ...[
+                                const SizedBox(height: 1),
+                                Text(
+                                  businessName,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    color: isDark ? AppColors.ink400 : AppColors.ink500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if (rent.isNotEmpty)
+                          Text(
+                            rent,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.success,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Direct Link to Dashboard Action Button
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF1D4ED8), Color(0xFF2563EB)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () async {
+                          Navigator.of(dialogCtx).pop();
+                          if (appId.isNotEmpty) {
+                            _globallyDismissedAppIds.add(appId);
+                            try {
+                              final prefs = await SharedPreferences.getInstance();
+                              await prefs.setBool('seen_celebration_$appId', true);
+                              await prefs.setBool('tenant_view_activated_$appId', true);
+                            } catch (_) {}
+                          }
+                          if (widget.onLeaseMayHaveChanged != null) {
+                            await widget.onLeaseMayHaveChanged!();
+                          }
+                          await ApiService.fetchLeaseStatus();
+                          if (!context.mounted) return;
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(builder: (_) => const HomeShell()),
+                            (route) => false,
+                          );
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.dashboard_customize_rounded, color: Colors.white, size: 18),
+                              SizedBox(width: 8),
+                              Text(
+                                'Direct to Dashboard',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              SizedBox(width: 6),
+                              Icon(Icons.arrow_forward_rounded, color: Colors.white, size: 16),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  // Polite Instructions Box
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF0F1E36) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF1E3A5F) : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 16,
+                          color: isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Instructions: Tap "Direct to Dashboard" to open your tenant dashboard. If your view doesn\'t update right away, please exit and reopen the app (or restart) to refresh your account.',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              height: 1.35,
+                              color: isDark ? AppColors.ink300 : AppColors.ink700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Secondary Action / Dismiss
+                  TextButton(
+                    onPressed: () {
+                      Navigator.of(dialogCtx).pop();
+                      if (appId.isNotEmpty) {
+                        _globallyDismissedAppIds.add(appId);
+                        SharedPreferences.getInstance().then((prefs) {
+                          prefs.setBool('seen_celebration_$appId', true);
+                        }).catchError((_) {});
+                      }
+                    },
+                    child: Text(
+                      'View Application Details',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? AppColors.ink300 : AppColors.ink500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ).then((_) async {
+      if (appId.isNotEmpty) {
+        _globallyDismissedAppIds.add(appId);
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('seen_celebration_$appId', true);
+        } catch (_) {}
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: isDark ? AppColors.midnightNavy : AppColors.bg,
       appBar: AppBar(
         automaticallyImplyLeading: !widget.isTab,
         leading: widget.isTab ? null : const AppBackButton(),
-        title: const Text('My Applications'),
-        backgroundColor: AppColors.surface,
+        title: Text(
+          'My Applications',
+          style: TextStyle(
+            color: isDark ? Colors.white : AppColors.ink900,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        backgroundColor: isDark ? AppColors.navySurface : AppColors.surface,
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.refresh_rounded,
               size: 22,
-              color: AppColors.primary,
+              color: isDark ? Colors.white : AppColors.primary,
             ),
             tooltip: 'Refresh applications',
             onPressed: _refresh,
@@ -75,52 +457,15 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
                   parent: BouncingScrollPhysics(),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 60,
+                  padding: EdgeInsets.fromLTRB(
+                    24,
+                    60,
+                    24,
+                    widget.isTab ? 120 : 60,
                   ),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: 64,
-                          height: 64,
-                          decoration: AppDecorations.squircle(
-                            color: AppColors.errorSoft,
-                          ),
-                          child: const Icon(
-                            Icons.error_outline,
-                            size: 32,
-                            color: AppColors.error,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Unable to Load Applications',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.ink900,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          snapshot.error.toString(),
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: AppColors.ink500,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        ElevatedButton.icon(
-                          onPressed: _refresh,
-                          icon: const Icon(Icons.refresh_rounded, size: 18),
-                          label: const Text('Try Again'),
-                        ),
-                      ],
-                    ),
+                  child: AppErrorView(
+                    error: snapshot.error,
+                    onRetry: _refresh,
                   ),
                 ),
               );
@@ -134,9 +479,11 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
                   parent: BouncingScrollPhysics(),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 60,
+                  padding: EdgeInsets.fromLTRB(
+                    24,
+                    60,
+                    24,
+                    widget.isTab ? 120 : 60,
                   ),
                   child: Center(
                     child: Column(
@@ -187,19 +534,24 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
                       (a['status'] ?? '').toString().toLowerCase() == 'pending',
                 )
                 .length;
-            final approvedCount = apps
-                .where(
-                  (a) =>
-                      (a['status'] ?? '').toString().toLowerCase() ==
-                      'approved',
-                )
-                .length;
+            final approvedApps = apps.where(
+              (a) => (a['status'] ?? '').toString().toLowerCase() == 'approved',
+            ).toList();
+            final approvedCount = approvedApps.length;
+
+            if (widget.isTab && approvedCount > 0 && !_hasShownCelebrationDialog) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && !_hasShownCelebrationDialog) {
+                  _checkAndShowCelebration(context, approvedApps.first);
+                }
+              });
+            }
 
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(
                 parent: BouncingScrollPhysics(),
               ),
-              padding: const EdgeInsets.fromLTRB(18, 16, 18, 32),
+              padding: EdgeInsets.fromLTRB(18, 16, 18, widget.isTab ? 120 : 40),
               children: [
                 // Header Summary Card
                 Container(
@@ -304,12 +656,12 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Submitted Proposals',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.ink900,
+                        color: isDark ? Colors.white : AppColors.ink900,
                         letterSpacing: -0.2,
                       ),
                     ),
@@ -326,7 +678,13 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
                 const SizedBox(height: 12),
 
                 // List of Application Cards with Process Steppers
-                ...apps.map((app) => _ApplicationProcessCard(app: app, onRefresh: _refresh)),
+                ...apps.map(
+                  (app) => _ApplicationProcessCard(
+                    app: app,
+                    onRefresh: _refresh,
+                    isInsideTenantView: !widget.isTab,
+                  ),
+                ),
               ],
             );
           },
@@ -386,14 +744,41 @@ class _SummaryChip extends StatelessWidget {
 class _ApplicationProcessCard extends StatefulWidget {
   final Map<String, dynamic> app;
   final VoidCallback onRefresh;
-  const _ApplicationProcessCard({required this.app, required this.onRefresh});
+  final bool isInsideTenantView;
+  const _ApplicationProcessCard({
+    required this.app,
+    required this.onRefresh,
+    this.isInsideTenantView = false,
+  });
 
   @override
-  State<_ApplicationProcessCard> createState() => _ApplicationProcessCardState();
+  State<_ApplicationProcessCard> createState() =>
+      _ApplicationProcessCardState();
 }
 
 class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
   bool _isReplying = false;
+  bool _isActivated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkActivation();
+  }
+
+  void _checkActivation() async {
+    if (widget.isInsideTenantView) {
+      if (mounted) setState(() => _isActivated = true);
+      return;
+    }
+    final appId = (widget.app['id'] ?? widget.app['application_id'] ?? '').toString();
+    if (appId.isNotEmpty) {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('tenant_view_activated_$appId') == true) {
+        if (mounted) setState(() => _isActivated = true);
+      }
+    }
+  }
 
   void _showReplyModal(BuildContext context, int appId, String lessorName) {
     final textController = TextEditingController();
@@ -422,17 +807,25 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Reply to $lessorName',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.ink900,
+                      Expanded(
+                        child: Text(
+                          'Reply to $lessorName',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.ink900,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       IconButton(
                         onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close, size: 20, color: AppColors.ink500),
+                        icon: const Icon(
+                          Icons.close,
+                          size: 20,
+                          color: AppColors.ink500,
+                        ),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),
@@ -448,10 +841,16 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                     controller: textController,
                     maxLines: 4,
                     autofocus: true,
-                    style: const TextStyle(fontSize: 13, color: AppColors.ink900),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.ink900,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Type your reply or proposed terms here...',
-                      hintStyle: const TextStyle(fontSize: 13, color: AppColors.ink500),
+                      hintStyle: const TextStyle(
+                        fontSize: 13,
+                        color: AppColors.ink500,
+                      ),
                       filled: true,
                       fillColor: AppColors.bg,
                       border: OutlineInputBorder(
@@ -464,7 +863,10 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                        borderSide: const BorderSide(
+                          color: AppColors.primary,
+                          width: 1.5,
+                        ),
                       ),
                       contentPadding: const EdgeInsets.all(14),
                     ),
@@ -476,7 +878,9 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       onPressed: _isReplying
                           ? null
@@ -494,7 +898,9 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                                 widget.onRefresh();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                    content: Text('Reply sent to lessor successfully!'),
+                                    content: Text(
+                                      'Reply sent to lessor successfully!',
+                                    ),
                                     backgroundColor: AppColors.success,
                                     behavior: SnackBarBehavior.floating,
                                   ),
@@ -504,7 +910,7 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                                 setModalState(() => _isReplying = false);
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Failed to send reply: $e'),
+                                    content: Text(ApiService.errorMessage(e)),
                                     backgroundColor: AppColors.error,
                                     behavior: SnackBarBehavior.floating,
                                   ),
@@ -515,11 +921,18 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
                             )
                           : const Text(
                               'Send Reply to Lessor',
-                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: Colors.white),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13.5,
+                                color: Colors.white,
+                              ),
                             ),
                     ),
                   ),
@@ -535,7 +948,9 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
   @override
   Widget build(BuildContext context) {
     final app = widget.app;
-    final appId = (app['id'] is num) ? (app['id'] as num).toInt() : int.tryParse(app['id']?.toString() ?? '0') ?? 0;
+    final appId = (app['id'] is num)
+        ? (app['id'] as num).toInt()
+        : int.tryParse(app['id']?.toString() ?? '0') ?? 0;
     final status = (app['status'] ?? 'pending').toString().toLowerCase();
     final rent = _asNum(app['rent']).toDouble();
     final term = _asNum(app['term_months']).toInt();
@@ -547,8 +962,11 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
     final createdAt = _formatDate(rawDate);
     final lessorRebuttal = (app['lessor_rebuttal'] ?? '').toString().trim();
     final rawRebuttalDate = app['rebuttal_at']?.toString() ?? '';
-    final rebuttalDate = rawRebuttalDate.isNotEmpty ? _formatDate(rawRebuttalDate) : '';
-    final negotiationMessages = (app['negotiation_messages'] as List<dynamic>?) ?? [];
+    final rebuttalDate = rawRebuttalDate.isNotEmpty
+        ? _formatDate(rawRebuttalDate)
+        : '';
+    final negotiationMessages =
+        (app['negotiation_messages'] as List<dynamic>?) ?? [];
 
     Color statusColor;
     Color statusBg;
@@ -575,9 +993,18 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
         currentStep = 2;
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
-      decoration: AppDecorations.card(radius: 18),
+      decoration: AppDecorations.card(
+        color: isDark ? AppColors.navyCard : AppColors.surface,
+        border: Border.all(
+          color: isDark ? AppColors.navyBorder : AppColors.border.withValues(alpha: 0.85),
+          width: 1,
+        ),
+        radius: 18,
+      ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -586,10 +1013,10 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
           Container(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             decoration: BoxDecoration(
-              color: AppColors.bg,
+              color: isDark ? AppColors.navySurface : AppColors.bg,
               border: Border(
                 bottom: BorderSide(
-                  color: AppColors.border.withValues(alpha: 0.6),
+                  color: isDark ? AppColors.navyBorder : AppColors.border.withValues(alpha: 0.6),
                 ),
               ),
             ),
@@ -600,13 +1027,13 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                   width: 38,
                   height: 38,
                   decoration: AppDecorations.squircle(
-                    color: AppColors.surface,
+                    color: isDark ? AppColors.navyCard : AppColors.surface,
                     radius: 10,
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.storefront_rounded,
                     size: 20,
-                    color: AppColors.primary,
+                    color: isDark ? const Color(0xFF60A5FA) : AppColors.primary,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -616,10 +1043,10 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                     children: [
                       Text(
                         propertyName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.ink900,
+                          color: isDark ? Colors.white : AppColors.ink900,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -777,46 +1204,70 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                         const SizedBox(height: 8),
                         ...negotiationMessages.map((m) {
                           final isMe = (m['sender'] ?? '') == 'lessee';
-                          final senderLabel = isMe ? 'You (Applicant)' : '$lessorName (Lessor)';
+                          final senderLabel = isMe
+                              ? 'You (Applicant)'
+                              : '$lessorName (Lessor)';
                           final text = (m['message'] ?? '').toString();
                           final timeRaw = m['sent_at']?.toString() ?? '';
-                          final timeStr = timeRaw.isNotEmpty ? timeRaw.split('T').first : '';
+                          final timeStr = timeRaw.isNotEmpty
+                              ? timeRaw.split('T').first
+                              : '';
 
                           return Container(
                             margin: const EdgeInsets.only(bottom: 6),
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: isMe ? Colors.white : const Color(0xFFE8F1FE),
+                              color: isMe
+                                  ? Colors.white
+                                  : const Color(0xFFE8F1FE),
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(
-                                color: isMe ? AppColors.border : const Color(0xFFBDD7FE),
+                                color: isMe
+                                    ? AppColors.border
+                                    : const Color(0xFFBDD7FE),
                               ),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Text(
-                                      senderLabel,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                        color: isMe ? AppColors.ink900 : const Color(0xFF0B57D0),
+                                    Expanded(
+                                      child: Text(
+                                        senderLabel,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: isMe
+                                              ? AppColors.ink900
+                                              : const Color(0xFF0B57D0),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    if (timeStr.isNotEmpty)
+                                    if (timeStr.isNotEmpty) ...[
+                                      const SizedBox(width: 6),
                                       Text(
                                         timeStr,
-                                        style: const TextStyle(fontSize: 10, color: AppColors.ink500),
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: AppColors.ink500,
+                                        ),
                                       ),
+                                    ],
                                   ],
                                 ),
                                 const SizedBox(height: 3),
                                 Text(
                                   text,
-                                  style: const TextStyle(fontSize: 12, color: AppColors.ink700, height: 1.3),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.ink700,
+                                    height: 1.3,
+                                  ),
                                 ),
                               ],
                             ),
@@ -828,8 +1279,13 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                             width: double.infinity,
                             height: 36,
                             child: OutlinedButton.icon(
-                              onPressed: () => _showReplyModal(context, appId, lessorName),
-                              icon: const Icon(Icons.reply_rounded, size: 16, color: Color(0xFF0B57D0)),
+                              onPressed: () =>
+                                  _showReplyModal(context, appId, lessorName),
+                              icon: const Icon(
+                                Icons.reply_rounded,
+                                size: 16,
+                                color: Color(0xFF0B57D0),
+                              ),
                               label: const Text(
                                 'Reply to Lessor',
                                 style: TextStyle(
@@ -840,8 +1296,12 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                               ),
                               style: OutlinedButton.styleFrom(
                                 backgroundColor: Colors.white,
-                                side: const BorderSide(color: Color(0xFF0B57D0)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                side: const BorderSide(
+                                  color: Color(0xFF0B57D0),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
                           ),
@@ -898,8 +1358,13 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                             width: double.infinity,
                             height: 36,
                             child: OutlinedButton.icon(
-                              onPressed: () => _showReplyModal(context, appId, lessorName),
-                              icon: const Icon(Icons.reply_rounded, size: 16, color: Color(0xFF0B57D0)),
+                              onPressed: () =>
+                                  _showReplyModal(context, appId, lessorName),
+                              icon: const Icon(
+                                Icons.reply_rounded,
+                                size: 16,
+                                color: Color(0xFF0B57D0),
+                              ),
                               label: const Text(
                                 'Reply to Lessor',
                                 style: TextStyle(
@@ -910,8 +1375,12 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                               ),
                               style: OutlinedButton.styleFrom(
                                 backgroundColor: Colors.white,
-                                side: const BorderSide(color: Color(0xFF0B57D0)),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                side: const BorderSide(
+                                  color: Color(0xFF0B57D0),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
                               ),
                             ),
                           ),
@@ -989,57 +1458,181 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                 ),
                 if (status == 'approved') ...[
                   const SizedBox(height: 16),
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppColors.primary, AppColors.primaryLight],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.25),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                  if (widget.isInsideTenantView || _isActivated)
+                    // In tenant view or activated: Color green with check and 'Approved'
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF059669), Color(0xFF10B981)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
                         borderRadius: BorderRadius.circular(14),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => LeaseContractScreen(
-                                applicationData: app,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () {
+                            if (Navigator.canPop(context)) {
+                              Navigator.of(context).pop();
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Application Approved • Tenant View Active'),
+                                  duration: Duration(seconds: 2),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 13,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.check_circle_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Approved',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    // Before being in tenant view: 'Direct to Dashboard' action button
+                    Container(
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF1D4ED8), Color(0xFF2563EB)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () async {
+                            final appIdStr = appId.toString();
+                            if (appIdStr.isNotEmpty) {
+                              try {
+                                final prefs = await SharedPreferences.getInstance();
+                                await prefs.setBool('tenant_view_activated_$appIdStr', true);
+                                await prefs.setBool('seen_celebration_$appIdStr', true);
+                              } catch (_) {}
+                            }
+                            await ApiService.fetchLeaseStatus();
+                            if (!context.mounted) return;
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(builder: (_) => const HomeShell()),
+                              (route) => false,
+                            );
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 13,
+                            ),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.dashboard_customize_rounded,
+                                    color: Colors.white,
+                                    size: 19,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    'Direct to Dashboard',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 13.5,
+                                      letterSpacing: -0.1,
+                                    ),
+                                  ),
+                                  SizedBox(width: 6),
+                                  Icon(
+                                    Icons.arrow_forward_rounded,
+                                    color: Colors.white70,
+                                    size: 16,
+                                  ),
+                                ],
                               ),
                             ),
-                          );
-                        },
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 20),
-                              SizedBox(width: 8),
-                              Text(
-                                'Open Tenant View & Contract',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13.5,
-                                  letterSpacing: -0.1,
-                                ),
-                              ),
-                              SizedBox(width: 6),
-                              Icon(Icons.arrow_forward_rounded, color: Colors.white70, size: 16),
-                            ],
                           ),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: isDark ? const Color(0xFF1E3A5F) : AppColors.border,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                LeaseContractScreen(applicationData: app),
+                          ),
+                        );
+                      },
+                      icon: Icon(
+                        Icons.description_outlined,
+                        size: 16,
+                        color: isDark ? const Color(0xFF60A5FA) : AppColors.primary,
+                      ),
+                      label: Text(
+                        'View Lease Agreement & Terms',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : AppColors.ink900,
                         ),
                       ),
                     ),
@@ -1053,25 +1646,33 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => LeaseContractScreen(
-                              applicationData: app,
-                            ),
+                            builder: (_) =>
+                                LeaseContractScreen(applicationData: app),
                           ),
                         );
                       },
-                      icon: const Icon(Icons.assignment_outlined, size: 16, color: AppColors.primary),
-                      label: const Text(
-                        'View Negotiated Terms & Checklist',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
+                      icon: const Icon(
+                        Icons.assignment_outlined,
+                        size: 16,
+                        color: AppColors.primary,
+                      ),
+                      label: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'View Negotiated Terms & Checklist',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         side: const BorderSide(color: AppColors.primaryLight),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                     ),
                   ),
@@ -1088,7 +1689,20 @@ class _ApplicationProcessCardState extends State<_ApplicationProcessCard> {
     if (raw == null || raw.toString().isEmpty) return '';
     try {
       final dt = DateTime.parse(raw.toString());
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
       return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
     } catch (_) {
       return raw.toString();

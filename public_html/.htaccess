@@ -1,20 +1,32 @@
+# ------------------------------------------------------------------
+# Pwestora — public_html/.htaccess  (Hostinger: Apache / LiteSpeed)
+# ------------------------------------------------------------------
 DirectoryIndex index.php
+Options -Indexes
 
-# Never allow the schema.sql or config.php to be downloaded directly
-<FilesMatch "^(schema\.sql|config\.php\.bak)$">
+# Never serve secrets, internal code or tooling files
+<FilesMatch "^(\.env.*|\.git.*|\.htaccess|\.user\.ini|composer\.(json|lock)|.*\.(sql|log|bak|sh|md|ini|dist))$">
   Require all denied
 </FilesMatch>
+# (README.md / docs are not needed on the server; this also blocks them.)
+
+RewriteEngine On
 
 # Force HTTPS (Hostinger issues a free SSL cert on your domain)
-RewriteEngine On
 RewriteCond %{HTTPS} off
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# Pass Authorization header to PHP environment (prevents Apache/FastCGI stripping Bearer tokens)
+# Block direct web access to internal folders (also protected by their own .htaccess)
+RewriteRule ^(app|docs|backup)(/|$) - [F,L]
+
+# Pass Authorization header to PHP (prevents Apache/FastCGI stripping Bearer tokens for the mobile API)
 RewriteCond %{HTTP:Authorization} ^(.*)
 RewriteRule .* - [e=HTTP_AUTHORIZATION:%1]
 
 <IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Strict-Transport-Security "max-age=31536000" env=HTTPS
     Header set Access-Control-Allow-Origin "*"
     Header set Access-Control-Allow-Methods "GET, POST, OPTIONS"
     Header set Access-Control-Allow-Headers "Content-Type, Authorization"

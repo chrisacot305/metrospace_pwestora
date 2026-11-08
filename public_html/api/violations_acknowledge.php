@@ -5,25 +5,17 @@
  * Body: { "violation_id": 41 }
  * Response: { "ok": true }
  */
-require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/../app/init_api.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    json_error('Use POST.', 405);
-}
+use Api\Http\Request;
+use Api\Repositories\ViolationRepository;
 
-$lessee = require_lessee_auth($pdo);
-$body = json_body();
-$violationId = (int) ($body['violation_id'] ?? 0);
+Request::requireMethod('POST');
 
-$stmt = $pdo->prepare(
-    'UPDATE violations v
-     JOIN tenants t ON t.id = v.tenant_id
-     SET v.acknowledged = 1
-     WHERE v.id = ? AND t.lessee_id = ?'
-);
-$stmt->execute([$violationId, $lessee['id']]);
+$lessee      = require_lessee_auth($pdo);
+$violationId = Request::positiveInt(Request::json()['violation_id'] ?? 0);
 
-if ($stmt->rowCount() === 0) {
+if ($violationId <= 0 || !(new ViolationRepository($pdo))->acknowledge($violationId, (int) $lessee['id'])) {
     json_error('Violation not found.', 404);
 }
 

@@ -2,48 +2,34 @@
 /**
  * POST /api/messages_send.php
  * Header: Authorization: Bearer <token>
- * Body: { "body": "..." }
+ * Body: { "body": "...", "tenant_id": 5 }   (tenant_id optional — newest lease if omitted)
  * Response: { "ok": true }
  */
-require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/../app/init_api.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    json_error('Use POST.', 405);
-}
+use Api\Http\Request;
+use Api\Repositories\MessageRepository;
+use Api\Services\TenantResolver;
+
+const MESSAGE_MAX_LENGTH = 5000;
+
+Request::requireMethod('POST');
 
 $lessee = require_lessee_auth($pdo);
-$body = json_body();
-$text = trim($body['body'] ?? '');
+$body   = Request::json();
+$text   = Request::string($body, 'body', MESSAGE_MAX_LENGTH);
 
 if ($text === '') {
     json_error('Message cannot be empty.');
 }
 
-$tenantId = isset($body['tenant_id']) && (int)$body['tenant_id'] > 0 ? (int)$body['tenant_id'] : 0;
-
-if ($tenantId > 0) {
-    $tenantStmt = $pdo->prepare('SELECT id AS tenant_id, lessor_id FROM tenants WHERE lessee_id = ? AND id = ? LIMIT 1');
-    $tenantStmt->execute([$lessee['id'], $tenantId]);
-} else {
-    $tenantStmt = $pdo->prepare('SELECT id AS tenant_id, lessor_id FROM tenants WHERE lessee_id = ? ORDER BY created_at DESC LIMIT 1');
-    $tenantStmt->execute([$lessee['id']]);
-}
-$tenant = $tenantStmt->fetch();
-
+$tenant = (new TenantResolver($pdo))->forLessee($lessee, Request::positiveInt($body['tenant_id'] ?? 0));
 if (!$tenant) {
     json_error('You need an active lease before messaging your lessor.', 403);
 }
 
-$threadStmt = $pdo->prepare('SELECT id FROM message_threads WHERE lessor_id = ? AND tenant_id = ?');
-$threadStmt->execute([$tenant['lessor_id'], $tenant['tenant_id']]);
-$threadId = $threadStmt->fetchColumn();
-
-if (!$threadId) {
-    $pdo->prepare('INSERT INTO message_threads (lessor_id, tenant_id) VALUES (?, ?)')
-        ->execute([$tenant['lessor_id'], $tenant['tenant_id']]);
-    $threadId = (int) $pdo->lastInsertId();
-}
-
-$pdo->prepare('INSERT INTO messages (thread_id, sender, body) VALUES (?, "tenant", ?)')->execute([$threadId, $text]);
+$messages = new MessageRepository($pdo);
+$threadId = $messages->findOrCreateThread((int) $tenant['lessor_id'], (int) $tenant['tenant_id']);
+$messages->add($threadId, 'tenant', $text);
 
 json_ok([]);

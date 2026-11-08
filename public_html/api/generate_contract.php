@@ -1,47 +1,64 @@
 <?php
-header('Access-Control-Allow-Origin: *');
-header('Content-Type: application/json');
-require_once __DIR__ . '/../config.php';
+/**
+ * POST /api/generate_contract.php
+ * Header: Authorization: Bearer <token>   (now required — before, anyone could call this)
+ * Body: { "lease_id": 12, "selected_terms": ["Term A", "Term B", ...] }
+ * Response: { "success": true, "contract": "<h2>...</h2>", "status": "Contract Review" }
+ *
+ * Only the lessee who owns the lease request can generate its contract.
+ */
+require __DIR__ . '/../app/init_api.php';
 
-$data = json_decode(file_get_contents('php://input'), true);
-$lease_id = $data['lease_id'] ?? null;
-$selected_terms = $data['selected_terms'] ?? []; // Array of checked checklist IDs
+use Api\Http\Request;
+use Api\Http\Response;
+use Api\Repositories\LeaseRequestRepository;
 
-if (!$lease_id) {
-    echo json_encode(['success' => false, 'message' => 'Lease ID required']);
-    exit;
+const CONTRACT_STATUS = 'Contract Review';
+const MAX_TERMS       = 50;
+const MAX_TERM_LENGTH = 500;
+
+Request::requireMethod('POST');
+
+$lessee = require_lessee_auth($pdo);
+$data   = Request::json();
+
+$leaseId       = Request::positiveInt($data['lease_id'] ?? 0);
+$selectedTerms = $data['selected_terms'] ?? [];
+
+if ($leaseId <= 0) {
+    Response::send(['success' => false, 'message' => 'Lease ID required']);
+}
+if (!is_array($selectedTerms) || count($selectedTerms) > MAX_TERMS) {
+    Response::send(['success' => false, 'message' => 'selected_terms must be a list of up to ' . MAX_TERMS . ' items']);
 }
 
-// Fetch Lease, Property, Lessor, and Lessee Info
-$stmt = $pdo->prepare("SELECT l.*, p.name as property_name, p.address, p.asking_rent, 
-                              u1.name as lessor_name, u2.name as lessee_name
-                       FROM lease_requests l
-                       JOIN properties p ON l.property_id = p.id
-                       JOIN users u1 ON p.lessor_id = u1.id
-                       JOIN users u2 ON l.lessee_id = u2.id
-                       WHERE l.id = ?");
-$stmt->execute([$lease_id]);
-$details = $stmt->fetch(PDO::FETCH_ASSOC);
+$leaseRequests = new LeaseRequestRepository($pdo);
+$details = $leaseRequests->findContractDetailsForLessee($leaseId, (int) $lessee['id']);
 
-// Generate Contract Text dynamically based on selected terms
-$contractHtml = "<h2>COMMERCIAL SPACE LEASE CONTRACT</h2>";
-$contractHtml .= "<p><strong>LESSOR:</strong> {$details['lessor_name']}</p>";
-$contractHtml .= "<p><strong>LESSEE:</strong> {$details['lessee_name']}</p>";
-$contractHtml .= "<p><strong>PROPERTY:</strong> {$details['property_name']} ({$details['address']})</p>";
-$contractHtml .= "<p><strong>RENTAL AMOUNT:</strong> ₱" . number_format($details['asking_rent']) . " / month</p>";
-$contractHtml .= "<hr><h3>AGREED LEASE TERMS & CONDITIONS</h3><ul>";
-
-foreach ($selected_terms as $term) {
-    $contractHtml .= "<li>" . htmlspecialchars($term) . "</li>";
+if (!$details) {
+    Response::send(['success' => false, 'message' => 'Lease request not found']);
 }
-$contractHtml .= "</ul>";
 
-// Update status to 'Contract Review'
-$updateStmt = $pdo->prepare("UPDATE lease_requests SET status = 'Contract Review', contract_body = ? WHERE id = ?");
-$updateStmt->execute([$contractHtml, $lease_id]);
+// Everything that goes into the HTML is escaped, so no one can inject scripts into the contract.
+$e = static fn($value): string => htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 
-echo json_encode([
-    'success' => true,
+$contractHtml  = '<h2>COMMERCIAL SPACE LEASE CONTRACT</h2>';
+$contractHtml .= '<p><strong>LESSOR:</strong> ' . $e($details['lessor_name']) . '</p>';
+$contractHtml .= '<p><strong>LESSEE:</strong> ' . $e($details['lessee_name']) . '</p>';
+$contractHtml .= '<p><strong>PROPERTY:</strong> ' . $e($details['property_name']) . ' (' . $e($details['address']) . ')</p>';
+$contractHtml .= '<p><strong>RENTAL AMOUNT:</strong> ₱' . number_format((float) $details['asking_rent']) . ' / month</p>';
+$contractHtml .= '<hr><h3>AGREED LEASE TERMS & CONDITIONS</h3><ul>';
+foreach ($selectedTerms as $term) {
+    if (is_scalar($term)) {
+        $contractHtml .= '<li>' . $e(mb_substr((string) $term, 0, MAX_TERM_LENGTH)) . '</li>';
+    }
+}
+$contractHtml .= '</ul>';
+
+$leaseRequests->saveContract($leaseId, $contractHtml, CONTRACT_STATUS);
+
+Response::send([
+    'success'  => true,
     'contract' => $contractHtml,
-    'status' => 'Contract Review'
+    'status'   => CONTRACT_STATUS,
 ]);

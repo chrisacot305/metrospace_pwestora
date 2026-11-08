@@ -33,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
         MaterialPageRoute(builder: (_) => const HomeShell()),
       );
     } catch (e) {
-      setState(() => _error = e.toString());
+      setState(() => _error = ApiService.errorMessage(e));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -48,8 +48,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: isDark ? const Color(0xFF000000) : AppColors.bg,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -66,41 +67,48 @@ class _LoginScreenState extends State<LoginScreen> {
                       height: 76,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? const Color(0xFF161616) : Colors.white,
                         borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: AppColors.border.withValues(alpha: 0.8)),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF262626)
+                              : AppColors.border.withValues(alpha: 0.8),
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.08),
+                            color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
                             blurRadius: 18,
                             offset: const Offset(0, 6),
                           ),
                         ],
                       ),
                       child: Image.asset(
-                        'img/Frame 2.png',
+                        isDark ? 'img/invert.png' : 'img/Frame 2.png',
                         fit: BoxFit.contain,
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Center(
+                  Center(
                     child: Text(
                       'Welcome to Pwestora',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
-                        color: AppColors.ink900,
+                        color: isDark ? Colors.white : AppColors.ink900,
                         letterSpacing: -0.5,
                       ),
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Center(
+                  Center(
                     child: Text(
                       'Commercial space discovery & lease management',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 13.5, color: AppColors.ink500),
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        color: isDark ? const Color(0xFF94A3B8) : AppColors.ink500,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 28),

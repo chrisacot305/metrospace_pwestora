@@ -2,56 +2,42 @@
 /**
  * POST /api/requests_create.php
  * Header: Authorization: Bearer <token>
- * Body: { "reason": "...", "plan_label": "2 payments" | "3 payments" }
+ * Body: { "reason": "...", "plan_label": "2 payments" | "3 payments", "tenant_id": 5 (optional) }
  * Amount is derived server-side from the tenant's actual monthly rent —
  * never trust a client-supplied amount for something billing-related.
  * Response: { "ok": true, "request_id": 7 }
  */
-require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/../app/init_api.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    json_error('Use POST.', 405);
-}
+use Api\Http\Request;
+use Api\Repositories\InstallmentRequestRepository;
+use Api\Services\TenantResolver;
+
+const INSTALLMENT_REASONS = ['Cash flow delay this month', 'Seasonal slowdown in business', 'Unexpected business expense', 'Other'];
+const INSTALLMENT_PLANS   = ['2 payments', '3 payments'];
+
+Request::requireMethod('POST');
 
 $lessee = require_lessee_auth($pdo);
-$body = json_body();
+$body   = Request::json();
+$reason = Request::string($body, 'reason', 100);
+$plan   = Request::string($body, 'plan_label', 20);
 
-$REASONS = ['Cash flow delay this month', 'Seasonal slowdown in business', 'Unexpected business expense', 'Other'];
-$reason = $body['reason'] ?? '';
-$plan   = $body['plan_label'] ?? '';
-
-if (!in_array($reason, $REASONS, true) || !in_array($plan, ['2 payments', '3 payments'], true)) {
+if (!in_array($reason, INSTALLMENT_REASONS, true) || !in_array($plan, INSTALLMENT_PLANS, true)) {
     json_error('A valid reason and plan are required.');
 }
 
-$reqTenantId = isset($body['tenant_id']) && (int)$body['tenant_id'] > 0 ? (int)$body['tenant_id'] : 0;
-
-if ($reqTenantId > 0) {
-    $tenantStmt = $pdo->prepare(
-        'SELECT t.id AS tenant_id, t.lessor_id, a.rent
-         FROM tenants t
-         LEFT JOIN applications a ON a.id = t.application_id
-         WHERE t.lessee_id = ? AND t.id = ? LIMIT 1'
-    );
-    $tenantStmt->execute([$lessee['id'], $reqTenantId]);
-} else {
-    $tenantStmt = $pdo->prepare(
-        'SELECT t.id AS tenant_id, t.lessor_id, a.rent
-         FROM tenants t
-         LEFT JOIN applications a ON a.id = t.application_id
-         WHERE t.lessee_id = ? ORDER BY t.created_at DESC LIMIT 1'
-    );
-    $tenantStmt->execute([$lessee['id']]);
-}
-$tenant = $tenantStmt->fetch();
-
+$tenant = (new TenantResolver($pdo))->forLessee($lessee, Request::positiveInt($body['tenant_id'] ?? 0));
 if (!$tenant) {
     json_error('You need an active lease before requesting an installment plan.', 403);
 }
 
-$insert = $pdo->prepare(
-    'INSERT INTO installment_requests (lessor_id, tenant_id, reason, plan_label, amount) VALUES (?, ?, ?, ?, ?)'
+$requestId = (new InstallmentRequestRepository($pdo))->create(
+    (int) $tenant['lessor_id'],
+    (int) $tenant['tenant_id'],
+    $reason,
+    $plan,
+    (float) $tenant['rent']
 );
-$insert->execute([$tenant['lessor_id'], $tenant['tenant_id'], $reason, $plan, (float) $tenant['rent']]);
 
-json_ok(['request_id' => (int) $pdo->lastInsertId()], 201);
+json_ok(['request_id' => $requestId], 201);

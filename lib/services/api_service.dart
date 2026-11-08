@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Thrown whenever the API responds with ok:false or a non-2xx status.
+/// Thrown whenever the API responds with ok:false, a non-2xx status, or network failure.
 class ApiException implements Exception {
   final String message;
   ApiException(this.message);
@@ -14,6 +16,73 @@ class ApiException implements Exception {
 class ApiService {
   // Change this if your domain is ever different.
   static const String baseUrl = 'https://pwestora.com/api';
+
+  static const String noInternetMessage = 'No internet connection. Please check your network and try again.';
+  static const String serverErrorMessage = 'Unable to reach the server right now. Please try again later.';
+
+  /// Detects whether an exception or error message is caused by network issues or no internet connection.
+  static bool isNetworkError(dynamic error) {
+    if (error == null) return false;
+    if (error is SocketException ||
+        error is http.ClientException ||
+        error is TimeoutException ||
+        error is HandshakeException) {
+      return true;
+    }
+    final str = error.toString().toLowerCase();
+    return str.contains('socketexception') ||
+        str.contains('clientexception') ||
+        str.contains('failed host lookup') ||
+        str.contains('no address associated with hostname') ||
+        str.contains('connection refused') ||
+        str.contains('connection reset') ||
+        str.contains('connection closed') ||
+        str.contains('timed out') ||
+        str.contains('handshakeexception') ||
+        str.contains('no internet') ||
+        str.contains('network') ||
+        str.contains('offline') ||
+        str.contains('os error');
+  }
+
+  /// Converts any exception into a clean, human-readable user message.
+  static String errorMessage(dynamic error) {
+    if (error == null) return 'Something went wrong. Please try again.';
+    if (isNetworkError(error)) {
+      return noInternetMessage;
+    }
+
+    final raw = error.toString().replaceAll('ApiException: ', '').replaceAll('Exception: ', '').trim();
+    final lower = raw.toLowerCase();
+
+    if (lower.contains('api endpoint not found') ||
+        lower.contains('php files') ||
+        lower.contains('server error') ||
+        lower.contains('unexpected server response') ||
+        lower.contains('syntax error') ||
+        lower.contains('fatal error') ||
+        lower.contains('500') ||
+        lower.contains('502') ||
+        lower.contains('503') ||
+        lower.contains('504')) {
+      return serverErrorMessage;
+    }
+
+    if (raw.isEmpty) {
+      return 'Something went wrong. Please try again.';
+    }
+
+    return raw;
+  }
+
+  /// Wraps any raw exception into an ApiException with clean user-facing copy.
+  static ApiException wrapError(dynamic e) {
+    if (e is ApiException) return e;
+    if (isNetworkError(e)) {
+      return ApiException(noInternetMessage);
+    }
+    return ApiException(errorMessage(e));
+  }
 
   // ---------------- Token storage ----------------
 
@@ -160,12 +229,18 @@ class ApiService {
       final token = await getToken();
       if (token != null) headers['Authorization'] = 'Bearer $token';
     }
-    final res = await http.post(
-      Uri.parse('$baseUrl/$path'),
-      headers: headers,
-      body: jsonEncode(body),
-    );
-    return _handleResponse(res);
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/$path'),
+        headers: headers,
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 25));
+      return _handleResponse(res);
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw wrapError(e);
+    }
   }
 
   static Future<Map<String, dynamic>> _getJson(
@@ -177,8 +252,17 @@ class ApiService {
       final token = await getToken();
       if (token != null) headers['Authorization'] = 'Bearer $token';
     }
-    final res = await http.get(Uri.parse('$baseUrl/$path'), headers: headers);
-    return _handleResponse(res);
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/$path'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 25));
+      return _handleResponse(res);
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw wrapError(e);
+    }
   }
 
   static Map<String, dynamic> _handleResponse(http.Response res) {
@@ -187,13 +271,13 @@ class ApiService {
       data = jsonDecode(res.body) as Map<String, dynamic>;
     } catch (_) {
       if (res.statusCode == 404) {
-        throw ApiException('API endpoint not found (404). Please verify that the PHP files are uploaded.');
+        throw ApiException('Unable to reach the service right now. Please try again later.');
       }
       if (res.statusCode >= 500) {
-        throw ApiException('Server error (${res.statusCode}). Please verify PHP files on your server.');
+        throw ApiException('Server is temporarily unavailable. Please try again later.');
       }
       throw ApiException(
-        'Unexpected server response (${res.statusCode}). Please try again.',
+        'Unable to connect to the server. Please try again.',
       );
     }
     if (res.statusCode >= 200 && res.statusCode < 300 && data['ok'] == true) {
@@ -296,10 +380,16 @@ class ApiService {
       }
     }
 
-    final streamedRes = await request.send();
-    final res = await http.Response.fromStream(streamedRes);
-    final data = _handleResponse(res);
-    return data['application_id'] as int;
+    try {
+      final streamedRes = await request.send().timeout(const Duration(seconds: 40));
+      final res = await http.Response.fromStream(streamedRes);
+      final data = _handleResponse(res);
+      return data['application_id'] as int;
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw wrapError(e);
+    }
   }
 
   static Future<List<dynamic>> fetchMyApplications() async {
@@ -333,6 +423,38 @@ class ApiService {
     final query = (tenantId != null && tenantId > 0) ? '?tenant_id=$tenantId' : '';
     final data = await _getJson('contract_view.php$query', auth: true);
     return data;
+  }
+
+  static Future<Map<String, dynamic>> acceptContract({
+    required int tenantId,
+    required int version,
+  }) async {
+    final res = await _postJson(
+      'contract_accept.php',
+      {
+        'tenant_id': tenantId,
+        'version': version,
+      },
+      auth: true,
+    );
+    return res;
+  }
+
+  static Future<Map<String, dynamic>> rejectContract({
+    required int tenantId,
+    required int version,
+    required String reason,
+  }) async {
+    final res = await _postJson(
+      'contract_reject.php',
+      {
+        'tenant_id': tenantId,
+        'version': version,
+        'reason': reason,
+      },
+      auth: true,
+    );
+    return res;
   }
 
   // ---------------- Lease status ----------------
@@ -478,10 +600,16 @@ class ApiService {
         );
       }
 
-      final streamedRes = await request.send();
-      final res = await http.Response.fromStream(streamedRes);
-      final data = _handleResponse(res);
-      return data['ticket_id'] as int;
+      try {
+        final streamedRes = await request.send().timeout(const Duration(seconds: 40));
+        final res = await http.Response.fromStream(streamedRes);
+        final data = _handleResponse(res);
+        return data['ticket_id'] as int;
+      } on ApiException {
+        rethrow;
+      } catch (e) {
+        throw wrapError(e);
+      }
     }
 
     final payload = <String, dynamic>{

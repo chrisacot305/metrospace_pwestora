@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
+import '../widgets/app_error_view.dart';
 import 'ticket_detail_screen.dart';
 
 const kTicketStages = [
@@ -136,28 +137,10 @@ class _TicketsListScreenState extends State<TicketsListScreen> {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: [
-                  const SizedBox(height: 80),
-                  Center(
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: AppDecorations.squircle(
-                        color: AppColors.errorSoft,
-                      ),
-                      child: const Icon(
-                        Icons.error_outline,
-                        size: 32,
-                        color: AppColors.error,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Text(
-                      snapshot.error.toString(),
-                      textAlign: TextAlign.center,
-                    ),
+                  const SizedBox(height: 60),
+                  AppErrorView(
+                    error: snapshot.error,
+                    onRetry: _refresh,
                   ),
                 ],
               );
@@ -573,18 +556,22 @@ class _SegmentTab extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
           decoration: BoxDecoration(
             color: active ? AppColors.primary : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-              color: active ? Colors.white : AppColors.ink700,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              title,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                color: active ? Colors.white : AppColors.ink700,
+              ),
             ),
           ),
         ),
@@ -699,20 +686,28 @@ class _ArtoReportCard extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Stage: $stageName',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary,
+                    Expanded(
+                      child: Text(
+                        'Stage: $stageName',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
-                    Text(
-                      isRejected ? 'Declined' : '${(progress * 100).toInt()}% Done',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w700,
-                        color: isRejected ? AppColors.error : AppColors.ink500,
+                    const SizedBox(width: 8),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        isRejected ? 'Declined' : '${(progress * 100).toInt()}% Done',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: isRejected ? AppColors.error : AppColors.ink500,
+                        ),
                       ),
                     ),
                   ],

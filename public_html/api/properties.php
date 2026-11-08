@@ -1,38 +1,21 @@
 <?php
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
-header('Content-Type: application/json');
+/**
+ * GET /api/properties.php?type=Retail
+ * Older listing endpoint (kept for compatibility). No auth required.
+ * Response: { "success": true, "data": [ { id, name, type, address, latitude, longitude, asking_rent, cover_photo }, ... ] }
+ */
+require __DIR__ . '/../app/init_api.php';
 
-require_once __DIR__ . '/../config.php';
+use Api\Http\Request;
+use Api\Http\Response;
+use Api\Repositories\PropertyRepository;
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
+$type = Request::string($_GET, 'type', 50);
 
 try {
-    $type = $_GET['type'] ?? null;
-    $sql = 'SELECT p.id, p.name, p.type, p.address, p.latitude, p.longitude, p.asking_rent,
-                  (SELECT photo_path FROM property_photos pp WHERE pp.property_id = p.id ORDER BY pp.id ASC LIMIT 1) AS cover_photo
-           FROM properties p 
-           WHERE p.status = "verified"';
-
-    if ($type && $type !== 'All') {
-        $sql .= ' AND p.type = :type';
-    }
-
-    $stmt = $pdo->prepare($sql);
-    if ($type && $type !== 'All') {
-        $stmt->bindValue(':type', $type);
-    }
-    $stmt->execute();
-
-    echo json_encode([
-        'success' => true,
-        'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)
-    ]);
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    $rows = (new PropertyRepository($pdo))->listVerifiedByType($type === '' ? null : $type);
+    Response::send(['success' => true, 'data' => $rows]);
+} catch (Throwable $e) {
+    error_log('[API properties.php] ' . $e->getMessage());
+    Response::send(['success' => false, 'message' => 'Could not load properties. Please try again later.'], 500);
 }

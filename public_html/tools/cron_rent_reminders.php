@@ -13,33 +13,31 @@
  *  - CLI Manual execution:
  *      php public_html/tools/cron_rent_reminders.php
  *      php public_html/tools/cron_rent_reminders.php --dry-run
- *  - Web URL trigger (browser or web cron):
- *      https://pwestora.com/tools/cron_rent_reminders.php?token=pwestora_cron_secret
- *      https://pwestora.com/tools/cron_rent_reminders.php?token=pwestora_cron_secret&dry_run=1
+ *  - Web URL trigger (browser or web cron) — only works when CRON_SECRET_KEY is set in .env:
+ *      https://pwestora.com/tools/cron_rent_reminders.php?token=<CRON_SECRET_KEY>
+ *      https://pwestora.com/tools/cron_rent_reminders.php?token=<CRON_SECRET_KEY>&dry_run=1
  */
 
 // If running in CLI vs Web
-$isCli = (php_sapi_name() === 'cli' || empty($_SERVER['REMOTE_ADDR']));
+$isCli = (PHP_SAPI === 'cli');
 
-require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../includes/payment_sms_helper.php';
+define('APP_NO_SESSION', true);
+require_once __DIR__ . '/../app/init.php';
+require_once APP_PATH . '/Services/RentNotificationService.php';
 
-// Security: If accessed via web, verify authorization token or active admin/lessor session
+// Security: over the web, a secret token from .env is REQUIRED.
+// (Before, a default token "pwestora_cron_secret" was written in this file's comments,
+//  so anyone could trigger mass SMS sending.)
 if (!$isCli) {
-    $expectedToken = defined('CRON_SECRET_KEY') ? CRON_SECRET_KEY : 'pwestora_cron_secret';
+    $expectedToken = defined('CRON_SECRET_KEY') ? CRON_SECRET_KEY : '';
     $providedToken = $_GET['token'] ?? ($_SERVER['HTTP_X_CRON_TOKEN'] ?? '');
 
-    $hasSessionAuth = false;
-    if (isset($_SESSION['user_id'])) {
-        $hasSessionAuth = in_array($_SESSION['role'] ?? '', ['lessor', 'superadmin'], true);
-    }
-
-    if ($providedToken !== $expectedToken && !$hasSessionAuth) {
+    if (strlen($expectedToken) < 16 || !is_string($providedToken) || !hash_equals($expectedToken, $providedToken)) {
         http_response_code(401);
         header('Content-Type: application/json');
         echo json_encode([
             'ok'    => false,
-            'error' => 'Unauthorized. Provide valid ?token= or sign in as administrator.'
+            'error' => 'Unauthorized.',
         ]);
         exit;
     }

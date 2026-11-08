@@ -1,0 +1,8 @@
+# tools/ — command-line scripts. Only the rent-reminder cron may be called over the web
+# (it also requires CRON_SECRET_KEY from .env), and migrate.php (requires MIGRATE_KEY).
+<IfModule mod_authz_core.c>
+    Require all denied
+    <FilesMatch "^(cron_rent_reminders|migrate)\.php$">
+        Require all granted
+    </FilesMatch>
+</IfModule>

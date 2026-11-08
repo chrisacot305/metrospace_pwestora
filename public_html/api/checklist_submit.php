@@ -7,30 +7,29 @@
  * this is meant to be required, not optional, per item.
  * Response: { "ok": true }
  */
-require __DIR__ . '/_bootstrap.php';
-require_once __DIR__ . '/../includes/lease_checklist.php';
+require __DIR__ . '/../app/init_api.php';
+$LEASE_CHECKLIST_ITEMS = App\Services\LeaseChecklist::items();
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    json_error('Use POST.', 405);
+use Api\Http\Request;
+use Api\Repositories\ChecklistRepository;
+
+Request::requireMethod('POST');
+
+$lessee    = require_lessee_auth($pdo);
+$submitted = Request::json()['acknowledged_keys'] ?? [];
+
+if (!is_array($submitted)) {
+    json_error('acknowledged_keys must be a list.');
 }
 
-$lessee = require_lessee_auth($pdo);
-$body = json_body();
-$submitted = $body['acknowledged_keys'] ?? [];
-
 $requiredKeys = array_keys($LEASE_CHECKLIST_ITEMS);
-$missing = array_diff($requiredKeys, $submitted);
+$missing = array_diff($requiredKeys, array_filter($submitted, 'is_string'));
 
 if (!empty($missing)) {
     json_error('All checklist items must be acknowledged before continuing.');
 }
 
-$stmt = $pdo->prepare(
-    'INSERT INTO lease_checklist_acknowledgments (user_id, item_key) VALUES (?, ?)
-     ON DUPLICATE KEY UPDATE acknowledged_at = NOW()'
-);
-foreach ($requiredKeys as $key) {
-    $stmt->execute([$lessee['id'], $key]);
-}
+// Only the server's own keys are saved — never whatever strings the client sent.
+(new ChecklistRepository($pdo))->acknowledgeAll((int) $lessee['id'], $requiredKeys);
 
 json_ok([]);

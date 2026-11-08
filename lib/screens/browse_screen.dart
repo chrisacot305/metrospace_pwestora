@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
+import '../widgets/app_error_view.dart';
 import 'property_detail_screen.dart';
 
 class BrowseScreen extends StatefulWidget {
@@ -17,7 +18,6 @@ class _BrowseScreenState extends State<BrowseScreen> {
   String _query = '';
   String _selectedCategory = 'All';
   final _searchCtrl = TextEditingController();
-  final Set<int> _savedPropertyIds = {};
 
   final _categories = const [
     ('All', Icons.grid_view_rounded),
@@ -81,27 +81,36 @@ class _BrowseScreenState extends State<BrowseScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Row(
-                        children: [
-                          if (Navigator.canPop(context))
-                            Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: AppBackButton(
-                                isDark: isDark,
-                                onPressed: () => Navigator.of(context).pop(),
+                      Expanded(
+                        child: Row(
+                          children: [
+                            if (Navigator.canPop(context))
+                              Padding(
+                                padding: const EdgeInsets.only(right: 6),
+                                child: AppBackButton(
+                                  isDark: isDark,
+                                  onPressed: () => Navigator.of(context).pop(),
+                                ),
+                              ),
+                            Flexible(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'Explore Spaces',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w900,
+                                    color: titleColor,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
                               ),
                             ),
-                          Text(
-                            'Explore Spaces',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w900,
-                              color: titleColor,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
                         width: 44,
                         height: 44,
@@ -121,7 +130,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                           ],
                         ),
                         child: Image.asset(
-                          'img/Frame 2.png',
+                          isDark ? 'img/invert.png' : 'img/Frame 2.png',
                           fit: BoxFit.contain,
                         ),
                       ),
@@ -534,28 +543,9 @@ class _BrowseScreenState extends State<BrowseScreen> {
                   }
                   if (snapshot.hasError) {
                     return SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.wifi_off,
-                              size: 40,
-                              color: AppColors.ink300,
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              snapshot.error.toString(),
-                              textAlign: TextAlign.center,
-                              style: TextStyle(color: titleColor),
-                            ),
-                            const SizedBox(height: 12),
-                            ElevatedButton(
-                              onPressed: _refresh,
-                              child: const Text('Try again'),
-                            ),
-                          ],
-                        ),
+                      child: AppErrorView(
+                        error: snapshot.error,
+                        onRetry: _refresh,
                       ),
                     );
                   }
@@ -586,10 +576,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
                   if (properties.isEmpty) {
                     return SliverToBoxAdapter(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 50,
-                          horizontal: 24,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(24, 50, 24, 120),
                         child: Column(
                           children: [
                             Container(
@@ -634,32 +621,20 @@ class _BrowseScreenState extends State<BrowseScreen> {
                   }
 
                   return SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 28),
+                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 120),
                     sliver: SliverGrid(
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            childAspectRatio: 0.64,
+                            childAspectRatio: 0.60,
                             crossAxisSpacing: 14,
                             mainAxisSpacing: 14,
                           ),
                       delegate: SliverChildBuilderDelegate((context, i) {
                         final prop = properties[i] as Map<String, dynamic>;
-                        final id = prop['id'] as int? ?? 0;
-                        final isSaved = _savedPropertyIds.contains(id);
 
                         return _DripzyGridCard(
                           property: prop,
-                          isSaved: isSaved,
-                          onSaveToggle: () {
-                            setState(() {
-                              if (isSaved) {
-                                _savedPropertyIds.remove(id);
-                              } else {
-                                _savedPropertyIds.add(id);
-                              }
-                            });
-                          },
                         );
                       }, childCount: properties.length),
                     ),
@@ -677,13 +652,9 @@ class _BrowseScreenState extends State<BrowseScreen> {
 /// Dripzy 2-Column Grid Card Design with Theme-Aware Dark Mode
 class _DripzyGridCard extends StatelessWidget {
   final Map<String, dynamic> property;
-  final bool isSaved;
-  final VoidCallback onSaveToggle;
 
   const _DripzyGridCard({
     required this.property,
-    required this.isSaved,
-    required this.onSaveToggle,
   });
 
   @override
@@ -790,84 +761,50 @@ class _DripzyGridCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      // Floating Bookmark Button (Top Right)
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: GestureDetector(
-                          onTap: onSaveToggle,
-                          child: Container(
-                            width: 30,
-                            height: 30,
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? const Color(0xFF1E293B).withValues(alpha: 0.9)
-                                  : Colors.white.withValues(alpha: 0.9),
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.15),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              isSaved
-                                  ? Icons.bookmark_rounded
-                                  : Icons.bookmark_border_rounded,
-                              size: 16,
-                              color: isSaved
-                                  ? AppColors.electricBlue
-                                  : subColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Floating Floor Area Badge (Bottom Left of Photo)
-                      if (property['floor_area'] != null &&
-                          property['floor_area'].toString().trim().isNotEmpty)
-                        Positioned(
-                          bottom: 8,
-                          left: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.70),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.square_foot_rounded,
-                                  size: 10,
-                                  color: Colors.white70,
-                                ),
-                                const SizedBox(width: 3),
-                                Text(
-                                  property['floor_area']
-                                              .toString()
-                                              .toLowerCase()
-                                              .contains('sqm') ||
-                                          property['floor_area']
-                                              .toString()
-                                              .toLowerCase()
-                                              .contains('m²')
-                                      ? property['floor_area'].toString()
-                                      : '${property['floor_area']} sqm',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w700,
+                      // Floating Vacancy Badge (Bottom Left of Photo)
+                      Builder(
+                        builder: (context) {
+                          final avail = (property['available_units'] as num?)?.toInt() ??
+                              (property['occupancy_status'] == 'occupied' ? 0 : 1);
+                          final String vacancyText = avail <= 0
+                              ? 'Fully Occupied'
+                              : (avail == 1 ? '1 Vacant Unit' : '$avail Vacant Units');
+
+                          return Positioned(
+                            bottom: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.70),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.meeting_room_rounded,
+                                    size: 10,
+                                    color: Colors.white70,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    vacancyText,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),

@@ -122,20 +122,20 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'Violations & Standing',
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w800,
-                color: AppColors.midnightNavy,
+                color: isDark ? Colors.white : AppColors.midnightNavy,
                 letterSpacing: -0.2,
               ),
             ),
             Text(
               propertyName,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11.5,
-                color: Color(0xFF64748B),
+                color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
                 fontWeight: FontWeight.w500,
               ),
               maxLines: 1,

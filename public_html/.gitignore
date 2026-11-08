@@ -1,0 +1,23 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# User uploads (personal documents — never commit)
+/uploads/*
+!/uploads/.htaccess
+!/uploads/verification/
+/uploads/verification/*
+!/uploads/verification/.htaccess
+
+# Logs / runtime files
+/app/storage/logs/*
+!/app/storage/logs/.htaccess
+error_log
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

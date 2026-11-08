@@ -1,43 +1,28 @@
 <?php
 /**
- * GET /api/requests_list.php
+ * GET /api/requests_list.php?tenant_id=5   (tenant_id optional — newest lease if omitted)
  * Header: Authorization: Bearer <token>
  * Response: { "ok": true, "requests": [ { id, reason, plan_label, amount, status, created_at }, ... ] }
  */
-require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/../app/init_api.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    json_error('Use GET.', 405);
-}
+use Api\Formatters\Formatter;
+use Api\Http\Request;
+use Api\Repositories\InstallmentRequestRepository;
+use Api\Services\TenantResolver;
+
+Request::requireMethod('GET');
 
 $lessee = require_lessee_auth($pdo);
 
-$tenantIdParam = isset($_GET['tenant_id']) && (int)$_GET['tenant_id'] > 0 ? (int)$_GET['tenant_id'] : 0;
-
-if ($tenantIdParam > 0) {
-    $tenantStmt = $pdo->prepare('SELECT id FROM tenants WHERE lessee_id = ? AND id = ? LIMIT 1');
-    $tenantStmt->execute([$lessee['id'], $tenantIdParam]);
-    $tenantId = $tenantStmt->fetchColumn();
-} else {
-    $tenantStmt = $pdo->prepare('SELECT id FROM tenants WHERE lessee_id = ? ORDER BY created_at DESC LIMIT 1');
-    $tenantStmt->execute([$lessee['id']]);
-    $tenantId = $tenantStmt->fetchColumn();
-}
-
-if (!$tenantId) {
+$tenant = (new TenantResolver($pdo))->forLessee($lessee, Request::positiveInt($_GET['tenant_id'] ?? 0));
+if (!$tenant) {
     json_ok(['requests' => []]);
 }
 
-$stmt = $pdo->prepare(
-    'SELECT id, reason, plan_label, amount, status, created_at
-     FROM installment_requests WHERE tenant_id = ? ORDER BY created_at DESC'
+$requests = array_map(
+    [Formatter::class, 'installmentRequest'],
+    (new InstallmentRequestRepository($pdo))->listForTenant((int) $tenant['tenant_id'])
 );
-$stmt->execute([$tenantId]);
-$requests = $stmt->fetchAll();
-
-foreach ($requests as &$r) {
-    $r['id']     = (int) $r['id'];
-    $r['amount'] = (float) $r['amount'];
-}
 
 json_ok(['requests' => $requests]);

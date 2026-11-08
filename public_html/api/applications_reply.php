@@ -3,32 +3,33 @@
  * POST /api/applications_reply.php
  * Header: Authorization: Bearer <token>
  * Body: { "application_id": 8, "message": "I agree to the terms..." }
- * Response: { "ok": true }
+ * Response: { "ok": true, "messages": [ ... ] }
  */
-require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/../app/init_api.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    json_error('Use POST.', 405);
-}
+use Api\Http\Request;
+use Api\Repositories\ApplicationRepository;
+
+const REPLY_MAX_LENGTH = 2000;
+
+Request::requireMethod('POST');
 
 $lessee = require_lessee_auth($pdo);
-$body = json_body();
+$body   = Request::json();
 
-$applicationId = (int) ($body['application_id'] ?? 0);
-$message = trim($body['message'] ?? '');
+$applicationId = Request::positiveInt($body['application_id'] ?? 0);
+$message       = Request::string($body, 'message', REPLY_MAX_LENGTH);
 
 if ($applicationId <= 0 || $message === '') {
     json_error('application_id and message are required.');
 }
 
-$stmt = $pdo->prepare('SELECT * FROM applications WHERE id = ? AND lessee_id = ?');
-$stmt->execute([$applicationId, $lessee['id']]);
-$app = $stmt->fetch();
+$applications = new ApplicationRepository($pdo);
+$app = $applications->findForLessee($applicationId, (int) $lessee['id']);
 
 if (!$app) {
     json_error('Application not found or unauthorized.', 404);
 }
-
 if ($app['status'] !== 'pending') {
     json_error('This application is already ' . $app['status'] . ' and cannot be negotiated further.', 400);
 }
@@ -40,7 +41,6 @@ if (!empty($app['checklist_negotiation'])) {
         $negotiation = $decoded;
     }
 }
-
 if (!isset($negotiation['messages']) || !is_array($negotiation['messages'])) {
     $negotiation['messages'] = [];
 }
@@ -53,13 +53,6 @@ $negotiation['messages'][] = [
     'sent_at'     => date('Y-m-d H:i:s'),
 ];
 
-$updatedJson = json_encode($negotiation);
-
-try {
-    $update = $pdo->prepare('UPDATE applications SET checklist_negotiation = ? WHERE id = ?');
-    $update->execute([$updatedJson, $applicationId]);
-} catch (Throwable $e) {
-    json_error('Failed to save reply: ' . $e->getMessage(), 500);
-}
+$applications->updateNegotiation($applicationId, json_encode($negotiation));
 
 json_ok(['ok' => true, 'messages' => $negotiation['messages']]);
