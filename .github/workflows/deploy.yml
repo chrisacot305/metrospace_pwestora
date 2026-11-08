@@ -31,7 +31,7 @@ jobs:
         run: flutter pub get
 
       - name: Build Web
-        run: flutter build web --release --base-href "/pwestora_metrospace/"
+        run: flutter build web --release --base-href "/metrospace_pwestora/"
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
