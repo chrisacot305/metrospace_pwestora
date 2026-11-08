@@ -7,6 +7,12 @@
 <title>Lessor Registration · <?= APP_NAME ?></title>
 <link rel="stylesheet" href="/assets/css/style.css?v=12">
 <link rel="icon" type="image/png" href="/assets/img/icon.png">
+<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png?v=2">
+<link rel="manifest" href="/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pwestora">
 <meta name="theme-color" content="#102340">
 </head>
 <body>
@@ -83,5 +89,6 @@
   </div>
 
 </div>
+<script src="/assets/js/pwa.js"></script>
 </body>
 </html>

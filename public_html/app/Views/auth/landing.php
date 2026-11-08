@@ -8,6 +8,12 @@
 <meta name="description" content="Pwestora is the leasing management platform built for commercial property lessors documented agreements, payments, maintenance, and tenant communication in one workspace.">
 <link rel="stylesheet" href="/assets/css/style.css?v=<?= filemtime(APP_ROOT . '/assets/css/style.css') ?>">
 <link rel="icon" type="image/png" href="/assets/img/icon.png">
+<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png?v=2">
+<link rel="manifest" href="/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pwestora">
 <meta name="theme-color" content="#102340">
 <link rel="stylesheet" href="/assets/css/landing-motion.css?v=<?= filemtime(APP_ROOT . '/assets/css/landing-motion.css') ?>">
 <script>
@@ -459,6 +465,7 @@ document.querySelectorAll('.l-upload-box input[type="file"]').forEach(function (
 
 </script>
 <script src="/assets/js/landing-motion.js?v=<?= filemtime(APP_ROOT . '/assets/js/landing-motion.js') ?>" defer></script>
+<script src="/assets/js/pwa.js" defer></script>
 
 </body>
 </html>
