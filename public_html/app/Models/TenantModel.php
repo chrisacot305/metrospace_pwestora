@@ -10,11 +10,23 @@ class TenantModel extends Model
         return $this->one('SELECT id, tenant_name FROM tenants WHERE id = ? AND lessor_id = ?', [$tenantId, $lessorId]);
     }
 
-    public function createFromApplication(int $lessorId, int $propertyId, int $appId, ?int $lesseeId, string $tenantName): int
-    {
+    public function createFromApplication(
+        int $lessorId,
+        int $propertyId,
+        int $appId,
+        ?int $lesseeId,
+        string $tenantName,
+        float $monthlyRent = 0.0,
+        ?string $startDate = null,
+        int $dueDay = 0,
+        ?string $businessName = null
+    ): int {
+        $start = ($startDate !== null && trim($startDate) !== '') ? substr(trim($startDate), 0, 10) : date('Y-m-d');
+        $day   = ($dueDay >= 1 && $dueDay <= 31) ? $dueDay : (int) date('j', strtotime($start));
         return $this->insert(
-            'INSERT INTO tenants (lessor_id, property_id, application_id, lessee_id, tenant_name) VALUES (?, ?, ?, ?, ?)',
-            [$lessorId, $propertyId, $appId, $lesseeId, $tenantName]
+            'INSERT INTO tenants (lessor_id, property_id, application_id, lessee_id, tenant_name, business_name, monthly_rent, start_date, due_day)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [$lessorId, $propertyId, $appId, $lesseeId, $tenantName, $businessName, $monthlyRent, $start, $day]
         );
     }
 
@@ -61,26 +73,34 @@ class TenantModel extends Model
         );
     }
 
-    /** Full roster with lease terms, negotiation history and last verified payment. */
+    /** Full roster with lease terms, finalized contract overrides, negotiation history and last verified payment. */
     public function rosterForLessor(int $lessorId): array
     {
         return $this->all(
-            "SELECT t.id, t.tenant_name, t.created_at, t.start_date, t.end_date, t.application_id, t.lessee_id,
+            "SELECT t.id, t.lessor_id, t.property_id, t.tenant_name, t.business_name AS tenant_business_name,
+                    t.due_day, t.created_at, t.created_at AS since, t.start_date, t.end_date,
+                    t.monthly_rent, COALESCE(t.security_deposit, 0) AS security_deposit, t.advance_rent,
+                    t.status AS tenant_status, t.application_id, t.lessee_id,
                     t.offline_email, t.offline_phone, p.name AS property_name,
-                    a.term_months, a.rent, a.business_name, a.submitted_at,
+                    a.term_months, a.term_months AS app_term_months, a.rent, a.rent AS app_rent,
+                    COALESCE(NULLIF(t.business_name, ''), a.business_name, '') AS business_name, a.submitted_at,
                     a.checklist_negotiation, a.lessor_rebuttal, a.rebuttal_at,
+                    lc.monthly_rent AS contract_rent, lc.term_months AS contract_term_months,
+                    lc.start_date AS contract_start_date, lc.end_date AS contract_end_date,
+                    lc.due_day AS contract_due_day, lc.status AS contract_status,
                     u.email AS lessee_email, u.phone AS lessee_phone,
                     (
                         SELECT MAX(pay.paid_at)
                         FROM payments pay
                         WHERE pay.tenant_id = t.id
                           AND pay.lessor_id = t.lessor_id
-                          AND pay.logged_by IS NOT NULL
-                          AND (pay.note IS NULL OR pay.note NOT LIKE '[DECLINED%')
+                          AND (pay.logged_by IS NOT NULL OR pay.note LIKE '%[VERIFIED]%' OR pay.note LIKE '%[AUTO-DEPOSIT]%')
+                          AND (pay.note IS NULL OR (pay.note NOT LIKE '[DECLINED%' AND pay.note NOT LIKE '%Security Deposit Top-Up%'))
                     ) AS last_paid_at
              FROM tenants t
              JOIN properties p ON p.id = t.property_id
              LEFT JOIN applications a ON a.id = t.application_id
+             LEFT JOIN lease_contracts lc ON lc.tenant_id = t.id
              LEFT JOIN users u ON u.id = t.lessee_id
              WHERE t.lessor_id = ?
              ORDER BY t.created_at DESC",

@@ -123,6 +123,7 @@ class ScoopedNavItem extends StatefulWidget {
   final IconData outlineIcon;
   final String label;
   final ValueChanged<int> onTap;
+  final bool isLocked;
 
   const ScoopedNavItem({
     super.key,
@@ -132,6 +133,7 @@ class ScoopedNavItem extends StatefulWidget {
     required this.outlineIcon,
     required this.label,
     required this.onTap,
+    this.isLocked = false,
   });
 
   @override
@@ -146,17 +148,18 @@ class _ScoopedNavItemState extends State<ScoopedNavItem> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isSelected = widget.currentIndex == widget.index;
-    final isActiveOrHovered = isSelected || _isHovered;
+    final isSelected = !widget.isLocked && widget.currentIndex == widget.index;
+    final isActiveOrHovered = isSelected || (!widget.isLocked && _isHovered);
 
     final activeColor = isDark ? Colors.white : navyActive;
     final inactiveColor = isDark ? const Color(0xFF94A3B8) : AppColors.ink400;
-    final itemColor = isActiveOrHovered ? activeColor : inactiveColor;
+    final itemColor = (isActiveOrHovered ? activeColor : inactiveColor)
+        .withValues(alpha: widget.isLocked ? 0.42 : 1.0);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      cursor: SystemMouseCursors.click,
+      cursor: widget.isLocked ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => widget.onTap(widget.index),
@@ -167,14 +170,36 @@ class _ScoopedNavItemState extends State<ScoopedNavItem> {
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AnimatedScale(
-                scale: isSelected ? 1.06 : 1.0,
-                duration: const Duration(milliseconds: 180),
-                child: Icon(
-                  isSelected ? widget.icon : widget.outlineIcon,
-                  color: itemColor,
-                  size: 23,
-                ),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  AnimatedScale(
+                    scale: isSelected ? 1.06 : 1.0,
+                    duration: const Duration(milliseconds: 180),
+                    child: Icon(
+                      isSelected ? widget.icon : widget.outlineIcon,
+                      color: itemColor,
+                      size: 23,
+                    ),
+                  ),
+                  if (widget.isLocked)
+                    Positioned(
+                      right: -6,
+                      top: -3,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1F2937) : const Color(0xFFFEE2E2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.lock_rounded,
+                          size: 9,
+                          color: AppColors.error,
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 3),
               Text(

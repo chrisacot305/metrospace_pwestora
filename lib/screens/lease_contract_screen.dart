@@ -119,9 +119,9 @@ class _LeaseContractScreenState extends State<LeaseContractScreen>
     },
     {
       'key': 'rent_grace_period',
-      'label': '7-Day Grace Period & Default Rules',
+      'label': '5-Day Grace Period & Default Rules',
       'standard':
-          "Monthly rent is due on the scheduled due date. A seven (7) calendar-day grace period is granted with zero late penalty. Payments unpaid after Day 7 incur a ₱500 late fee and initiate Strike 1 payment default escalation.",
+          "Monthly rent is due on the contract due date. A five (5) calendar-day grace period is granted with zero late penalty. If unpaid by Day 5, available Security Deposit balance is auto-deducted; any remaining unpaid balance past Day 5 carries over to the next month and initiates 3-strike escalation (Strike 1: ₱0 warning, Strike 2: ₱500 fine, Strike 3: ₱1,500 fine & Eviction Lock).",
       'agreed': true,
       'note': '',
     },

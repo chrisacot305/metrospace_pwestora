@@ -13,6 +13,7 @@ import 'my_applications_screen.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../widgets/luxury_rent_card.dart';
 import '../widgets/building_details_sheet.dart';
+import '../widgets/eviction_lock_panel.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Map<String, dynamic> lease;
@@ -89,6 +90,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void didUpdateWidget(covariant DashboardScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.allLeases != null && widget.allLeases != oldWidget.allLeases) {
+      final oldTid = oldWidget.lease['tenant_id'] ?? oldWidget.lease['id'];
+      final newTid = widget.lease['tenant_id'] ?? widget.lease['id'];
+      if (oldTid != newTid) {
+        _checkedTenantIds.clear();
+      }
       setState(() {
         _allLeases = widget.allLeases!;
       });
@@ -110,11 +116,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.dispose();
   }
 
-  Future<void> _loadAllLeases() async {
+  Future<void> _loadAllLeases({bool forceNetwork = false}) async {
     try {
-      final list = (widget.allLeases != null && widget.allLeases!.isNotEmpty)
+      final list = (!forceNetwork && widget.allLeases != null && widget.allLeases!.isNotEmpty)
           ? widget.allLeases!
-          : await ApiService.fetchAllActiveLeases(initialLease: widget.lease);
+          : await ApiService.fetchAllActiveLeases(
+              initialLease: forceNetwork ? null : widget.lease,
+            );
       if (mounted) {
         setState(() {
           _allLeases = list;
@@ -181,8 +189,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         lessorName: activeLessor,
       );
       if (!mounted) return;
-      // Filter out violations that belong to a different landlord
+      // Filter out violations belonging to a different lease or landlord
       final violations = rawViolations.where((v) {
+        if (v['tenant_id'] != null && effectiveId > 0) {
+          final int? vTid = v['tenant_id'] is int
+              ? v['tenant_id'] as int
+              : int.tryParse(v['tenant_id'].toString());
+          if (vTid != null && vTid != effectiveId) {
+            return false;
+          }
+        }
         if (v['lessor_name'] != null && activeLessor.isNotEmpty) {
           final vLessor = v['lessor_name'].toString().trim().toLowerCase();
           if (vLessor.isNotEmpty &&
@@ -235,7 +251,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _ticketsFuture,
       _arrangementsFuture,
       _violationsFuture,
-      _loadAllLeases(),
+      _loadAllLeases(forceNetwork: true),
     ]);
     widget.onRefresh();
   }
@@ -435,10 +451,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  void _showLockedNotice() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF991B1B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: const Text(
+            'Locked for this evicted business. Settle its balance or swipe the card to switch to a clean business.',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final rentAmount = (_activeLease['rent'] as num?)?.toDouble() ?? 12000.0;
+    final bool isActiveLocked = isLeaseEvictionLocked(_activeLease);
+    final leaseListForSwitch = _allLeases.isNotEmpty ? _allLeases : [widget.lease];
+    final int cleanLeaseIndex =
+        leaseListForSwitch.indexWhere((l) => !isLeaseEvictionLocked(l));
+    final String? cleanBizLabel = cleanLeaseIndex >= 0
+        ? leaseDisplayLabel(leaseListForSwitch[cleanLeaseIndex])
+        : null;
     final now = DateTime.now();
     final currentMonthName = _getMonthName(now.month);
 
@@ -493,22 +533,82 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const Spacer(),
 
-                    // Receipts Button (Small icon beside Message button)
+                    // Receipts Button (Small icon beside Message button — locked while viewing an evicted card)
                     Tooltip(
-                      message: 'Receipts',
+                      message: isActiveLocked ? 'Locked during Eviction Notice' : 'Receipts',
+                      child: Opacity(
+                        opacity: isActiveLocked ? 0.45 : 1.0,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(22),
+                          onTap: isActiveLocked
+                              ? _showLockedNotice
+                              : () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ReceiptsHistoryScreen(
+                                        lease: _activeLease,
+                                        rentAmount: rentAmount,
+                                      ),
+                                    ),
+                                  );
+                                },
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isDark
+                                      ? Colors.black.withValues(alpha: 0.35)
+                                      : const Color(
+                                          0xFF0F172A,
+                                        ).withValues(alpha: 0.07),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            alignment: Alignment.center,
+                            child: Icon(
+                              isActiveLocked
+                                  ? Icons.lock_outline_rounded
+                                  : Icons.receipt_long_rounded,
+                              size: 21,
+                              color: isActiveLocked
+                                  ? AppColors.error
+                                  : (isDark
+                                      ? const Color(0xFF60A5FA)
+                                      : const Color(0xFF0F172A)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    // Chat Button (Clean borderless floating circular button — locked while viewing an evicted card)
+                    Opacity(
+                      opacity: isActiveLocked ? 0.45 : 1.0,
                       child: InkWell(
                         borderRadius: BorderRadius.circular(22),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ReceiptsHistoryScreen(
-                                lease: _activeLease,
-                                rentAmount: rentAmount,
-                              ),
-                            ),
-                          );
-                        },
+                        onTap: isActiveLocked
+                            ? _showLockedNotice
+                            : () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => MessagesScreen(
+                                      lease: _activeLease,
+                                      onNavigateTab: widget.onNavigateTab,
+                                    ),
+                                  ),
+                                );
+                              },
                         child: Container(
                           width: 44,
                           height: 44,
@@ -529,96 +629,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ],
                           ),
-                          alignment: Alignment.center,
-                          child: Icon(
-                            Icons.receipt_long_rounded,
-                            size: 21,
-                            color: isDark
-                                ? const Color(0xFF60A5FA)
-                                : const Color(0xFF0F172A),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(width: 8),
-
-                    // Chat Button (Clean borderless floating circular button)
-                    InkWell(
-                      borderRadius: BorderRadius.circular(22),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => MessagesScreen(
-                              lease: _activeLease,
-                              onNavigateTab: widget.onNavigateTab,
-                            ),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isDark
-                              ? const Color(0xFF1E293B)
-                              : Colors.white,
-                          boxShadow: [
-                            BoxShadow(
-                              color: isDark
-                                  ? Colors.black.withValues(alpha: 0.35)
-                                  : const Color(
-                                      0xFF0F172A,
-                                    ).withValues(alpha: 0.07),
-                              blurRadius: 12,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          alignment: Alignment.center,
-                          children: [
-                            SvgPicture.asset(
-                              'img/comment-alt-dots.svg',
-                              width: 21,
-                              height: 21,
-                              colorFilter: ColorFilter.mode(
-                                isDark
-                                    ? const Color(0xFF60A5FA)
-                                    : const Color(0xFF0F172A),
-                                BlendMode.srcIn,
-                              ),
-                            ),
-                            Positioned(
-                              top: 2,
-                              right: 2,
-                              child: Container(
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF2563EB),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: isDark
-                                        ? const Color(0xFF1E293B)
-                                        : Colors.white,
-                                    width: 1.8,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(
-                                        0xFF2563EB,
-                                      ).withValues(alpha: 0.4),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 1),
+                          child: isActiveLocked
+                              ? const Icon(
+                                  Icons.lock_outline_rounded,
+                                  size: 20,
+                                  color: AppColors.error,
+                                )
+                              : Stack(
+                                  clipBehavior: Clip.none,
+                                  alignment: Alignment.center,
+                                  children: [
+                                    SvgPicture.asset(
+                                      'img/comment-alt-dots.svg',
+                                      width: 21,
+                                      height: 21,
+                                      colorFilter: ColorFilter.mode(
+                                        isDark
+                                            ? const Color(0xFF60A5FA)
+                                            : const Color(0xFF0F172A),
+                                        BlendMode.srcIn,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      top: 2,
+                                      right: 2,
+                                      child: Container(
+                                        width: 10,
+                                        height: 10,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF2563EB),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: isDark
+                                                ? const Color(0xFF1E293B)
+                                                : Colors.white,
+                                            width: 1.8,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFF2563EB,
+                                              ).withValues(alpha: 0.4),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 1),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ),
-                          ],
                         ),
                       ),
                     ),
@@ -632,11 +692,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               FutureBuilder<String>(
                 future: _rentStatusFuture,
                 builder: (context, rentStatusSnap) {
-                  final rentStatus = rentStatusSnap.data ?? 'normal';
-                  final isOverdue = rentStatus == 'overdue';
-                  final overdueSubtext = isOverdue
-                      ? 'October + November'
-                      : null;
+                  final simulatorStatus = rentStatusSnap.data ?? 'normal';
 
                   return FutureBuilder<List<dynamic>>(
                     future: _arrangementsFuture,
@@ -651,8 +707,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       final plan = latest?['plan_label'] ?? '2 payments';
                       final isApproved = status == 'approved';
                       final isPending = status == 'pending';
+                      final isActiveLeaseOverdue =
+                          _activeLease['is_overdue'] == true ||
+                          _activeLease['rent_status'] == 'overdue' ||
+                          simulatorStatus == 'overdue';
                       final hasRestructuring =
-                          !isOverdue && (isApproved || isPending);
+                          !isActiveLeaseOverdue && (isApproved || isPending);
                       final currentPart =
                           (latest?['current_part'] as int?) ?? 1;
 
@@ -701,43 +761,98 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 }
 
                                 final leaseItem = leaseList[index];
-                                final simulatorStatus = rentStatusSnap.data ?? 'normal';
-                                final isSimulatorActive = simulatorStatus == 'overdue' || simulatorStatus == 'grace_period';
+                                final bool isItemEviction =
+                                    leaseItem['is_eviction'] == true;
+                                final bool isItemTerminated =
+                                    leaseItem['is_terminated'] == true ||
+                                    (leaseItem['rent_status'] ?? '')
+                                            .toString() ==
+                                        'terminated';
+                                final bool isItemLocked =
+                                    isItemEviction || isItemTerminated;
+                                final isBackendGrace =
+                                    leaseItem['is_grace_period'] == true ||
+                                    leaseItem['rent_status'] == 'grace_period';
+                                final isBackendOverdue =
+                                    leaseItem['is_overdue'] == true ||
+                                    leaseItem['rent_status'] == 'overdue';
+                                final isBackendSettled =
+                                    leaseItem['is_settled'] == true ||
+                                    leaseItem['rent_status'] == 'settled';
+                                final isSimulatorActive =
+                                    !isBackendGrace &&
+                                    !isBackendOverdue &&
+                                    (simulatorStatus == 'overdue' ||
+                                        simulatorStatus == 'grace_period');
 
                                 final bool isItemGrace = isSimulatorActive
                                     ? (simulatorStatus == 'grace_period')
-                                    : (leaseItem['is_grace_period'] == true);
-
+                                    : isBackendGrace;
                                 final bool isItemOverdue = isSimulatorActive
                                     ? (simulatorStatus == 'overdue')
-                                    : (leaseItem['is_overdue'] == true || leaseItem['rent_status'] == 'overdue');
+                                    : isBackendOverdue;
+                                final bool hasRestructuring =
+                                    !isItemLocked && !isItemOverdue && (isApproved || isPending);
 
-                                final int itemGraceDays = (leaseItem['grace_days_remaining'] as num?)?.toInt() ?? 5;
+                                final int itemGraceDays = isSimulatorActive
+                                    ? 5
+                                    : ((leaseItem['grace_days_remaining'] as num?)?.toInt() ?? 5);
 
-                                final itemDueLabel = (leaseItem['due_status_label'] ?? '').toString();
+                                final double baseRent =
+                                    (leaseItem['base_rent'] as num?)?.toDouble() ??
+                                    (leaseItem['rent'] as num?)?.toDouble() ??
+                                    0.0;
+                                final double itemPenalty =
+                                    (leaseItem['penalty_amount'] as num?)?.toDouble() ?? 0.0;
+                                final double backendTotalDue =
+                                    (leaseItem['total_due'] as num?)?.toDouble() ??
+                                    (baseRent + itemPenalty);
+                                final String monthsLabel =
+                                    (leaseItem['outstanding_months_label'] ?? '').toString().trim();
+                                final String formattedDueDate =
+                                    (leaseItem['due_date_formatted'] ?? '').toString().trim();
+                                final String itemDueLabel =
+                                    (leaseItem['due_status_label'] ?? '').toString().trim();
+
                                 final String dynamicDueDate;
                                 if (hasRestructuring && isApproved && currentPart > 1) {
                                   dynamicDueDate = '15 Nov ${now.year}';
+                                } else if (isItemGrace || isItemOverdue) {
+                                  if (formattedDueDate.isNotEmpty) {
+                                    dynamicDueDate = formattedDueDate;
+                                  } else {
+                                    final dueDay = (leaseItem['due_day'] as num?)?.toInt() ?? now.day;
+                                    dynamicDueDate = '$dueDay $currentMonthName ${now.year}';
+                                  }
                                 } else if (itemDueLabel.isNotEmpty && !isSimulatorActive) {
                                   dynamicDueDate = itemDueLabel;
+                                } else if (formattedDueDate.isNotEmpty) {
+                                  dynamicDueDate = formattedDueDate;
                                 } else {
-                                  final dueDay = (leaseItem['due_day'] as num?)?.toInt() ?? 30;
+                                  final dueDay = (leaseItem['due_day'] as num?)?.toInt() ?? now.day;
                                   dynamicDueDate = '$dueDay $currentMonthName ${now.year}';
                                 }
 
-                                final itemRent =
-                                    (leaseItem['rent'] as num?)?.toDouble() ??
-                                    12000.0;
-                                final itemPenalty =
-                                    (leaseItem['penalty_amount'] as num?)?.toDouble() ?? 0.0;
-                                final itemEffectiveRent = isItemOverdue
-                                    ? (itemRent * 2 + (itemPenalty > 0 ? itemPenalty : 500))
-                                    : (itemRent + itemPenalty);
-                                final effectiveSubtext = isItemOverdue
-                                    ? (overdueSubtext ?? 'Overdue Balance + Late Fee')
-                                    : (itemPenalty > 0
-                                        ? 'Includes ₱${itemPenalty.toStringAsFixed(0)} Strike Penalty'
-                                        : null);
+                                final double itemEffectiveRent = isSimulatorActive
+                                    ? (isItemOverdue
+                                          ? (baseRent * 2 + (itemPenalty > 0 ? itemPenalty : 500))
+                                          : (baseRent + itemPenalty))
+                                    : ((isBackendSettled && backendTotalDue <= 0)
+                                          ? baseRent
+                                          : backendTotalDue);
+
+                                final String? effectiveSubtext;
+                                if (isItemOverdue) {
+                                  effectiveSubtext = monthsLabel.isNotEmpty
+                                      ? monthsLabel
+                                      : (isSimulatorActive ? 'Simulated Overdue Balance' : 'Overdue Balance');
+                                } else if (itemPenalty > 0) {
+                                  effectiveSubtext =
+                                      'Includes ₱${itemPenalty.toStringAsFixed(0)} Strike Penalty';
+                                } else {
+                                  effectiveSubtext = null;
+                                }
+                                final itemRent = baseRent;
                                 final itemCompany =
                                     (leaseItem['business_name'] ?? '')
                                         .toString()
@@ -780,7 +895,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     isGracePeriod: isItemGrace,
                                     graceDaysRemaining: itemGraceDays,
                                     overdueSubtext: effectiveSubtext,
+                                    isEviction: isItemEviction,
+                                    isTerminated: isItemTerminated,
                                     onCardTap: () {
+                                      if (isItemLocked) {
+                                        Navigator.of(context)
+                                            .push(
+                                              MaterialPageRoute(
+                                                builder: (_) => ViolationsScreen(
+                                                  lease: leaseItem,
+                                                ),
+                                              ),
+                                            )
+                                            .then((_) => _refresh());
+                                        return;
+                                      }
                                       final enriched = Map<String, dynamic>.from(leaseItem);
                                       enriched['due_date'] = dynamicDueDate;
                                       BuildingDetailsSheet.show(
@@ -789,28 +918,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         onNavigateTab: widget.onNavigateTab,
                                       );
                                     },
-                                    onArrangementTap: () {
-                                      Navigator.of(context)
-                                          .push(
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  PaymentArrangementScreen(
-                                                    lease: leaseItem,
-                                                    onArrangementSubmitted:
-                                                        () => _refresh(),
+                                    onArrangementTap: isItemLocked
+                                        ? null
+                                        : () {
+                                            Navigator.of(context)
+                                                .push(
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        PaymentArrangementScreen(
+                                                          lease: leaseItem,
+                                                          onArrangementSubmitted:
+                                                              () => _refresh(),
+                                                        ),
                                                   ),
-                                            ),
-                                          )
-                                          .then((_) => _refresh());
-                                    },
+                                                )
+                                                .then((_) => _refresh());
+                                          },
                                     onPayRent: () {
+                                      if (isItemTerminated) {
+                                        Navigator.of(context)
+                                            .push(
+                                              MaterialPageRoute(
+                                                builder: (_) => ViolationsScreen(
+                                                  lease: leaseItem,
+                                                ),
+                                              ),
+                                            )
+                                            .then((_) => _refresh());
+                                        return;
+                                      }
                                       Navigator.of(context)
                                           .push(
                                             MaterialPageRoute(
                                               builder: (_) => RentPaymentScreen(
                                                 lease: leaseItem,
                                                 rentAmount: itemRent,
-                                                isOverdue: isItemOverdue,
+                                                isOverdue: isItemOverdue || isItemEviction,
                                                 activeArrangement:
                                                     hasRestructuring
                                                     ? latest
@@ -854,8 +997,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             }),
                           ),
 
-                          // Active Restructuring Plan Strip (if any)
-                          if (hasRestructuring)
+                          // Active Restructuring Plan Strip (if any, hidden on evicted/terminated cards)
+                          if (hasRestructuring && !isActiveLocked)
                             Padding(
                               padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
                               child: InkWell(
@@ -935,8 +1078,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 },
               ),
 
-              // Inline Violation Strip (if any)
-              FutureBuilder<List<Map<String, dynamic>>>(
+              if (isActiveLocked)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+                  child: EvictionLockPanel(
+                    lease: _activeLease,
+                    cleanBusinessLabel: cleanBizLabel,
+                    onSwitchToCleanBusiness: (cleanLeaseIndex >= 0 &&
+                            _cardPageController.hasClients)
+                        ? () {
+                            _cardPageController.animateToPage(
+                              cleanLeaseIndex,
+                              duration: const Duration(milliseconds: 350),
+                              curve: Curves.easeOutCubic,
+                            );
+                          }
+                        : null,
+                    onProceedToPayment: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => RentPaymentScreen(
+                            lease: _activeLease,
+                            rentAmount: rentAmount,
+                            isOverdue: _activeLease['is_overdue'] == true ||
+                                (_activeLease['overdue_rent_amount'] as num? ?? 0) > 0,
+                            onPaymentSubmitted: () => _refresh(),
+                          ),
+                        ),
+                      );
+                      _refresh();
+                    },
+                    onViewNotice: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => ViolationsScreen(lease: _activeLease),
+                        ),
+                      );
+                      _refresh();
+                    },
+                    onRefresh: _refresh,
+                  ),
+                )
+              else ...[
+                // Inline Violation Strip (if any)
+                FutureBuilder<List<Map<String, dynamic>>>(
                 future: _violationsFuture,
                 builder: (context, snapshot) {
                   final rawViolations = snapshot.data ?? [];
@@ -963,12 +1148,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     return true;
                   }).toList();
 
-                  if (violations.isEmpty) return const SizedBox.shrink();
+                  final unpaidViolations = violations
+                      .where((v) => v['is_paid'] != true && v['is_paid'] != 1)
+                      .toList();
+                  if (unpaidViolations.isEmpty) return const SizedBox.shrink();
 
-                  final latest = violations.first;
+                  final latest = unpaidViolations.first;
                   final strike = latest['strike'] is int
                       ? latest['strike'] as int
                       : int.tryParse(latest['strike']?.toString() ?? '1') ?? 1;
+                  final fineAmt = (latest['fine_amount'] as num?)?.toDouble() ??
+                      (strike >= 3 ? 1500.0 : (strike == 2 ? 500.0 : 0.0));
                   final isEviction = strike >= 3;
 
                   return Padding(
@@ -1015,9 +1205,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               child: Text(
                                 isEviction
                                     ? 'Final Notice: Lease Default (View Notice)'
-                                    : (strike == 2
-                                          ? '2nd Notice: ₱500 Penalty Billed (View)'
-                                          : 'Formal Notice: 1 Infraction on Record (View)'),
+                                    : (fineAmt > 0
+                                          ? 'Strike $strike Notice: ₱${_formatMoney(fineAmt)} Penalty Billed (View)'
+                                          : 'Formal Notice: Strike $strike Infraction on Record (View)'),
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
@@ -1226,27 +1416,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const SizedBox(height: 18),
 
                       // 1. Dynamic Monthly Stall Rent Row
-                      _buildActivityRow(
-                        isDark: isDark,
-                        icon: Icons.receipt_long_rounded,
-                        title: 'Monthly Stall Rent',
-                        subtitle:
-                            '₱${_formatMoney(rentAmount)} • Due ${_formatDate(DateTime(now.year, now.month, now.month == 2 ? 28 : 30))}',
-                        trailing: '₱${_formatMoney(rentAmount)}',
-                        onTap: () {
-                          Navigator.of(context)
-                              .push(
-                                MaterialPageRoute(
-                                  builder: (_) => RentPaymentScreen(
-                                    lease: _activeLease,
-                                    rentAmount: rentAmount,
-                                    onPaymentSubmitted: () => _refresh(),
+                      Builder(builder: (context) {
+                        final activeRemaining =
+                            (_activeLease['active_cycle_remaining'] as num?)?.toDouble();
+                        final totalDueRow =
+                            (_activeLease['total_due'] as num?)?.toDouble() ??
+                            activeRemaining ??
+                            rentAmount;
+                        final bool settledRow =
+                            _activeLease['is_settled'] == true && totalDueRow <= 0;
+                        final dueFormatted =
+                            (_activeLease['due_date_formatted'] ?? '').toString().trim();
+                        final dueLabel =
+                            (_activeLease['due_status_label'] ?? '').toString().trim();
+                        final dueText = settledRow
+                            ? 'Paid for current period'
+                            : (dueFormatted.isNotEmpty
+                                  ? 'Due $dueFormatted${dueLabel.contains('Grace') ? ' ($dueLabel)' : ''}'
+                                  : (dueLabel.isNotEmpty ? dueLabel : 'Current Cycle'));
+                        final displayRowAmt = settledRow ? rentAmount : totalDueRow;
+
+                        return _buildActivityRow(
+                          isDark: isDark,
+                          icon: Icons.receipt_long_rounded,
+                          title: 'Monthly Stall Rent',
+                          subtitle:
+                              '₱${_formatMoney(displayRowAmt)} • $dueText',
+                          trailing: settledRow
+                              ? 'Paid'
+                              : '₱${_formatMoney(displayRowAmt)}',
+                          onTap: () {
+                            Navigator.of(context)
+                                .push(
+                                  MaterialPageRoute(
+                                    builder: (_) => RentPaymentScreen(
+                                      lease: _activeLease,
+                                      rentAmount: rentAmount,
+                                      isOverdue: _activeLease['is_overdue'] == true ||
+                                          _activeLease['rent_status'] == 'overdue',
+                                      onPaymentSubmitted: () => _refresh(),
+                                    ),
                                   ),
-                                ),
-                              )
-                              .then((_) => _refresh());
-                        },
-                      ),
+                                )
+                                .then((_) => _refresh());
+                          },
+                        );
+                      }),
 
                       // 2. Dynamic Maintenance Tickets from Backend
                       FutureBuilder<List<dynamic>>(
@@ -1374,6 +1589,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
               ),
+              ],
 
               // Bottom padding for dock
               const SizedBox(height: 100),

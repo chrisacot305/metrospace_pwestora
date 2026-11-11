@@ -40,7 +40,7 @@ final class PaymentRepository extends Repository
         return (float) $this->fetchValue(
             "SELECT COALESCE(SUM(amount), 0) FROM payments
              WHERE tenant_id = ? AND (note LIKE '%[VERIFIED]%' OR logged_by IS NOT NULL)
-               AND (note LIKE '%Monthly Rent%' OR note NOT LIKE '%Restructuring%')
+               AND (note IS NULL OR (note NOT LIKE '[DECLINED%' AND note NOT LIKE '%Restructuring%' AND note NOT LIKE '%Security Deposit Top-Up%' AND note NOT LIKE '%security_deposit%'))
                AND MONTH(paid_at) = ? AND YEAR(paid_at) = ?",
             [$tenantId, $month, $year]
         );

@@ -35,9 +35,17 @@ final class ApplicationsController extends Controller
                     $apps->beginTransaction();
                     try {
                         $apps->setStatus($appId, 'approved');
+                        $moveIn = !empty($app['preferred_move_in']) ? substr((string) $app['preferred_move_in'], 0, 10) : date('Y-m-d');
                         (new TenantModel($this->pdo))->createFromApplication(
-                            $lessorId, (int) $app['property_id'], $appId,
-                            $app['lessee_id'] !== null ? (int) $app['lessee_id'] : null, $app['tenant_name']
+                            $lessorId,
+                            (int) $app['property_id'],
+                            $appId,
+                            $app['lessee_id'] !== null ? (int) $app['lessee_id'] : null,
+                            $app['tenant_name'],
+                            (float) ($app['rent'] ?? 0),
+                            $moveIn,
+                            (int) date('j', strtotime($moveIn)),
+                            $app['business_name'] ?? null
                         );
                         audit_log($this->pdo, $lessorId, 'Approved application', $app['tenant_name']);
                         $apps->commit();

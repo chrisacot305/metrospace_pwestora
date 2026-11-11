@@ -11,6 +11,9 @@
  */
 
 require_once __DIR__ . '/Sms.php';
+require_once __DIR__ . '/RentBillingService.php';
+
+use App\Services\RentBillingService;
 
 /**
  * Ensures the dedup tracking table for SMS reminders exists.
@@ -38,7 +41,7 @@ function ensure_sms_reminder_logs_table(PDO $pdo): void {
  * Updates the existing bubble in-place as the countdown progresses (3 days -> 2 days -> 1 day -> Today -> Grace -> Overdue -> Settled),
  * so it never clutters or duplicates messages in the chat.
  */
-function sync_chat_rent_reminder(PDO $pdo, int $tenantId, int $lessorId, int $diff, float $monthlyRent, float $rentRemaining, string $currentBillingMonth): void {
+function sync_chat_rent_reminder(PDO $pdo, int $tenantId, int $lessorId, int $diff, float $monthlyRent, float $rentRemaining, string $currentBillingMonth, array $billing = []): void {
     if ($monthlyRent <= 0 || $tenantId <= 0 || $lessorId <= 0) return;
 
     try {
@@ -51,10 +54,34 @@ function sync_chat_rent_reminder(PDO $pdo, int $tenantId, int $lessorId, int $di
             $threadId = (int) $pdo->lastInsertId();
         }
 
-        $formattedRent = '₱' . number_format($monthlyRent, 2);
+        $formattedRent   = '₱' . number_format($monthlyRent, 2);
+        $outstandingRent = (float) ($billing['outstanding_rent_total'] ?? $rentRemaining);
+        $penaltyAmount   = (float) ($billing['penalty_amount'] ?? 0);
+        $totalDue        = (float) ($billing['total_due'] ?? ($rentRemaining + $penaltyAmount));
+        $strikeLevel     = (int) ($billing['strike_level'] ?? 0);
+        $monthsLabel     = trim((string) ($billing['outstanding_months_label'] ?? $currentBillingMonth));
+        $isEviction      = !empty($billing['is_eviction']);
 
-        if ($rentRemaining <= 0) {
-            $msgBody = "✅ RENT FULLY SETTLED\n\nYour monthly rent for $currentBillingMonth has been received and verified. Your account is in excellent standing with zero arrears. Thank you!";
+        if ($rentRemaining <= 0.009 && $outstandingRent <= 0.009 && $penaltyAmount <= 0.009) {
+            $msgBody = "✅ RENT FULLY SETTLED\n\nYour monthly rent for $currentBillingMonth has been received and verified. Your account is in good standing with zero arrears. Thank you!";
+        } elseif (!empty($billing['is_overdue']) || $diff < -5) {
+            $fmtTotal   = '₱' . number_format($totalDue, 2);
+            $fmtPenalty = '₱' . number_format($penaltyAmount, 2);
+            $strikeNote = $isEviction
+                ? "Strike 3 Eviction Lock is active (includes {$fmtPenalty} penalty). Please settle your full balance in the Rent Payment page to lift the account lock."
+                : ($strikeLevel >= 2
+                    ? "Strike {$strikeLevel} is active (includes {$fmtPenalty} fine)."
+                    : "Strike {$strikeLevel} overdue warning recorded (₱0 fine; Strike 2 adds ₱500.00, Strike 3 adds ₱1,500.00 + Eviction Lock).");
+            $periodNote = $monthsLabel !== '' ? " ({$monthsLabel})" : '';
+            $msgBody = "🚨 OFFICIAL OVERDUE & INFRACTION NOTICE\n\nYour 5-day grace period has ended and your balance{$periodNote} remains unpaid. Total Due: {$fmtTotal}. {$strikeNote}";
+        } elseif (!empty($billing['is_grace_period']) || ($diff >= -5 && $diff <= -1)) {
+            $daysLeft = (int) ($billing['grace_days_remaining'] ?? max(1, min(5, 6 + $diff)));
+            $fmtRem   = '₱' . number_format(max(0.0, $rentRemaining), 2);
+            if ($diff === -5 || $daysLeft === 1) {
+                $msgBody = "⚠️ FINAL DAY OF GRACE PERIOD (1d Grace)\n\nThis is the last day of your 5-day grace period for $currentBillingMonth (Remaining: $fmtRem). Available Security Deposit balance is auto-applied at grace expiry. Any unpaid balance after today carries over into next month with a lease Strike recorded (Strike 1: ₱0, Strike 2: ₱500, Strike 3: ₱1,500 + Eviction Lock).";
+            } else {
+                $msgBody = "⏳ GRACE PERIOD ACTIVE ({$daysLeft}d Grace)\n\nYour monthly rent for $currentBillingMonth is past due ($fmtRem remaining). You have $daysLeft day" . ($daysLeft == 1 ? '' : 's') . " of your 5-day grace period remaining before carryover and Strike escalation.";
+            }
         } elseif ($diff > 3) {
             return; // Outside of reminder threshold
         } elseif ($diff == 3) {
@@ -64,14 +91,9 @@ function sync_chat_rent_reminder(PDO $pdo, int $tenantId, int $lessorId, int $di
         } elseif ($diff == 1) {
             $msgBody = "📅 OFFICIAL RENT NOTICE (Due Tomorrow)\n\nFriendly reminder: Your monthly rent of $formattedRent is due tomorrow. Please submit your payment via the Pwestora app.";
         } elseif ($diff == 0) {
-            $msgBody = "📅 OFFICIAL RENT NOTICE (Due Today)\n\nYour monthly rent of $formattedRent is officially due today. Please settle your payment to avoid entering the grace period.";
-        } elseif ($diff >= -4) {
-            $daysLeft = 5 + $diff;
-            $msgBody = "⏳ GRACE PERIOD ACTIVE ($daysLeft Days Remaining)\n\nYour monthly rent is past due. You have $daysLeft day" . ($daysLeft == 1 ? '' : 's') . " of grace remaining to settle without late penalties or lease infraction strikes.";
-        } elseif ($diff == -5) {
-            $msgBody = "⚠️ FINAL DAY OF GRACE PERIOD\n\nThis is the last day of your grace period. If unpaid by midnight, a ₱500.00 late fee will be applied and Strike 1 Payment Default citation will be logged.";
+            $msgBody = "📅 OFFICIAL RENT NOTICE (Due Today)\n\nYour monthly rent of $formattedRent is officially due today. Please settle your payment to avoid entering the 5-day grace period.";
         } else {
-            $msgBody = "🚨 OFFICIAL OVERDUE & INFRACTION NOTICE\n\nYour grace period has ended and rent remains unpaid. A ₱500.00 late fee has been applied and a Strike citation has been recorded against your lease agreement.";
+            return;
         }
 
         // Look for the existing reminder bubble in this thread
@@ -132,8 +154,7 @@ function send_payment_receipt_sms(PDO $pdo, int $paymentId): array {
         }
 
         $amountPaid = (float) $pRow['amount'];
-        $monthlyRent = (float) ($pRow['monthly_rent'] ?? 0);
-        $note = $pRow['note'] ?? '';
+        $note = (string) ($pRow['note'] ?? '');
 
         // Extract reference number if present
         $refNo = '';
@@ -142,20 +163,18 @@ function send_payment_receipt_sms(PDO $pdo, int $paymentId): array {
         }
         $refStr = $refNo ? " Ref #$refNo." : "";
 
-        $isRestructuring = stripos($note, 'Restructuring') !== false;
-        $isOverdue       = stripos($note, 'Overdue') !== false;
-        $isDepositTopUp  = stripos($note, 'Security Deposit Top-Up') !== false || stripos($note, 'security_deposit') !== false;
+        $isRestructuring = stripos($note, 'Restructuring') !== false && stripos($note, 'Both') === false;
+        $isOverdue       = stripos($note, 'Overdue') !== false || stripos($note, 'Full Balance') !== false;
+        $isDepositTopUp  = stripos($note, 'Security Deposit Top-Up') !== false
+            || (stripos($note, 'security_deposit') !== false
+                && stripos($note, '[AUTO-DEPOSIT]') === false
+                && ($pRow['method'] ?? '') !== 'security_deposit');
 
-        // 1. Calculate Monthly Rent Remaining for current billing month
-        $monthRentPaidStmt = $pdo->prepare(
-            "SELECT COALESCE(SUM(amount), 0) FROM payments 
-             WHERE tenant_id = ? AND (note LIKE '%[VERIFIED]%' OR id = ? OR logged_by IS NOT NULL)
-               AND (note LIKE '%Monthly Rent%' OR (note NOT LIKE '%Restructuring%' AND note NOT LIKE '%Security Deposit Top-Up%'))
-               AND MONTH(paid_at) = MONTH(CURRENT_DATE()) AND YEAR(paid_at) = YEAR(CURRENT_DATE())"
-        );
-        $monthRentPaidStmt->execute([$pRow['tenant_id'], $paymentId]);
-        $totalRentPaidThisMonth = (float) $monthRentPaidStmt->fetchColumn();
-        $rentRemaining = max(0.0, $monthlyRent - $totalRentPaidThisMonth);
+        // 1. Compute authoritative remaining balance via RentBillingService (read-only)
+        $billing       = (new RentBillingService($pdo))->computeForTenantId((int) $pRow['tenant_id'], false) ?? [];
+        $monthlyRent   = (float) ($billing['base_rent'] ?? ($pRow['monthly_rent'] ?? 0));
+        $rentRemaining = (float) ($billing['active_cycle_remaining'] ?? 0);
+        $totalDueAfter = (float) ($billing['total_due'] ?? $rentRemaining);
 
         // 2. Calculate Restructuring Plan Remaining if active
         $planStmt = $pdo->prepare(
@@ -170,7 +189,8 @@ function send_payment_receipt_sms(PDO $pdo, int $paymentId): array {
             $planPaidStmt = $pdo->prepare(
                 "SELECT COALESCE(SUM(amount), 0) FROM payments 
                  WHERE tenant_id = ? AND (note LIKE '%[VERIFIED]%' OR id = ? OR logged_by IS NOT NULL)
-                   AND note LIKE '%Restructuring%'"
+                   AND note LIKE '%Restructuring%'
+                   AND (note IS NULL OR note NOT LIKE '[DECLINED%')"
             );
             $planPaidStmt->execute([$pRow['tenant_id'], $paymentId]);
             $totalPlanPaid = (float) $planPaidStmt->fetchColumn();
@@ -189,34 +209,31 @@ function send_payment_receipt_sms(PDO $pdo, int $paymentId): array {
             $smsBody = "[Pwestora] Security Deposit top-up of $formattedPaid confirmed!$refStr Your locked deposit balance is now $formattedDep. Thank you!";
         } elseif ($isRestructuring) {
             $formattedPlanRemaining = '₱' . number_format($planRemaining, 2);
-            if ($rentRemaining > 0 && $monthlyRent > 0) {
-                $formattedRentRemaining = '₱' . number_format($rentRemaining, 2);
-                $smsBody = "[Pwestora] Restructuring installment of $formattedPaid received!$refStr Remaining plan balance: $formattedPlanRemaining. Notice: You still have an unpaid monthly rent balance of $formattedRentRemaining.";
+            if ($totalDueAfter > 0.009 && $monthlyRent > 0) {
+                $formattedRentRemaining = '₱' . number_format($totalDueAfter, 2);
+                $smsBody = "[Pwestora] Restructuring installment of $formattedPaid received!$refStr Remaining plan balance: $formattedPlanRemaining. Notice: You still have an unpaid balance of $formattedRentRemaining.";
             } else {
-                $smsBody = "[Pwestora] Restructuring installment of $formattedPaid received!$refStr Remaining plan balance: $formattedPlanRemaining. Your monthly rent is also fully settled. Thank you!";
+                $smsBody = "[Pwestora] Restructuring installment of $formattedPaid received!$refStr Remaining plan balance: $formattedPlanRemaining. Your rent is also settled. Thank you!";
             }
         } elseif ($isOverdue) {
-            $smsBody = "[Pwestora] Overdue payment of $formattedPaid received!$refStr Your account is now updated and in good standing. Thank you!";
+            if ($totalDueAfter <= 0.009) {
+                $smsBody = "[Pwestora] Overdue balance payment of $formattedPaid received!$refStr Your arrears and penalties are now cleared and your account is in good standing. Thank you!";
+            } else {
+                $formattedRemDue = '₱' . number_format($totalDueAfter, 2);
+                $smsBody = "[Pwestora] Payment of $formattedPaid received!$refStr Your remaining balance (rent/penalties) is $formattedRemDue. Please settle the balance in Pwestora.";
+            }
         } else {
             // Regular monthly rent
-            if ($rentRemaining <= 0) {
-                $smsBody = "[Pwestora] Payment received! $formattedPaid for your monthly rent.$refStr Your rent for this month is fully settled (Remaining balance: ₱0.00). Thank you!";
+            if ($totalDueAfter <= 0.009) {
+                $smsBody = "[Pwestora] Payment received! $formattedPaid for your monthly rent.$refStr Your current rent balance is fully settled (Remaining balance: ₱0.00). Thank you!";
             } else {
-                $formattedRentRemaining = '₱' . number_format($rentRemaining, 2);
-                $smsBody = "[Pwestora] Partial rent payment of $formattedPaid received.$refStr Your remaining rent balance for this month is $formattedRentRemaining. Thank you!";
+                $formattedRentRemaining = '₱' . number_format($totalDueAfter, 2);
+                $smsBody = "[Pwestora] Partial rent payment of $formattedPaid received.$refStr Your remaining balance is $formattedRentRemaining. Thank you!";
             }
         }
 
-        // If payment received, clear active violation fines for this tenant
+        // Post official verified receipt into in-app chat thread (never blindly clear violations here)
         try {
-            // FIX: removed "ALTER TABLE violations ADD COLUMN is_paid" — the column already exists, so the
-            // statement threw and fines were never cleared / receipts never posted after verification.
-            $pdo->prepare("UPDATE violations SET is_paid = 1 WHERE tenant_id = ? AND (is_paid = 0 OR is_paid IS NULL)")
-                ->execute([$pRow['tenant_id']]);
-            $pdo->prepare("UPDATE tenants SET status = 'active' WHERE id = ? AND status = 'overdue'")
-                ->execute([$pRow['tenant_id']]);
-
-            // Post official verified receipt into in-app chat thread
             $threadStmt = $pdo->prepare('SELECT id FROM message_threads WHERE lessor_id = ? AND tenant_id = ?');
             $threadStmt->execute([$pRow['lessor_id'], $pRow['tenant_id']]);
             $threadId = $threadStmt->fetchColumn();
@@ -224,7 +241,9 @@ function send_payment_receipt_sms(PDO $pdo, int $paymentId): array {
                 $pdo->prepare('INSERT INTO message_threads (lessor_id, tenant_id) VALUES (?, ?)')->execute([$pRow['lessor_id'], $pRow['tenant_id']]);
                 $threadId = (int)$pdo->lastInsertId();
             }
-            $remBalStr = $isRestructuring ? ($formattedPlanRemaining ?? '₱0.00') : ('₱' . number_format($rentRemaining, 2));
+            $remBalStr = $isDepositTopUp
+                ? ('₱' . number_format($totalDueAfter, 2))
+                : ($isRestructuring ? ($formattedPlanRemaining ?? '₱0.00') : ('₱' . number_format($totalDueAfter, 2)));
             $verifiedMsg = "🧾 OFFICIAL PAYMENT RECEIPT (VERIFIED)\n\nPayment Ref: {$refStr}\nAmount Settled: {$formattedPaid}\nRemaining Balance: {$remBalStr}\nDate: " . date('M d, Y h:i A') . "\nStatus: ✅ VERIFIED & POSTED\n\nYour payment has been officially verified and posted to your account ledger. Thank you!";
             $pdo->prepare("INSERT INTO messages (thread_id, sender, notice_type, body) VALUES (?, 'lessor', 'Payment Receipt', ?)")
                 ->execute([$threadId, $verifiedMsg]);
@@ -268,31 +287,56 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
         'actions'           => [],
     ];
 
-    // Fetch all active tenants with their application details and user profile
+    // Fetch all active (non-terminated) tenants with contract + application + user profile
     $stmt = $pdo->query(
-        "SELECT t.id AS tenant_id, t.tenant_name, t.lessee_id, t.lessor_id, t.created_at AS lease_start,
-                COALESCE(t.security_deposit, 0) AS security_deposit,
-                a.rent AS monthly_rent, a.term_months,
+        "SELECT t.id AS tenant_id, t.tenant_name, t.lessee_id, t.lessor_id, t.due_day,
+                t.created_at AS since, t.start_date, t.end_date, t.monthly_rent,
+                COALESCE(t.security_deposit, 0) AS security_deposit, t.advance_rent,
+                t.status AS tenant_status,
+                a.rent AS app_rent, a.term_months AS app_term_months,
+                lc.monthly_rent AS contract_rent, lc.term_months AS contract_term_months,
+                lc.start_date AS contract_start_date, lc.end_date AS contract_end_date,
+                lc.due_day AS contract_due_day, lc.status AS contract_status,
                 u.phone AS lessee_phone, u.full_name AS lessee_full_name
          FROM tenants t
          LEFT JOIN applications a ON a.id = t.application_id
+         LEFT JOIN lease_contracts lc ON lc.tenant_id = t.id
          LEFT JOIN users u ON u.id = t.lessee_id
+         WHERE COALESCE(t.status, 'active') <> 'terminated'
          ORDER BY t.id ASC"
     );
     $tenants = $stmt->fetchAll();
 
-    $today = new DateTime('today');
-    $currentYear  = (int) $today->format('Y');
-    $currentMonth = (int) $today->format('m');
-    $currentBillingMonth = $today->format('Y-m');
-    $daysInMonth  = (int) $today->format('t');
+    $today          = new DateTime('today');
+    $billingService = new RentBillingService($pdo);
 
     foreach ($tenants as $t) {
         $report['tenants_checked']++;
         $tenantId = (int) $t['tenant_id'];
         $lessorId = (int) ($t['lessor_id'] ?? 2);
-        $phone = $t['lessee_phone'] ?? '';
-        $monthlyRent = (float) ($t['monthly_rent'] ?? 0);
+        $phone    = $t['lessee_phone'] ?? '';
+
+        // Authoritative billing + automated Day-5 deposit drawdown + post-grace strike escalation
+        $billing             = $billingService->compute($t, !$dryRun, $today);
+        $monthlyRent         = (float) $billing['base_rent'];
+        $diff                = (int) $billing['due_diff_days'];
+        $currentBillingMonth = (string) $billing['active_period'];
+        $rentRemaining       = (float) $billing['active_cycle_remaining'];
+        $dueDate             = $billing['active_due_date_obj'] ?? new DateTime($billing['due_date'] ?: 'today');
+
+        // Keep chat reminder bubble synced (skip DB writes on dry run)
+        if (!$dryRun) {
+            sync_chat_rent_reminder(
+                $pdo,
+                $tenantId,
+                $lessorId,
+                $diff,
+                $monthlyRent,
+                $rentRemaining,
+                $currentBillingMonth,
+                $billing
+            );
+        }
 
         if (empty($phone)) {
             $report['skipped_no_phone']++;
@@ -305,32 +349,6 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
             continue;
         }
 
-        // Determine monthly recurring due day based on lease start date
-        $startDay = 1;
-        if (!empty($t['lease_start'])) {
-            $startDay = (int) date('j', strtotime($t['lease_start']));
-        }
-        $dueDay = min($startDay, $daysInMonth);
-        $dueDateStr = sprintf('%04d-%02d-%02d', $currentYear, $currentMonth, $dueDay);
-        $dueDate = new DateTime($dueDateStr);
-
-        // Days until due date: positive = days before due date, 0 = due today, negative = past due
-        $diff = (int) $today->diff($dueDate)->format('%r%a');
-
-        // Calculate verified rent payments made by tenant this month
-        $paidStmt = $pdo->prepare(
-            "SELECT COALESCE(SUM(amount), 0) FROM payments
-             WHERE tenant_id = ? AND (note LIKE '%[VERIFIED]%' OR logged_by IS NOT NULL)
-               AND (note LIKE '%Monthly Rent%' OR note NOT LIKE '%Restructuring%')
-               AND MONTH(paid_at) = ? AND YEAR(paid_at) = ?"
-        );
-        $paidStmt->execute([$tenantId, $currentMonth, $currentYear]);
-        $rentPaidThisMonth = (float) $paidStmt->fetchColumn();
-        $rentRemainingThisMonth = max(0.0, $monthlyRent - $rentPaidThisMonth);
-
-        // Keep chat reminder bubble updated dynamically with countdown without spam
-        sync_chat_rent_reminder($pdo, $tenantId, $lessorId, $diff, $monthlyRent, $rentRemainingThisMonth, $currentBillingMonth);
-
         // Check if there is an active restructuring plan
         $planStmt = $pdo->prepare(
             "SELECT * FROM installment_requests WHERE tenant_id = ? AND status = 'approved' ORDER BY id DESC LIMIT 1"
@@ -341,10 +359,7 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
         // -------------------------------------------------------------
         // STAGE 1: 3-Day Advance Pre-Due Reminder
         // -------------------------------------------------------------
-        // Trigger condition: Today is exactly 3 days before due date (diff == 3)
-        // AND monthly rent is still unpaid.
-        if ($diff === 3 && $rentRemainingThisMonth > 0) {
-            // Check dedup log
+        if ($diff === 3 && $rentRemaining > 0.009) {
             $logCheck = $pdo->prepare(
                 "SELECT id FROM sms_reminder_logs WHERE tenant_id = ? AND billing_month = ? AND reminder_type = '3_day_advance'"
             );
@@ -352,23 +367,22 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
             if ($logCheck->fetch()) {
                 $report['already_reminded']++;
             } else {
-                $formattedRent = '₱' . number_format($rentRemainingThisMonth, 2);
+                $formattedRent    = '₱' . number_format($rentRemaining, 2);
                 $formattedDueDate = $dueDate->format('M d, Y');
-                $advanceMsg = "[Pwestora] Friendly Reminder: Your monthly rent of $formattedRent is due in 3 days ($formattedDueDate). Please settle your payment on time via the Pwestora app to maintain good standing. Thank you!";
+                $advanceMsg       = "[Pwestora] Friendly Reminder: Your monthly rent of $formattedRent is due in 3 days ($formattedDueDate). Please settle your payment on time via the Pwestora app to maintain good standing. Thank you!";
 
                 $smsSuccess = true;
                 if (!$dryRun) {
-                    $smsRes = send_sms($phone, $advanceMsg);
+                    $smsRes     = send_sms($phone, $advanceMsg);
                     $smsSuccess = $smsRes['ok'] ?? false;
-                    $insertLog = $pdo->prepare(
+                    $pdo->prepare(
                         "INSERT INTO sms_reminder_logs (tenant_id, lessee_id, billing_month, reminder_type, amount_due, sent_to, sms_message)
                          VALUES (?, ?, ?, '3_day_advance', ?, ?, ?)"
-                    );
-                    $insertLog->execute([
+                    )->execute([
                         $tenantId,
                         $t['lessee_id'],
                         $currentBillingMonth,
-                        $rentRemainingThisMonth,
+                        $rentRemaining,
                         $phone,
                         $advanceMsg,
                     ]);
@@ -376,71 +390,20 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
 
                 $report['advance_sent']++;
                 $report['actions'][] = [
-                    'tenant_id' => $tenantId,
-                    'name'      => $t['tenant_name'],
-                    'type'      => '3_day_advance',
-                    'amount'    => $rentRemainingThisMonth,
-                    'message'   => $advanceMsg,
-                    'dispatched'=> !$dryRun && $smsSuccess,
+                    'tenant_id'  => $tenantId,
+                    'name'       => $t['tenant_name'],
+                    'type'       => '3_day_advance',
+                    'amount'     => $rentRemaining,
+                    'message'    => $advanceMsg,
+                    'dispatched' => !$dryRun && $smsSuccess,
                 ];
             }
         }
 
         // -------------------------------------------------------------
-        // AUTOMATED SECURITY DEPOSIT DRAWDOWN (Grace Period Expiry)
+        // STAGE 2: Post-Grace Overdue Notice (after 5-day grace expires)
         // -------------------------------------------------------------
-        $depositBalance = (float) ($t['security_deposit'] ?? 0);
-        // FIX: a --dry-run must never move money (before, the dry run deducted real deposits).
-        if (!$dryRun && $diff <= -5 && $rentRemainingThisMonth > 0 && $depositBalance > 0) {
-            $deductAmount = min($rentRemainingThisMonth, $depositBalance);
-            $newDeposit = max(0.0, $depositBalance - $deductAmount);
-
-            // Update tenant security_deposit balance
-            $pdo->prepare('UPDATE tenants SET security_deposit = ? WHERE id = ?')
-                ->execute([$newDeposit, $tenantId]);
-            $t['security_deposit'] = $newDeposit;
-
-            // Record automated payment into ledger
-            $refNo = 'ESC-' . (time() % 10000000);
-            $note = "[AUTO-DEPOSIT] Auto-settled from Security Deposit escrow on grace period expiry | Ref: $refNo";
-            $pdo->prepare(
-                'INSERT INTO payments (tenant_id, lessor_id, amount, method, note, paid_at, logged_by)
-                 VALUES (?, ?, ?, "security_deposit", ?, CURDATE(), ?)'
-            )->execute([$tenantId, $lessorId, $deductAmount, $note, $lessorId]);
-
-            // Record in deposits ledger
-            $pdo->prepare(
-                'INSERT INTO deposits (lessor_id, tenant_id, amount, method, status, note, released_at)
-                 VALUES (?, ?, ?, "Automated Escrow", "released", ?, NOW())'
-            )->execute([$lessorId, $tenantId, $deductAmount, "Auto-deducted to cover $currentBillingMonth rent ($refNo)"]);
-
-            // Post digital receipt to in-app chat thread
-            try {
-                $threadStmt = $pdo->prepare('SELECT id FROM message_threads WHERE lessor_id = ? AND tenant_id = ?');
-                $threadStmt->execute([$lessorId, $tenantId]);
-                $threadId = $threadStmt->fetchColumn();
-                if ($threadId) {
-                    $receiptMsg = "🧾 DIGITAL PAYMENT RECEIPT\n\nPayment Ref: {$refNo}\nAmount Covered: ₱" . number_format($deductAmount, 2) . "\nPayment Method: Security Deposit (Escrow)\nDate: " . date('M d, Y h:i A') . "\nStatus: ✅ Settled via Escrow\n\nYour rent for {$currentBillingMonth} was automatically covered using your Security Deposit advance shield.";
-                    $pdo->prepare("INSERT INTO messages (thread_id, sender, notice_type, body) VALUES (?, 'lessor', 'Payment Receipt', ?)") // sender enum allows only lessor|tenant
-                        ->execute([$threadId, $receiptMsg]);
-                }
-            } catch (Throwable $_) {}
-
-            // Recompute remaining rent
-            $rentPaidThisMonth += $deductAmount;
-            $rentRemainingThisMonth = max(0.0, $monthlyRent - $rentPaidThisMonth);
-
-            // Sync chat reminder bubble
-            sync_chat_rent_reminder($pdo, $tenantId, $lessorId, $diff, $monthlyRent, $rentRemainingThisMonth, $currentBillingMonth);
-        }
-
-        // -------------------------------------------------------------
-        // STAGE 2: Post-Grace Overdue Notice (₱500 Late Fee & Multi-Month)
-        // -------------------------------------------------------------
-        // In Pwestora lease terms, the grace period is 5 to 7 days.
-        // Once diff <= -5 (5 or more days past due date), overdue notice is sent.
-        if ($diff <= -5 && $rentRemainingThisMonth > 0 && !$activePlan) {
-            // Check dedup log so overdue notice is sent once per billing cycle
+        if (!empty($billing['is_overdue']) && $billing['outstanding_rent_total'] > 0.009 && !$activePlan) {
             $logCheck = $pdo->prepare(
                 "SELECT id FROM sms_reminder_logs WHERE tenant_id = ? AND billing_month = ? AND reminder_type = 'overdue_grace'"
             );
@@ -448,38 +411,30 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
             if ($logCheck->fetch()) {
                 $report['already_reminded']++;
             } else {
-                // Calculate historical unpaid rent months
-                // Find total months from lease start to now
-                $leaseStartDate = new DateTime($t['lease_start'] ?: 'now');
-                $monthsElapsed = max(1, ($currentYear - (int) $leaseStartDate->format('Y')) * 12 + ($currentMonth - (int) $leaseStartDate->format('m')) + 1);
-                $totalExpectedRent = $monthsElapsed * $monthlyRent;
+                $totalOverdueBalance = (float) $billing['total_due'];
+                $fineAmt             = (float) $billing['penalty_amount'];
+                $strikeLevel         = (int) $billing['strike_level'];
+                $monthsText          = $billing['outstanding_months_label'] ?: $currentBillingMonth;
+                $formattedBalance    = '₱' . number_format($totalOverdueBalance, 2);
 
-                $totalPaidStmt = $pdo->prepare(
-                    "SELECT COALESCE(SUM(amount), 0) FROM payments
-                     WHERE tenant_id = ? AND (note LIKE '%[VERIFIED]%' OR logged_by IS NOT NULL)
-                       AND (note LIKE '%Monthly Rent%' OR note NOT LIKE '%Restructuring%')"
-                );
-                $totalPaidStmt->execute([$tenantId]);
-                $totalPaidAllTime = (float) $totalPaidStmt->fetchColumn();
-
-                $unpaidRentTotal = max($rentRemainingThisMonth, $totalExpectedRent - $totalPaidAllTime);
-
-                // Add ₱500 flat late fee
-                $lateFee = 500.00;
-                $totalOverdueBalance = $unpaidRentTotal + $lateFee;
-
-                $formattedBalance = '₱' . number_format($totalOverdueBalance, 2);
-                $overdueMsg = "[Pwestora] URGENT: Your monthly rent is now OVERDUE as the grace period has ended. A late fee of ₱500.00 has been applied. Your new total balance is $formattedBalance. Please settle immediately in Pwestora to avoid account escalation.";
+                if (!empty($billing['is_eviction']) || $strikeLevel >= 3) {
+                    $fmtFine    = '₱' . number_format($fineAmt, 2);
+                    $overdueMsg = "[Pwestora] EVICTION NOTICE (Strike 3): Your overdue rent ($monthsText) plus $fmtFine penalty brings your balance to $formattedBalance. App access is locked to Payment only until settled.";
+                } elseif ($strikeLevel === 2) {
+                    $fmtFine    = '₱' . number_format($fineAmt, 2);
+                    $overdueMsg = "[Pwestora] URGENT (Strike 2): Your rent ($monthsText) is OVERDUE past the 5-day grace period with a $fmtFine penalty. Total balance due: $formattedBalance. Please settle immediately to avoid Strike 3 Eviction Lock.";
+                } else {
+                    $overdueMsg = "[Pwestora] URGENT (Strike 1): Your rent ($monthsText) is now OVERDUE after the 5-day grace period (₱0 fine on Strike 1). Total balance due: $formattedBalance. Settle immediately to avoid Strike 2 (₱500 fine).";
+                }
 
                 $smsSuccess = true;
                 if (!$dryRun) {
-                    $smsRes = send_sms($phone, $overdueMsg);
+                    $smsRes     = send_sms($phone, $overdueMsg);
                     $smsSuccess = $smsRes['ok'] ?? false;
-                    $insertLog = $pdo->prepare(
+                    $pdo->prepare(
                         "INSERT INTO sms_reminder_logs (tenant_id, lessee_id, billing_month, reminder_type, amount_due, sent_to, sms_message)
                          VALUES (?, ?, ?, 'overdue_grace', ?, ?, ?)"
-                    );
-                    $insertLog->execute([
+                    )->execute([
                         $tenantId,
                         $t['lessee_id'],
                         $currentBillingMonth,
@@ -487,41 +442,16 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
                         $phone,
                         $overdueMsg,
                     ]);
-                    // Also record into violations table under 'Unpaid Rent Default'
-                    try {
-                        // FIX: removed "ALTER TABLE violations ADD COLUMN is_paid" here. The column already
-                        // exists, so that statement threw and this whole block was silently skipped.
-                        // (tools/migrate.php guarantees the column.)
-                        $monthStart = date('Y-m-01 00:00:00');
-                        $violCheck = $pdo->prepare("SELECT id FROM violations WHERE tenant_id = ? AND category = 'Unpaid Rent Default (Past Due)' AND issued_at >= ?");
-                        $violCheck->execute([$tenantId, $monthStart]);
-                        if (!$violCheck->fetch()) {
-                            $maxStrikeStmt = $pdo->prepare('SELECT COALESCE(MAX(strike), 0) FROM violations WHERE tenant_id = ? AND (is_paid = 0 OR is_paid IS NULL)');
-                            $maxStrikeStmt->execute([$tenantId]);
-                            $newStrike = min(3, (int)$maxStrikeStmt->fetchColumn() + 1);
-                            $fineAmt = $newStrike == 2 ? 500.00 : ($newStrike >= 3 ? 1500.00 : 0.00);
-
-                            $lessorStmt = $pdo->prepare("SELECT lessor_id FROM tenants WHERE id = ?");
-                            $lessorStmt->execute([$tenantId]);
-                            $lId = (int)$lessorStmt->fetchColumn() ?: 2;
-
-                            $desc = "Monthly rent for $currentBillingMonth remained unpaid past the grace period. Strike $newStrike recorded.";
-                            $pdo->prepare('INSERT INTO violations (lessor_id, tenant_id, category, strike, fine_amount, description, issued_at) VALUES (?, ?, ?, ?, ?, ?, NOW())')
-                                ->execute([$lId, $tenantId, 'Unpaid Rent Default (Past Due)', $newStrike, $fineAmt, $desc]);
-
-                            $pdo->prepare("UPDATE tenants SET status = 'overdue' WHERE id = ?")->execute([$tenantId]);
-                        }
-                    } catch (Throwable $ignored) {}
                 }
 
                 $report['overdue_sent']++;
                 $report['actions'][] = [
-                    'tenant_id' => $tenantId,
-                    'name'      => $t['tenant_name'],
-                    'type'      => 'overdue_grace',
-                    'amount'    => $totalOverdueBalance,
-                    'message'   => $overdueMsg,
-                    'dispatched'=> !$dryRun && $smsSuccess,
+                    'tenant_id'  => $tenantId,
+                    'name'       => $t['tenant_name'],
+                    'type'       => 'overdue_grace',
+                    'amount'     => $totalOverdueBalance,
+                    'message'    => $overdueMsg,
+                    'dispatched' => !$dryRun && $smsSuccess,
                 ];
             }
         }
@@ -530,11 +460,12 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
         // STAGE 3: Restructuring Plan Due Reminder (if active)
         // -------------------------------------------------------------
         if ($activePlan && $diff === 3) {
-            $planTotal = (float) $activePlan['amount'];
+            $planTotal    = (float) $activePlan['amount'];
             $planPaidStmt = $pdo->prepare(
-                "SELECT COALESCE(SUM(amount), 0) FROM payments 
+                "SELECT COALESCE(SUM(amount), 0) FROM payments
                  WHERE tenant_id = ? AND (note LIKE '%[VERIFIED]%' OR logged_by IS NOT NULL)
-                   AND note LIKE '%Restructuring%'"
+                   AND note LIKE '%Restructuring%'
+                   AND (note IS NULL OR note NOT LIKE '[DECLINED%')"
             );
             $planPaidStmt->execute([$tenantId]);
             $planPaidSoFar = (float) $planPaidStmt->fetchColumn();
@@ -553,13 +484,12 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
 
                     $smsSuccess = true;
                     if (!$dryRun) {
-                        $smsRes = send_sms($phone, $planMsg);
+                        $smsRes     = send_sms($phone, $planMsg);
                         $smsSuccess = $smsRes['ok'] ?? false;
-                        $insertLog = $pdo->prepare(
+                        $pdo->prepare(
                             "INSERT INTO sms_reminder_logs (tenant_id, lessee_id, billing_month, reminder_type, amount_due, sent_to, sms_message)
                              VALUES (?, ?, ?, 'restructure_due', ?, ?, ?)"
-                        );
-                        $insertLog->execute([
+                        )->execute([
                             $tenantId,
                             $t['lessee_id'],
                             $currentBillingMonth,
@@ -571,18 +501,18 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
 
                     $report['plan_remind_sent']++;
                     $report['actions'][] = [
-                        'tenant_id' => $tenantId,
-                        'name'      => $t['tenant_name'],
-                        'type'      => 'restructure_due',
-                        'amount'    => $planRemaining,
-                        'message'   => $planMsg,
-                        'dispatched'=> !$dryRun && $smsSuccess,
+                        'tenant_id'  => $tenantId,
+                        'name'       => $t['tenant_name'],
+                        'type'       => 'restructure_due',
+                        'amount'     => $planRemaining,
+                        'message'    => $planMsg,
+                        'dispatched' => !$dryRun && $smsSuccess,
                     ];
                 }
             }
         }
 
-        if ($rentRemainingThisMonth <= 0) {
+        if ($billing['outstanding_rent_total'] <= 0.009) {
             $report['already_settled']++;
         }
     }
@@ -590,8 +520,6 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
     // -------------------------------------------------------------
     // STAGE 4: Automated 2-Month Clean Record Strike Reduction
     // -------------------------------------------------------------
-    // Check tenants who have active strikes and zero new infractions
-    // and on-time payments for at least 60 days.
     try {
         $decayStmt = $pdo->query(
             "SELECT v.tenant_id, MAX(v.strike) AS current_strike, MAX(v.issued_at) AS last_violation,
@@ -599,29 +527,27 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
              FROM violations v
              JOIN tenants t ON t.id = v.tenant_id
              LEFT JOIN users u ON u.id = t.lessee_id
-             WHERE (v.is_paid = 0 OR v.is_paid IS NULL) AND v.strike > 0
+             WHERE COALESCE(t.status, 'active') <> 'terminated'
+               AND (v.is_paid = 0 OR v.is_paid IS NULL)
+               AND (v.description IS NULL OR v.description NOT LIKE '%[DECAYED]%')
+               AND v.strike > 0
              GROUP BY v.tenant_id"
         );
         $decayCandidates = $decayStmt->fetchAll();
 
         foreach ($decayCandidates as $cand) {
-            $lastViolDate = new DateTime($cand['last_violation']);
+            $lastViolDate  = new DateTime($cand['last_violation']);
             $daysSinceViol = (int) $today->diff($lastViolDate)->format('%a');
 
-            // 60 days clean record threshold (2 billing cycles)
             if ($daysSinceViol >= 60) {
-                // Confirm no overdue in the last 60 days
-                // (FIX: sms_reminder_logs has "sent_at", not "created_at" — this query used to fail, so strikes never decayed.)
                 $overdueCheck = $pdo->prepare(
-                    "SELECT COUNT(*) FROM sms_reminder_logs 
-                     WHERE tenant_id = ? AND reminder_type = 'overdue_grace' 
+                    "SELECT COUNT(*) FROM sms_reminder_logs
+                     WHERE tenant_id = ? AND reminder_type = 'overdue_grace'
                        AND sent_at >= DATE_SUB(NOW(), INTERVAL 60 DAY)"
                 );
                 $overdueCheck->execute([$cand['tenant_id']]);
                 $hasRecentOverdue = (int) $overdueCheck->fetchColumn() > 0;
 
-                // Only one "Good Standing" reduction per tenant every 60 days. Without this guard the
-                // reduction would repeat on every daily run and remove all strikes within a few days.
                 $recentRewardStmt = $pdo->prepare(
                     "SELECT COUNT(*) FROM messages m
                      JOIN message_threads mt ON mt.id = m.thread_id
@@ -636,27 +562,26 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
                     $newStrike = max(0, $oldStrike - 1);
 
                     if ($dryRun) {
-                        // Dry run: report only, change nothing.
                         $report['actions'][] = [
-                            'tenant_id' => $cand['tenant_id'],
-                            'name'      => $cand['tenant_name'],
-                            'type'      => 'strike_decay',
-                            'amount'    => 0,
-                            'message'   => "[DRY RUN] Would reduce strike from $oldStrike to $newStrike after 60 days clean.",
-                            'dispatched'=> false,
+                            'tenant_id'  => $cand['tenant_id'],
+                            'name'       => $cand['tenant_name'],
+                            'type'       => 'strike_decay',
+                            'amount'     => 0,
+                            'message'    => "[DRY RUN] Would reduce strike from $oldStrike to $newStrike after 60 days clean.",
+                            'dispatched' => false,
                         ];
                         continue;
                     }
 
-                    // Mark the highest active violation as resolved/decayed
-                    $resolveStmt = $pdo->prepare(
-                        "UPDATE violations SET is_paid = 1 
+                    // Mark the highest active violation as resolved/decayed with [DECAYED] marker
+                    $pdo->prepare(
+                        "UPDATE violations
+                         SET is_paid = 1,
+                             description = CONCAT(COALESCE(description, ''), ' [DECAYED]')
                          WHERE tenant_id = ? AND strike = ? AND (is_paid = 0 OR is_paid IS NULL)
                          ORDER BY id DESC LIMIT 1"
-                    );
-                    $resolveStmt->execute([$cand['tenant_id'], $oldStrike]);
+                    )->execute([$cand['tenant_id'], $oldStrike]);
 
-                    // Send official notification message in message_threads
                     $threadStmt = $pdo->prepare('SELECT id FROM message_threads WHERE lessor_id = ? AND tenant_id = ?');
                     $threadStmt->execute([$cand['lessor_id'], $cand['tenant_id']]);
                     $threadId = $threadStmt->fetchColumn();
@@ -670,17 +595,17 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
                     $pdo->prepare('INSERT INTO messages (thread_id, sender, notice_type, body) VALUES (?, "lessor", "Good Standing Notice", ?)')
                         ->execute([$threadId, $decayMsg]);
 
-                    if (!$dryRun && !empty($cand['phone'])) {
+                    if (!empty($cand['phone'])) {
                         send_sms($cand['phone'], "[Pwestora] Good news! You maintained a 2-month clean record with zero infractions. Your strike level was reduced to Strike $newStrike.");
                     }
 
                     $report['actions'][] = [
-                        'tenant_id' => $cand['tenant_id'],
-                        'name'      => $cand['tenant_name'],
-                        'type'      => 'strike_decay',
-                            'amount'    => 0,
-                        'message'   => "Strike reduced from $oldStrike to $newStrike after 60 days clean.",
-                        'dispatched'=> true,
+                        'tenant_id'  => $cand['tenant_id'],
+                        'name'       => $cand['tenant_name'],
+                        'type'       => 'strike_decay',
+                        'amount'     => 0,
+                        'message'    => "Strike reduced from $oldStrike to $newStrike after 60 days clean.",
+                        'dispatched' => true,
                     ];
                 }
             }

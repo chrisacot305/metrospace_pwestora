@@ -88,6 +88,8 @@ class LuxuryRentCard extends StatelessWidget {
   final bool isGracePeriod;
   final int graceDaysRemaining;
   final String? overdueSubtext;
+  final bool isEviction;
+  final bool isTerminated;
 
   const LuxuryRentCard({
     super.key,
@@ -103,6 +105,8 @@ class LuxuryRentCard extends StatelessWidget {
     this.isGracePeriod = false,
     this.graceDaysRemaining = 5,
     this.overdueSubtext,
+    this.isEviction = false,
+    this.isTerminated = false,
   });
 
   String get _displayTenantName {
@@ -128,7 +132,8 @@ class LuxuryRentCard extends StatelessWidget {
     final planLabel = (activeArrangement?['plan_label'] ?? '').toString();
     final isApproved = status == 'approved';
     final isPending = status == 'pending';
-    final hasRestructuring = isApproved || isPending;
+    final isLockedCard = isEviction || isTerminated;
+    final hasRestructuring = !isLockedCard && (isApproved || isPending);
 
     final totalHeight = hasRestructuring ? 244.0 : 224.0;
     const frontCardTop = 26.0;
@@ -229,12 +234,18 @@ class LuxuryRentCard extends StatelessWidget {
                 onTap: onCardTap,
                 child: Container(
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFF0F2044),
-                        Color(0xFF09142B),
-                        Color(0xFF040A18),
-                      ],
+                    gradient: LinearGradient(
+                      colors: isLockedCard
+                          ? const [
+                              Color(0xFF5C1111),
+                              Color(0xFF3B0909),
+                              Color(0xFF1F0404),
+                            ]
+                          : const [
+                              Color(0xFF0F2044),
+                              Color(0xFF09142B),
+                              Color(0xFF040A18),
+                            ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
@@ -349,7 +360,7 @@ class LuxuryRentCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                isOverdue ? 'Total Outstanding' : 'Monthly Rent',
+                                (isOverdue || isLockedCard) ? 'Total Outstanding' : 'Monthly Rent',
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   height: 1.2,
@@ -479,7 +490,44 @@ class LuxuryRentCard extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                if (isOverdue) ...[
+                                if (isLockedCard) ...[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEF4444).withValues(alpha: 0.24),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0xFFFCA5A5).withValues(alpha: 0.7),
+                                        width: 0.8,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.gavel_rounded, size: 11, color: Color(0xFFFCA5A5)),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          isTerminated ? 'TERMINATED' : 'EVICTION LOCK',
+                                          style: const TextStyle(
+                                            fontSize: 10.5,
+                                            fontWeight: FontWeight.w900,
+                                            color: Color(0xFFFEE2E2),
+                                            letterSpacing: 0.4,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    isTerminated ? 'Lease ended' : 'Past $dueDate',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white.withValues(alpha: 0.65),
+                                    ),
+                                  ),
+                                ] else if (isOverdue) ...[
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: const [
@@ -646,7 +694,9 @@ class LuxuryRentCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 9),
                       Text(
-                        isOverdue ? 'Pay Balance' : 'Pay Rent',
+                        isTerminated
+                            ? 'View Notice'
+                            : ((isOverdue || isEviction) ? 'Pay Balance' : 'Pay Rent'),
                         style: const TextStyle(
                           fontSize: 14.5,
                           fontWeight: FontWeight.w900,

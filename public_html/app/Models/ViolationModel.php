@@ -6,7 +6,14 @@ class ViolationModel extends Model
 {
     public function highestStrike(int $tenantId): int
     {
-        return (int) $this->value('SELECT COALESCE(MAX(strike), 0) FROM violations WHERE tenant_id = ?', [$tenantId]);
+        return (int) $this->value(
+            "SELECT COALESCE(MAX(strike), 0) FROM violations
+             WHERE tenant_id = ?
+               AND (is_paid = 0 OR is_paid IS NULL
+                    OR (issued_at >= DATE_SUB(NOW(), INTERVAL 60 DAY)
+                        AND (description IS NULL OR description NOT LIKE '%[DECAYED]%')))",
+            [$tenantId]
+        );
     }
 
     /**

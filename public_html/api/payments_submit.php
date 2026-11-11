@@ -28,6 +28,7 @@ const PAYMENT_TARGETS = [
     'security_deposit'   => 'Security Deposit Top-Up',
     'restructuring_plan' => 'Restructuring Plan',
     'both'               => 'Both (Rent + Restructuring)',
+    'overdue_cycle'      => 'Overdue Rent + Strike Penalty',
     'overdue_october'    => 'Overdue Rent + Strike Penalty',
     'full_balance'       => 'Full Balance (Overdue + Advance)',
 ];

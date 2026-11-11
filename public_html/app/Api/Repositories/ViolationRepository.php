@@ -6,7 +6,15 @@ final class ViolationRepository extends Repository
 {
     private const LIST_SELECT =
         'SELECT v.id, v.tenant_id, v.lessor_id, u.company_name AS lessor_name,
-                v.category, v.strike, v.acknowledged, v.issued_at,
+                v.category, v.strike, v.description,
+                CASE
+                    WHEN v.fine_amount > 0 THEN v.fine_amount
+                    WHEN v.strike = 2 THEN 500.00
+                    WHEN v.strike >= 3 THEN 1500.00
+                    ELSE 0.00
+                END AS fine_amount,
+                COALESCE(v.is_paid, 0) AS is_paid,
+                v.acknowledged, v.issued_at,
                 v.contract_ref, v.clause_text, v.clause_ref
          FROM violations v
          JOIN users u ON u.id = v.lessor_id';

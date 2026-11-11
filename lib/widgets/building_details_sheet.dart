@@ -186,30 +186,38 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
   }
 
   String get _dueDate {
+    final formatted = widget.lease['due_date_formatted']?.toString().trim() ?? '';
+    if (formatted.isNotEmpty) return formatted;
+
     final direct = widget.lease['due_date'] ?? widget.lease['effective_due_date'];
     if (direct != null && direct.toString().trim().isNotEmpty) {
+      final parsed = DateTime.tryParse(direct.toString().trim());
+      if (parsed != null) {
+        const months = [
+          'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+        ];
+        return '${months[parsed.month - 1]} ${parsed.day}, ${parsed.year}';
+      }
       return direct.toString().trim();
     }
 
     final rawDay = widget.lease['due_day'];
-    final int day = (rawDay != null) ? (int.tryParse(rawDay.toString()) ?? 30) : 30;
+    int? parsedDay = rawDay != null ? int.tryParse(rawDay.toString()) : null;
+    if (parsedDay == null || parsedDay <= 0) {
+      final sinceDt = DateTime.tryParse((widget.lease['start_date'] ?? widget.lease['since'] ?? '').toString());
+      parsedDay = sinceDt?.day ?? DateTime.now().day;
+    }
 
     final now = DateTime.now();
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
-    int targetMonth = now.month;
-    int targetYear = now.year;
-    if (now.day > day + 3) {
-      targetMonth += 1;
-      if (targetMonth > 12) {
-        targetMonth = 1;
-        targetYear += 1;
-      }
-    }
-    final monthName = months[targetMonth - 1];
-    return '$monthName $day, $targetYear';
+    final maxDays = DateTime(now.year, now.month + 1, 0).day;
+    final day = parsedDay.clamp(1, maxDays);
+    final monthName = months[now.month - 1];
+    return '$monthName $day, ${now.year}';
   }
 
   String? get _escalationRate {

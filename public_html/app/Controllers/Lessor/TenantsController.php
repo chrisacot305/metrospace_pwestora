@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Core\Csrf;
 use App\Models\TenantModel;
 use App\Services\LeaseChecklist;
+use App\Services\RentBillingService;
 use DateTime;
 
 /**
@@ -36,21 +37,35 @@ final class TenantsController extends Controller
 
         $tenants = $tenantsModel->rosterForLessor($lessorId);
         $contractStatuses = (new \App\Models\LeaseContractModel($this->pdo))->statusesForLessor($lessorId);
+        $billingService = new RentBillingService($this->pdo);
 
         $now = new DateTime();
-        $today = new DateTime('today');
         $totalActive = count($tenants);
         $expiringSoon = 0;
         $monthlyRentTotal = 0;
 
         foreach ($tenants as &$t) {
-            $t['rent'] = (float) ($t['rent'] ?? 0);
+            $billing = $billingService->compute($t, false);
+            $hasContract = in_array((string) ($t['contract_status'] ?? ''), ['finalized', 'accepted'], true);
+
+            $t['rent'] = (float) $billing['base_rent'];
             $monthlyRentTotal += $t['rent'];
 
-            $t['lease_end'] = $t['end_date'] ? new DateTime($t['end_date']) : null;
+            $effectiveStart = ($hasContract && !empty($t['contract_start_date']))
+                ? $t['contract_start_date']
+                : (!empty($t['start_date']) ? $t['start_date'] : $t['created_at']);
+            $effectiveEnd = ($hasContract && !empty($t['contract_end_date']))
+                ? $t['contract_end_date']
+                : ($t['end_date'] ?? null);
+            $effectiveTerm = ($hasContract && (int) ($t['contract_term_months'] ?? 0) > 0)
+                ? (int) $t['contract_term_months']
+                : (int) ($t['term_months'] ?? 0);
+
+            $t['term_months']  = $effectiveTerm;
+            $t['lease_end']    = $effectiveEnd ? new DateTime($effectiveEnd) : null;
             $t['status_label'] = 'Active';
             $t['status_style'] = 'background:var(--success-soft); color:var(--success);';
-            $t['move_in_date'] = $t['start_date'] ? new DateTime($t['start_date']) : new DateTime($t['created_at']);
+            $t['move_in_date'] = new DateTime($effectiveStart);
 
             if ($t['lease_end']) {
                 $daysLeft = (int) $now->diff($t['lease_end'])->format('%r%a');
@@ -62,10 +77,9 @@ final class TenantsController extends Controller
                     $t['status_label'] = 'Lease ended';
                     $t['status_style'] = 'background:var(--bg); color:var(--ink-500);';
                 }
-            } elseif ($t['term_months']) {
-                // No end date but a term exists → compute the end date.
+            } elseif ($effectiveTerm > 0) {
                 $end = (clone $t['move_in_date']);
-                $end->modify('+' . (int) $t['term_months'] . ' months');
+                $end->modify('+' . $effectiveTerm . ' months');
                 $t['lease_end'] = $end;
 
                 $daysLeft = (int) $now->diff($end)->format('%r%a');
@@ -79,16 +93,27 @@ final class TenantsController extends Controller
                 }
             }
 
-            $t['last_payment_date'] = !empty($t['last_paid_at']) ? new DateTime($t['last_paid_at']) : null;
-            $baseDueDate = $t['last_payment_date'] ? clone $t['last_payment_date'] : clone $t['move_in_date'];
-            $nextDue = (clone $baseDueDate)->modify('+1 month');
+            if (!empty($billing['is_terminated'])) {
+                $t['status_label'] = 'Terminated';
+                $t['status_style'] = 'background:var(--bg); color:var(--ink-500);';
+            } elseif (!empty($billing['is_eviction'])) {
+                $t['status_label'] = 'Eviction Lock (Strike 3)';
+                $t['status_style'] = 'background:var(--error-soft, #fee2e2); color:var(--error);';
+            }
 
-            if ($t['status_label'] === 'Lease ended') {
+            $t['last_payment_date']    = !empty($billing['last_paid_at'])
+                ? new DateTime($billing['last_paid_at'])
+                : (!empty($t['last_paid_at']) ? new DateTime($t['last_paid_at']) : null);
+            $t['billing']              = $billing;
+            $t['is_overdue']           = (bool) $billing['is_overdue'];
+            $t['is_grace_period']      = (bool) $billing['is_grace_period'];
+            $t['grace_days_remaining'] = (int) $billing['grace_days_remaining'];
+
+            if ($t['status_label'] === 'Lease ended' && $billing['outstanding_rent_total'] <= 0.009) {
                 $t['next_due_date'] = null;
-                $t['is_overdue'] = false;
+                $t['is_overdue']    = false;
             } else {
-                $t['next_due_date'] = $nextDue;
-                $t['is_overdue'] = $nextDue < $today;
+                $t['next_due_date'] = $billing['active_due_date_obj'];
             }
 
             $negotiation = [];

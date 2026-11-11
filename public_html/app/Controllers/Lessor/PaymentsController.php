@@ -7,6 +7,7 @@ use App\Models\DepositModel;
 use App\Models\PaymentModel;
 use App\Models\PropertyModel;
 use App\Models\TenantModel;
+use App\Services\RentBillingService;
 
 /**
  * Lessor → Rent Payments (was modules/payments.php)
@@ -40,23 +41,66 @@ final class PaymentsController extends Controller
             try {
                 $pRow = $payments->findForApproval($paymentId, $lessorId);
                 if ($pRow) {
-                    $currentNote = $pRow['note'] ?? '';
+                    $tenantId    = (int) $pRow['tenant_id'];
+                    $amount      = (float) $pRow['amount'];
+                    $currentNote = (string) ($pRow['note'] ?? '');
+
+                    $isTopUp = stripos($currentNote, 'Security Deposit Top-Up') !== false
+                        || (stripos($currentNote, 'security_deposit') !== false
+                            && stripos($currentNote, '[AUTO-DEPOSIT]') === false
+                            && ($pRow['method'] ?? '') !== 'security_deposit');
+                    $isPureRestructuring = stripos($currentNote, 'Target: Restructuring Plan') !== false
+                        || (stripos($currentNote, 'Restructuring') !== false && stripos($currentNote, 'Both') === false);
+
+                    $billingService = new RentBillingService($this->pdo);
+                    $preBilling     = (!$isTopUp && !$isPureRestructuring)
+                        ? $billingService->computeForTenantId($tenantId, false)
+                        : null;
+
                     $newNote = str_contains($currentNote, '[PENDING]')
                         ? str_replace('[PENDING]', '[VERIFIED]', $currentNote)
-                        : ('[VERIFIED] ' . $currentNote);
+                        : trim('[VERIFIED] ' . $currentNote);
+
+                    $shouldSettleViolations = false;
+                    if ($preBilling !== null) {
+                        $prePenalty = (float) ($preBilling['penalty_amount'] ?? 0);
+                        $preOverdue = (float) ($preBilling['overdue_rent_amount'] ?? 0);
+
+                        if ($prePenalty > 0 && $amount >= ($preOverdue + $prePenalty - 0.01)) {
+                            if (stripos($newNote, 'FineSettled:') === false) {
+                                $newNote .= ' | FineSettled: ' . number_format($prePenalty, 2, '.', '');
+                            }
+                            $shouldSettleViolations = true;
+                        } elseif ($prePenalty <= 0.009 && $preOverdue > 0 && $amount >= ($preOverdue - 0.01)) {
+                            $shouldSettleViolations = true;
+                        }
+                    }
+
                     $payments->markVerified($paymentId, $lessorId, $newNote);
 
                     // Security Deposit Top-Up → credit the tenant's deposit buffer
-                    if (stripos($currentNote, 'Security Deposit Top-Up') !== false || stripos($currentNote, 'security_deposit') !== false) {
-                        $tenantsModel->addToSecurityDeposit((int) $pRow['tenant_id'], (float) $pRow['amount']);
+                    if ($isTopUp) {
+                        $tenantsModel->addToSecurityDeposit($tenantId, $amount);
                         (new DepositModel($this->pdo))->createLockedTopUp(
-                            $lessorId, (int) $pRow['tenant_id'], (float) $pRow['amount'],
+                            $lessorId, $tenantId, $amount,
                             $pRow['method'] ?? 'bank_transfer', 'Tenant Deposit Top-Up Verified'
                         );
+                    } elseif ($shouldSettleViolations) {
+                        $this->pdo->prepare(
+                            'UPDATE violations SET is_paid = 1 WHERE tenant_id = ? AND (is_paid = 0 OR is_paid IS NULL)'
+                        )->execute([$tenantId]);
+                    }
+
+                    if (!$isTopUp && !$isPureRestructuring) {
+                        $postBilling = $billingService->computeForTenantId($tenantId, false);
+                        if ($postBilling !== null && empty($postBilling['is_overdue']) && empty($postBilling['is_eviction']) && empty($postBilling['is_terminated'])) {
+                            $this->pdo->prepare("UPDATE tenants SET status = 'active' WHERE id = ? AND status = 'overdue'")
+                                ->execute([$tenantId]);
+                        }
                     }
 
                     audit_log($this->pdo, $lessorId, 'Confirmed Tenant Payment',
-                        '₱' . number_format((float) $pRow['amount'], 2) . ' from ' . $pRow['tenant_name']);
+                        '₱' . number_format($amount, 2) . ' from ' . $pRow['tenant_name']);
 
                     require_once APP_PATH . '/Services/RentNotificationService.php';
                     if (function_exists('send_payment_receipt_sms')) {

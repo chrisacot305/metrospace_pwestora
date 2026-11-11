@@ -114,12 +114,12 @@ class _ApplyScreenState extends State<ApplyScreen> {
     },
     {
       'key': 'rent_grace_period',
-      'label': '7-Day Rent Grace Period & Default Rules',
-      'standard': "Monthly rent is due on the scheduled due date. A 7-calendar-day grace period is granted with zero late penalty. Unpaid rent past Day 7 incurs a ₱500 late fee and initiates Strike 1 payment default escalation.",
+      'label': '5-Day Rent Grace Period & Default Rules',
+      'standard': "Monthly rent is due on the contract due date. A 5-calendar-day grace period is granted with zero late penalty. If unpaid by Day 5, any Security Deposit balance is auto-applied; remaining unpaid rent past Day 5 carries over to the next billing cycle and triggers 3-strike escalation (Strike 1: ₱0 warning, Strike 2: ₱500 fine, Strike 3: ₱1,500 fine & Eviction Lock).",
       'agreed': true,
       'isMandatory': true,
       'controller': TextEditingController(),
-      'defaultCounterPlaceholder': 'e.g. Requesting 10-day grace period for bank clearance',
+      'defaultCounterPlaceholder': 'e.g. Requesting extended grace period for bank clearance',
     },
     {
       'key': 'rent_restructuring_policy',

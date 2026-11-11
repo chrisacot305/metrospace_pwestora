@@ -194,6 +194,14 @@ class ApiService {
     await prefs.remove('company_name');
     await prefs.remove('user_email');
     await prefs.remove('user_phone');
+    await prefs.remove(_kDemoRentStatusKey);
+    for (final k in prefs.getKeys().toList()) {
+      if (k.startsWith('demo_violation_strike_level') ||
+          k.startsWith('demo_acknowledged_strikes') ||
+          k.startsWith('demo_violation_strike_category')) {
+        await prefs.remove(k);
+      }
+    }
   }
 
   // ---------------- Recently viewed (stored locally on-device) ----------------
@@ -459,17 +467,21 @@ class ApiService {
 
   // ---------------- Lease status ----------------
 
+  static Future<void> _cacheLeaseUserSummary(Map<String, dynamic> data) async {
+    if (data['user'] != null && data['user'] is Map) {
+      final u = data['user'] as Map<String, dynamic>;
+      final prefs = await SharedPreferences.getInstance();
+      if (u['full_name'] != null) await prefs.setString('user_name', u['full_name'].toString());
+      if (u['email'] != null) await prefs.setString('user_email', u['email'].toString());
+      if (u['phone'] != null) await prefs.setString('user_phone', u['phone'].toString());
+    }
+  }
+
   /// Returns null if no active lease, otherwise the lease details map.
   static Future<Map<String, dynamic>?> fetchLeaseStatus() async {
     try {
       final data = await _getJson('lease_status.php', auth: true);
-      if (data['user'] != null && data['user'] is Map) {
-        final u = data['user'] as Map<String, dynamic>;
-        final prefs = await SharedPreferences.getInstance();
-        if (u['full_name'] != null) await prefs.setString('user_name', u['full_name']);
-        if (u['email'] != null) await prefs.setString('user_email', u['email']);
-        if (u['phone'] != null) await prefs.setString('user_phone', u['phone']);
-      }
+      await _cacheLeaseUserSummary(data);
       if (data['has_lease'] == true && data['lease'] is Map) {
         return Map<String, dynamic>.from(data['lease'] as Map);
       }
@@ -501,25 +513,39 @@ class ApiService {
   /// Returns all active commercial properties/stalls for the user (GlobeOne-style multi-account switcher)
   static Future<List<Map<String, dynamic>>> fetchAllActiveLeases({Map<String, dynamic>? initialLease}) async {
     final list = <Map<String, dynamic>>[];
-    final seen = <String>{};
+    final seenTenantKeys = <String>{};
+    final seenAppIds = <String>{};
+    final seenLegacyKeys = <String>{};
 
-    void addLease(Map<String, dynamic> l) {
-      final name = (l['property_name'] ?? l['name'] ?? '').toString().trim().toLowerCase();
-      final pId = (l['property_id'] ?? l['tenant_id'] ?? '').toString();
-      final key = name.isNotEmpty ? name : pId;
-      if (key.isNotEmpty && !seen.contains(key)) {
-        seen.add(key);
+    void addLease(Map<String, dynamic> l, {bool isApprovedAppFallback = false}) {
+      final tid = (l['tenant_id'] ?? '').toString().trim();
+      final appId = (l['application_id'] ?? (isApprovedAppFallback ? l['id'] : null) ?? '').toString().trim();
+      final propId = (l['property_id'] ?? '').toString().trim();
+      final propName = (l['property_name'] ?? l['name'] ?? '').toString().trim().toLowerCase();
+      final bizName = (l['business_name'] ?? '').toString().trim().toLowerCase();
+      final legacyKey = '${propId.isNotEmpty ? propId : propName}|$bizName';
+
+      if (isApprovedAppFallback) {
+        if (appId.isNotEmpty && seenAppIds.contains(appId)) return;
+        if (legacyKey != '|' && seenLegacyKeys.contains(legacyKey)) return;
+      }
+
+      final primaryKey = !isApprovedAppFallback && tid.isNotEmpty
+          ? 't_$tid'
+          : (appId.isNotEmpty ? 'a_$appId' : 'l_$legacyKey');
+
+      if (primaryKey.isNotEmpty && !seenTenantKeys.contains(primaryKey)) {
+        seenTenantKeys.add(primaryKey);
+        if (appId.isNotEmpty) seenAppIds.add(appId);
+        if (legacyKey != '|') seenLegacyKeys.add(legacyKey);
         list.add(Map<String, dynamic>.from(l));
       }
     }
 
-    if (initialLease != null && initialLease.isNotEmpty) {
-      addLease(initialLease);
-    }
-
-    // 1. Try lease_status.php for multiple leases
+    // 1. Try lease_status.php for live billing state before falling back
     try {
       final data = await _getJson('lease_status.php', auth: true);
+      await _cacheLeaseUserSummary(data);
       if (data['leases'] is List) {
         for (final item in data['leases']) {
           if (item is Map) addLease(Map<String, dynamic>.from(item));
@@ -528,6 +554,13 @@ class ApiService {
         addLease(Map<String, dynamic>.from(data['lease'] as Map));
       }
     } catch (_) {}
+
+    if (list.isEmpty && initialLease != null && initialLease.isNotEmpty) {
+      addLease(
+        initialLease,
+        isApprovedAppFallback: initialLease['is_approved_application'] == true,
+      );
+    }
 
     // 2. Query approved applications from applications_mine.php
     try {
@@ -545,7 +578,7 @@ class ApiService {
             'term_months': (app['term_months'] as num?)?.toInt() ?? 12,
             'cover_photo': app['cover_photo'] ?? '',
             'is_approved_application': true,
-          });
+          }, isApprovedAppFallback: true);
         }
       }
     } catch (_) {}

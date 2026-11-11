@@ -36,6 +36,12 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   bool _loading = true;
   List<dynamic> _paymentsHistory = [];
 
+  double get _baseRent => widget.rentAmount > 0
+      ? widget.rentAmount
+      : ((widget.lease['base_rent'] as num?)?.toDouble() ??
+            (widget.lease['rent'] as num?)?.toDouble() ??
+            0.0);
+
   double get _penaltyAmount {
     final p = widget.lease['penalty_amount'];
     if (p is num) return p.toDouble();
@@ -49,7 +55,51 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     return [];
   }
 
-  double get _effectiveLateFee => _penaltyAmount > 0 ? _penaltyAmount : 500.0;
+  // Exact backend fine (Strike 1 = ₱0, Strike 2 = ₱500, Strike 3 = ₱1,500)
+  double get _effectiveLateFee => _penaltyAmount;
+
+  double get _overdueRentAmount =>
+      (widget.lease['overdue_rent_amount'] as num?)?.toDouble() ?? 0.0;
+
+  double get _nextCycleRentAmount =>
+      (widget.lease['next_cycle_rent_amount'] as num?)?.toDouble() ?? 0.0;
+
+  int get _overdueCyclesCount =>
+      (widget.lease['overdue_cycles_count'] as num?)?.toInt() ?? 0;
+
+  double get _activeCycleTarget =>
+      (widget.lease['active_cycle_target'] as num?)?.toDouble() ?? _baseRent;
+
+  double get _activeCyclePaid =>
+      (widget.lease['active_cycle_paid'] as num?)?.toDouble() ?? 0.0;
+
+  double? get _activeCycleRemaining =>
+      (widget.lease['active_cycle_remaining'] as num?)?.toDouble();
+
+  String get _overdueOptionLabel {
+    final lbl = (widget.lease['overdue_option_label'] ?? '').toString().trim();
+    return lbl.isNotEmpty ? lbl : 'Past-Due Cycle';
+  }
+
+  String get _outstandingMonthsLabel {
+    final lbl =
+        (widget.lease['outstanding_months_label'] ?? '').toString().trim();
+    return lbl.isNotEmpty ? lbl : 'Overdue + Current Month';
+  }
+
+  bool get _isEffectiveOverdue =>
+      widget.isOverdue ||
+      widget.lease['is_overdue'] == true ||
+      widget.lease['rent_status'] == 'overdue' ||
+      _overdueRentAmount > 0.009;
+
+  double get _option1Amount => _overdueRentAmount > 0.009
+      ? (_overdueRentAmount + _effectiveLateFee)
+      : (_baseRent + _effectiveLateFee);
+
+  double get _option2Amount => (_overdueRentAmount + _nextCycleRentAmount) > 0.009
+      ? (_overdueRentAmount + _nextCycleRentAmount + _effectiveLateFee)
+      : (_baseRent * 2 + _effectiveLateFee);
 
   double get _securityDeposit {
     final raw = widget.lease['security_deposit'];
@@ -70,39 +120,43 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     return plan.contains('3') ? 3 : 2;
   }
 
-  double get _splitAmount => widget.rentAmount / _numParts;
+  double get _splitAmount => _baseRent / _numParts;
 
   double get _totalObligation {
-    if (widget.isOverdue) {
+    if (_isEffectiveOverdue) {
       if (_selectedTarget == 'full_balance') {
-        return widget.rentAmount * 2 + _effectiveLateFee;
+        final gross = _activeCycleTarget > 0
+            ? _activeCycleTarget
+            : (_baseRent * 2);
+        return gross + _effectiveLateFee;
       }
-      return widget.rentAmount + _effectiveLateFee;
+      final cyclesCount = _overdueCyclesCount > 0 ? _overdueCyclesCount : 1;
+      return (_baseRent * cyclesCount) + _effectiveLateFee;
     }
     if (_hasRestructuring) {
       if (_selectedTarget == 'restructuring_plan') {
         return _splitAmount + _penaltyAmount;
       } else if (_selectedTarget == 'both') {
-        return widget.rentAmount + _splitAmount + _penaltyAmount;
+        return (_activeCycleRemaining ?? _baseRent) + _splitAmount + _penaltyAmount;
       }
     }
-    return widget.rentAmount + _penaltyAmount;
+    final target = _activeCycleTarget > 0 ? _activeCycleTarget : _baseRent;
+    return target + _penaltyAmount;
   }
 
   double get _paidThisMonth {
-    double verifiedFromHistory = 0.0;
-    for (final p in _paymentsHistory) {
-      final status = (p['status'] ?? '').toString().toLowerCase();
-      final note = (p['note'] ?? '').toString();
-      final isPending =
-          status == 'pending' ||
-          note.toUpperCase().contains('[PENDING]') ||
-          note.toLowerCase().contains('pending verification');
-      if (!isPending && (status == 'approved' || status == 'verified')) {
-        verifiedFromHistory += (p['amount'] as num?)?.toDouble() ?? 0.0;
-      }
+    if (_isEffectiveOverdue) {
+      final paid = _totalObligation - _paymentLeft;
+      return paid < 0 ? 0.0 : paid;
     }
-    if (verifiedFromHistory > 0) return verifiedFromHistory;
+    if (!_hasRestructuring && _activeCycleRemaining != null) {
+      final paid = _totalObligation - _paymentLeft;
+      return paid < 0 ? 0.0 : paid;
+    }
+    if (_hasRestructuring && _selectedTarget == 'monthly_rent' && _activeCycleRemaining != null) {
+      final paid = _totalObligation - _paymentLeft;
+      return paid < 0 ? 0.0 : paid;
+    }
     final rptm = widget.lease['rent_paid_this_month'];
     if (rptm is num) return rptm.toDouble();
     if (rptm != null) return double.tryParse(rptm.toString()) ?? 0.0;
@@ -110,11 +164,32 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   }
 
   double get _paymentLeft {
-    final left = _totalObligation - _paidThisMonth;
-    return left < 0 ? 0.0 : left;
+    if (_isEffectiveOverdue) {
+      return _selectedTarget == 'full_balance' ? _option2Amount : _option1Amount;
+    }
+    if (!_hasRestructuring && _activeCycleRemaining != null) {
+      final left = _activeCycleRemaining! + _penaltyAmount;
+      return left < 0.01 ? 0.0 : left;
+    }
+    if (_hasRestructuring) {
+      if (_selectedTarget == 'monthly_rent' && _activeCycleRemaining != null) {
+        final left = _activeCycleRemaining! + _penaltyAmount;
+        return left < 0.01 ? 0.0 : left;
+      }
+      if (_selectedTarget == 'both') {
+        return (_activeCycleRemaining ?? _baseRent) + _splitAmount + _penaltyAmount;
+      }
+      if (_selectedTarget == 'restructuring_plan') {
+        final rptm = (widget.lease['rent_paid_this_month'] as num?)?.toDouble() ?? 0.0;
+        final left = _totalObligation - rptm;
+        return left < 0.01 ? 0.0 : left;
+      }
+    }
+    final left = _totalObligation - _activeCyclePaid;
+    return left < 0.01 ? 0.0 : left;
   }
 
-  bool get _isPaymentComplete => _paymentLeft <= 0;
+  bool get _isPaymentComplete => _paymentLeft <= 0.01;
 
   double get _enteredAmount {
     final amtText = _amountController.text.trim().replaceAll(',', '');
@@ -145,8 +220,8 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   }
 
   void _initInitialTargetAndAmount() {
-    if (widget.isOverdue) {
-      _selectedTarget = 'overdue_october';
+    if (_isEffectiveOverdue) {
+      _selectedTarget = 'overdue_cycle';
     } else if (_hasRestructuring) {
       _selectedTarget = 'restructuring_plan';
     } else {
@@ -283,8 +358,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
         tenantId: _tenantId,
       );
 
-      if (widget.isOverdue &&
-          (_selectedTarget == 'overdue_october' ||
+      if (_isEffectiveOverdue &&
+          (_selectedTarget == 'overdue_cycle' ||
+              _selectedTarget == 'overdue_october' ||
               _selectedTarget == 'full_balance')) {
         await ApiService.setDemoRentStatus('normal');
       }
@@ -406,41 +482,45 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     return buffer.toString();
   }
 
-  // Calculate percentage paid / remaining
+  // Calculate percentage paid / remaining for current obligation
   Map<String, dynamic> _computePaymentProgress() {
-    double totalVerifiedPaid = 0.0;
     double totalPendingPaid = 0.0;
 
     for (final p in _paymentsHistory) {
       final amt = (p['amount'] as num?)?.toDouble() ?? 0.0;
       final status = (p['status'] ?? '').toString().toLowerCase();
       final note = (p['note'] ?? '').toString();
+      final method = (p['method'] ?? '').toString().toLowerCase();
+      final isDeclined =
+          status == 'declined' || note.toUpperCase().contains('[DECLINED');
+      final isTopUp =
+          note.toLowerCase().contains('security deposit top-up') ||
+          (method == 'security_deposit' &&
+              !note.toUpperCase().contains('[AUTO-DEPOSIT]'));
+      if (isDeclined || isTopUp) continue;
+
       final isPending =
           status == 'pending' ||
           note.toUpperCase().contains('[PENDING]') ||
           note.toLowerCase().contains('pending verification');
-
-      if (!isPending && (status == 'approved' || status == 'verified')) {
-        totalVerifiedPaid += amt;
-      } else {
+      if (isPending) {
         totalPendingPaid += amt;
       }
     }
 
-    if (totalVerifiedPaid == 0.0 && _paidThisMonth > 0) {
-      totalVerifiedPaid = _paidThisMonth;
+    if (totalPendingPaid == 0.0) {
+      totalPendingPaid =
+          (widget.lease['pending_rent_amount'] as num?)?.toDouble() ?? 0.0;
     }
 
+    final totalVerifiedPaid = _paidThisMonth;
     final totalTarget = _totalObligation > 0
         ? _totalObligation
-        : (widget.rentAmount > 0 ? widget.rentAmount : 2500.0);
+        : (_baseRent > 0 ? _baseRent : 1.0);
     final verifiedPercent = ((totalVerifiedPaid / totalTarget) * 100)
         .clamp(0, 100)
         .toInt();
-    final remainingAmount = (totalTarget - totalVerifiedPaid).clamp(
-      0.0,
-      totalTarget,
-    );
+    final remainingAmount = _paymentLeft.clamp(0.0, totalTarget);
     final remainingPercent = (100 - verifiedPercent).clamp(0, 100);
 
     return {
@@ -790,12 +870,12 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     const SizedBox(height: 14),
 
                     // Itemized Statement Breakdown
-                    if (_penaltyAmount > 0 || widget.isOverdue) ...[
+                    if (_penaltyAmount > 0 || _isEffectiveOverdue) ...[
                       _buildPaymentBreakdownCard(),
                     ],
 
                     // Payment Target Options (Overdue Arrears or Restructuring)
-                    if (widget.isOverdue) ...[
+                    if (_isEffectiveOverdue) ...[
                       Text(
                         'Select Payment Target (Oldest Debt First)',
                         style: TextStyle(
@@ -808,27 +888,28 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                       ),
                       const SizedBox(height: 8),
                       _buildPaymentOptionCard(
-                        value: 'overdue_october',
-                        title: 'Option 1: Pay Overdue Month (October First)',
-                        amountText:
-                            '₱${_formatMoney(widget.rentAmount + _effectiveLateFee)}',
-                        badgeText: 'Priority Target · Clears Overdue & Strike',
+                        value: 'overdue_cycle',
+                        title: 'Option 1: Pay Overdue ($_overdueOptionLabel)',
+                        amountText: '₱${_formatMoney(_option1Amount)}',
+                        badgeText: _effectiveLateFee > 0
+                            ? 'Priority Target · Includes Fines'
+                            : 'Priority Target · Clears Overdue',
                         badgeColor: isDark
                             ? const Color(0xFF450A0A).withValues(alpha: 0.4)
                             : const Color(0xFFFEF2F2),
                         badgeTextColor: isDark
                             ? const Color(0xFFF87171)
                             : const Color(0xFFDC2626),
-                        description:
-                            'Settles the oldest missed due date (October) first to immediately clear overdue default status and remove lease strikes.',
+                        description: _effectiveLateFee > 0
+                            ? 'Settles your unpaid $_overdueOptionLabel arrears and ₱${_formatMoney(_effectiveLateFee)} penalty first to clear overdue status.'
+                            : 'Settles your unpaid $_overdueOptionLabel arrears first to clear overdue status before the next cycle.',
                       ),
                       _buildPaymentOptionCard(
                         value: 'full_balance',
                         title:
-                            'Option 2: Pay Full Balance (October + November)',
-                        amountText:
-                            '₱${_formatMoney(widget.rentAmount * 2 + _effectiveLateFee)}',
-                        badgeText: 'Full 2-Month Settlement',
+                            'Option 2: Pay Full Balance ($_outstandingMonthsLabel)',
+                        amountText: '₱${_formatMoney(_option2Amount)}',
+                        badgeText: 'Full Balance Settlement',
                         badgeColor: isDark
                             ? const Color(0xFF1E3A8A).withValues(alpha: 0.3)
                             : const Color(0xFFEFF6FF),
@@ -836,7 +917,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                             ? const Color(0xFF60A5FA)
                             : AppColors.electricBlue,
                         description:
-                            'Settles both October overdue arrears and November advance rent together in full.',
+                            'Settles all overdue balance ($_outstandingMonthsLabel)${_effectiveLateFee > 0 ? ' plus ₱${_formatMoney(_effectiveLateFee)} penalties' : ''} together in one payment.',
                       ),
                       const SizedBox(height: 12),
                     ] else if (_hasRestructuring) ...[
@@ -1566,6 +1647,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                       .toString()
                       .toLowerCase();
                   final isPending = status == 'pending';
+                  final isDeclined = status == 'declined';
                   final amt = (p['amount'] as num?)?.toDouble() ?? 0.0;
                   final paidAt = p['paid_at']?.toString() ?? '';
                   final note = p['note']?.toString() ?? '';
@@ -1610,7 +1692,12 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                                         vertical: 2,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: isPending
+                                        color: isDeclined
+                                            ? (isDark
+                                                  ? const Color(0xFF450A0A)
+                                                        .withValues(alpha: 0.45)
+                                                  : const Color(0xFFFEE2E2))
+                                            : isPending
                                             ? (isDark
                                                   ? const Color(
                                                       0xFF78350F,
@@ -1624,13 +1711,19 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
-                                        isPending
+                                        isDeclined
+                                            ? 'DECLINED'
+                                            : isPending
                                             ? 'PENDING VERIFICATION'
                                             : 'VERIFIED & CREDITED',
                                         style: TextStyle(
                                           fontSize: 9.5,
                                           fontWeight: FontWeight.w900,
-                                          color: isPending
+                                          color: isDeclined
+                                              ? (isDark
+                                                    ? const Color(0xFFF87171)
+                                                    : const Color(0xFFDC2626))
+                                              : isPending
                                               ? (isDark
                                                     ? const Color(0xFFFBBF24)
                                                     : const Color(0xFFD97706))
@@ -1849,11 +1942,15 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
 
   Widget _buildPaymentBreakdownCard() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseRent = widget.rentAmount;
-    final penalty = _penaltyAmount;
-    final total = widget.isOverdue
-        ? (baseRent + _effectiveLateFee)
-        : (baseRent + penalty);
+    final bool includeNextCycle =
+        _isEffectiveOverdue && _selectedTarget == 'full_balance';
+    final double rentPortion = _isEffectiveOverdue
+        ? (includeNextCycle ? (_overdueRentAmount + _nextCycleRentAmount) : _overdueRentAmount)
+        : (_activeCycleRemaining ?? _baseRent);
+    final double displayRent = rentPortion > 0 ? rentPortion : _baseRent;
+    final double total = _paymentLeft;
+    final int strikeLevel =
+        (widget.lease['strike_level'] as num?)?.toInt() ?? 0;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1881,55 +1978,115 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF78350F).withValues(alpha: 0.4)
-                      : const Color(0xFFFEF3C7),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Includes Penalty',
-                  style: TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w800,
-                    color: isDark
-                        ? const Color(0xFFFBBF24)
-                        : const Color(0xFFD97706),
+              if (_penaltyAmount > 0 || strikeLevel > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: _penaltyAmount > 0
+                        ? (isDark
+                              ? const Color(0xFF78350F).withValues(alpha: 0.4)
+                              : const Color(0xFFFEF3C7))
+                        : (isDark
+                              ? const Color(0xFF1E3A8A).withValues(alpha: 0.35)
+                              : const Color(0xFFEFF6FF)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    _penaltyAmount > 0
+                        ? 'Includes Penalty'
+                        : 'Strike $strikeLevel (₱0 Fine)',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: _penaltyAmount > 0
+                          ? (isDark
+                                ? const Color(0xFFFBBF24)
+                                : const Color(0xFFD97706))
+                          : (isDark
+                                ? const Color(0xFF93C5FD)
+                                : AppColors.electricBlue),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Base Monthly Rent',
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: isDark ? const Color(0xFFCBD5E1) : AppColors.ink700,
+          if (_isEffectiveOverdue && _overdueRentAmount > 0) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Overdue Arrears ($_overdueOptionLabel)',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: isDark ? const Color(0xFFCBD5E1) : AppColors.ink700,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                '₱${_formatMoney(baseRent)}',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w700,
-                  color: isDark ? Colors.white : AppColors.ink900,
+                const SizedBox(width: 8),
+                Text(
+                  '₱${_formatMoney(_overdueRentAmount)}',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : AppColors.ink900,
+                  ),
                 ),
+              ],
+            ),
+            if (includeNextCycle && _nextCycleRentAmount > 0) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Next Billing Cycle Rent',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: isDark ? const Color(0xFFCBD5E1) : AppColors.ink700,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '₱${_formatMoney(_nextCycleRentAmount)}',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : AppColors.ink900,
+                    ),
+                  ),
+                ],
               ),
             ],
-          ),
+          ] else
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Remaining Rent Balance',
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: isDark ? const Color(0xFFCBD5E1) : AppColors.ink700,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '₱${_formatMoney(displayRent)}',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? Colors.white : AppColors.ink900,
+                  ),
+                ),
+              ],
+            ),
           const SizedBox(height: 8),
           if (_penaltyBreakdown.isNotEmpty)
             ..._penaltyBreakdown.map((pb) {
               final label = pb['label'] ?? 'Violation Penalty';
-              final amt = (pb['amount'] as num?)?.toDouble() ?? 500.0;
+              final amt = (pb['amount'] as num?)?.toDouble() ?? 0.0;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Row(
@@ -1968,7 +2125,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      '⚠️ Strike 2 Infraction Penalty',
+                      '⚠️ Strike ${strikeLevel > 0 ? strikeLevel : 2} Infraction Penalty',
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark
@@ -1992,32 +2149,32 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                 ],
               ),
             )
-          else if (widget.isOverdue)
+          else if (_isEffectiveOverdue)
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
-                      '⚠️ Post-Grace Overdue Fee',
+                      'Strike 1 Overdue Warning (No monetary fine)',
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark
-                            ? const Color(0xFFF87171)
-                            : const Color(0xFFDC2626),
+                            ? const Color(0xFF93C5FD)
+                            : AppColors.electricBlue,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '+₱500',
+                    '₱0',
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w800,
                       color: isDark
-                          ? const Color(0xFFF87171)
-                          : const Color(0xFFDC2626),
+                          ? const Color(0xFF93C5FD)
+                          : AppColors.electricBlue,
                     ),
                   ),
                 ],

@@ -47,22 +47,28 @@ final class TenantRepository extends Repository
         return array_map('intval', $this->fetchColumnList('SELECT id FROM tenants WHERE lessee_id = ?', [$lesseeId]));
     }
 
-    /** Every lease of this lessee with property + lessor info, newest first. */
+    /** Every lease of this lessee with property + lessor + finalized contract info, newest first. */
     public function leasesForLessee(int $lesseeId): array
     {
         return $this->fetchAll(
-            "SELECT t.id AS tenant_id, t.property_id, t.lessor_id, t.due_day, t.created_at AS since,
-                    t.start_date, t.end_date, t.security_deposit, t.advance_rent, t.contract_pdf,
+            "SELECT t.id AS tenant_id, t.application_id, t.property_id, t.lessor_id, t.due_day, t.created_at AS since,
+                    t.start_date, t.end_date, t.monthly_rent, t.security_deposit, t.advance_rent,
+                    t.contract_pdf, t.status AS tenant_status,
                     COALESCE(NULLIF(t.business_name, ''), a.business_name, '') AS business_name,
                     t.unit_label,
                     p.name AS property_name, p.address AS property_address, p.type AS property_type,
                     (SELECT photo_path FROM property_photos pp WHERE pp.property_id = p.id ORDER BY pp.sort_order ASC, pp.id ASC LIMIT 1) AS cover_photo,
                     u.company_name AS lessor_name,
-                    a.rent, a.term_months, a.submitted_at AS applied_at
+                    a.rent AS app_rent, a.term_months AS app_term_months,
+                    a.rent, a.term_months, a.submitted_at AS applied_at,
+                    lc.monthly_rent AS contract_rent, lc.term_months AS contract_term_months,
+                    lc.start_date AS contract_start_date, lc.end_date AS contract_end_date,
+                    lc.due_day AS contract_due_day, lc.status AS contract_status
              FROM tenants t
              JOIN properties p ON p.id = t.property_id
              JOIN users u ON u.id = t.lessor_id
              LEFT JOIN applications a ON a.id = t.application_id
+             LEFT JOIN lease_contracts lc ON lc.tenant_id = t.id
              WHERE t.lessee_id = ?
              ORDER BY t.created_at DESC",
             [$lesseeId]

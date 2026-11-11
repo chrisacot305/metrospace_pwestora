@@ -3,12 +3,16 @@ import '../theme.dart';
 import '../services/api_service.dart';
 import '../widgets/scooped_nav_bar.dart';
 import '../widgets/loading.dart';
+import '../widgets/eviction_lock_panel.dart';
 import 'browse_screen.dart';
 import 'my_applications_screen.dart';
 import 'dashboard_screen.dart';
 import 'schedule_screen.dart';
 import 'ticket_create_screen.dart';
 import 'profile_screen.dart';
+import 'rent_payment_screen.dart';
+import 'violations_screen.dart';
+import 'login_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -20,22 +24,20 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _currentIndex = 0;
   int _applicantAppsTick = 0;
-  late Future<Map<String, dynamic>?> _leaseFuture;
+  late Future<List<Map<String, dynamic>>> _leasesFuture;
   List<Map<String, dynamic>> _allLeases = [];
   int _activeLeaseIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _leaseFuture = ApiService.fetchLeaseStatus();
-    _loadAllLeases();
+    _leasesFuture = _fetchAndStoreLeases();
   }
 
-  Future<void> _loadAllLeases() async {
+  Future<List<Map<String, dynamic>>> _fetchAndStoreLeases() async {
     try {
-      final initial = await _leaseFuture;
-      final leases = await ApiService.fetchAllActiveLeases(initialLease: initial);
-      if (mounted && leases.isNotEmpty) {
+      final leases = await ApiService.fetchAllActiveLeases();
+      if (mounted) {
         setState(() {
           _allLeases = leases;
           if (_activeLeaseIndex >= _allLeases.length) {
@@ -43,16 +45,18 @@ class _HomeShellState extends State<HomeShell> {
           }
         });
       }
-    } catch (_) {}
+      return leases;
+    } catch (_) {
+      return _allLeases;
+    }
   }
 
   Future<void> _recheckLease() async {
-    final result = await ApiService.fetchLeaseStatus();
+    final leases = await _fetchAndStoreLeases();
     if (!mounted) return;
     setState(() {
-      _leaseFuture = Future.value(result);
+      _leasesFuture = Future.value(leases);
     });
-    _loadAllLeases();
   }
 
   void _onBusinessSwiped(int newIndex, Map<String, dynamic> lease) {
@@ -83,8 +87,8 @@ class _HomeShellState extends State<HomeShell> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>?>(
-      future: _leaseFuture,
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _leasesFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
           final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -99,9 +103,19 @@ class _HomeShellState extends State<HomeShell> {
           );
         }
 
-        final initialLease = snapshot.data;
-        final hasActiveLease = initialLease != null;
-        final currentLease = _activeLease ?? initialLease;
+        final leases = _allLeases.isNotEmpty
+            ? _allLeases
+            : (snapshot.data ?? const <Map<String, dynamic>>[]);
+        final hasActiveLease = leases.isNotEmpty;
+        final currentLease = _activeLease ?? (hasActiveLease ? leases.first : null);
+        final bool hasCleanLease = leases.any((l) => !isLeaseEvictionLocked(l));
+        final bool isSelectedLocked = isLeaseEvictionLocked(currentLease);
+
+        // Full-screen lock only when the user has NO clean business to switch to.
+        // If another business is clean, keep Dashboard carousel open and lock per card.
+        if (hasActiveLease && !hasCleanLease && currentLease != null) {
+          return _buildEvictionLockScreen(currentLease, allLeases: leases);
+        }
 
         // Build screens based on user state
         final List<Widget> screens = hasActiveLease
@@ -112,7 +126,13 @@ class _HomeShellState extends State<HomeShell> {
                   activeLeaseIndex: _activeLeaseIndex,
                   onLeaseChanged: _onBusinessSwiped,
                   onRefresh: _recheckLease,
-                  onNavigateTab: (idx) => setState(() => _currentIndex = idx),
+                  onNavigateTab: (idx) {
+                    if (isSelectedLocked && idx != 0) {
+                      _showLockedBusinessNotice();
+                      return;
+                    }
+                    setState(() => _currentIndex = idx);
+                  },
                 ),
                 ScheduleScreen(
                   key: ValueKey('schedule_${currentLease['property_id'] ?? currentLease['id'] ?? _activeLeaseIndex}'),
@@ -122,7 +142,13 @@ class _HomeShellState extends State<HomeShell> {
                 ProfileScreen(
                   key: ValueKey('profile_${currentLease['property_id'] ?? currentLease['id'] ?? _activeLeaseIndex}'),
                   lease: currentLease,
-                  onNavigateTab: (idx) => setState(() => _currentIndex = idx),
+                  onNavigateTab: (idx) {
+                    if (isSelectedLocked && idx != 0) {
+                      _showLockedBusinessNotice();
+                      return;
+                    }
+                    setState(() => _currentIndex = idx);
+                  },
                   onLeaseMayHaveChanged: _recheckLease,
                 ),
               ]
@@ -140,7 +166,8 @@ class _HomeShellState extends State<HomeShell> {
                 ),
               ];
 
-        final safeIndex = _currentIndex.clamp(0, screens.length - 1);
+        final clampedIndex = _currentIndex.clamp(0, screens.length - 1);
+        final safeIndex = (hasActiveLease && isSelectedLocked) ? 0 : clampedIndex;
         final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
         final hideDock = isKeyboardOpen;
 
@@ -154,16 +181,172 @@ class _HomeShellState extends State<HomeShell> {
           bottomNavigationBar: hideDock
               ? null
               : (hasActiveLease
-                  ? _buildTenantDock(currentLease!, safeIndex)
+                  ? _buildTenantDock(
+                      currentLease!,
+                      safeIndex,
+                      isLocked: isSelectedLocked,
+                    )
                   : _buildApplicantDock(safeIndex)),
         );
       },
     );
   }
 
+  void _showLockedBusinessNotice() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: const Color(0xFF991B1B),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          content: const Text(
+            'Locked for this evicted business. Settle its balance or swipe the card above to switch to a clean business.',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+        ),
+      );
+  }
+
+  Future<void> _signOutFromLock() async {
+    await ApiService.clearSession();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
+  }
+
+  /// Strike 3 / Eviction Lock when no clean business is available on the account.
+  Widget _buildEvictionLockScreen(
+    Map<String, dynamic> lease, {
+    List<Map<String, dynamic>> allLeases = const [],
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final double baseRent = (lease['base_rent'] as num?)?.toDouble() ??
+        (lease['rent'] as num?)?.toDouble() ??
+        0.0;
+
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFFEF2F2),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.gavel_rounded,
+                          color: AppColors.error,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Pwestora Account Lock',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : AppColors.midnightNavy,
+                        ),
+                      ),
+                    ],
+                  ),
+                  TextButton.icon(
+                    onPressed: _signOutFromLock,
+                    icon: const Icon(Icons.logout_rounded, size: 17),
+                    label: const Text('Sign Out'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: isDark ? Colors.white70 : AppColors.ink700,
+                    ),
+                  ),
+                ],
+              ),
+              if (allLeases.length > 1) ...[
+                const SizedBox(height: 14),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: List.generate(allLeases.length, (i) {
+                      final isSelected = i == _activeLeaseIndex;
+                      final label = leaseDisplayLabel(allLeases[i]);
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          selected: isSelected,
+                          onSelected: (_) {
+                            if (_activeLeaseIndex != i) {
+                              setState(() => _activeLeaseIndex = i);
+                            }
+                          },
+                          label: Text(label),
+                          selectedColor: AppColors.error,
+                          labelStyle: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: isSelected
+                                ? Colors.white
+                                : (isDark ? Colors.white70 : AppColors.ink700),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 18),
+              EvictionLockPanel(
+                lease: lease,
+                onProceedToPayment: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => RentPaymentScreen(
+                        lease: lease,
+                        rentAmount: baseRent,
+                        isOverdue: lease['is_overdue'] == true ||
+                            (lease['overdue_rent_amount'] as num? ?? 0) > 0,
+                        onPaymentSubmitted: _recheckLease,
+                      ),
+                    ),
+                  );
+                  _recheckLease();
+                },
+                onViewNotice: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ViolationsScreen(lease: lease),
+                    ),
+                  );
+                  _recheckLease();
+                },
+                onRefresh: _recheckLease,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Bottom Dock for Active Tenants: Home, Schedule, (+) Report, Chat, Me
   /// Featuring a smooth scooped cradle with elevated Report button and Navy Blue active/hover states.
-  Widget _buildTenantDock(Map<String, dynamic> lease, int currentIndex) {
+  Widget _buildTenantDock(
+    Map<String, dynamic> lease,
+    int currentIndex, {
+    bool isLocked = false,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final scaffoldBg = isDark ? const Color(0xFF000000) : AppColors.bg;
     final dockBg = isDark ? const Color(0xFF121212) : Colors.white;
@@ -237,7 +420,14 @@ class _HomeShellState extends State<HomeShell> {
                             icon: Icons.calendar_month_rounded,
                             outlineIcon: Icons.calendar_month_outlined,
                             label: 'Schedule',
-                            onTap: (idx) => setState(() => _currentIndex = idx),
+                            isLocked: isLocked,
+                            onTap: (idx) {
+                              if (isLocked) {
+                                _showLockedBusinessNotice();
+                                return;
+                              }
+                              setState(() => _currentIndex = idx);
+                            },
                           ),
                         ),
                         // Center Report item aligned on the exact same baseline as other nav items
@@ -245,7 +435,7 @@ class _HomeShellState extends State<HomeShell> {
                           width: 68,
                           child: GestureDetector(
                             behavior: HitTestBehavior.opaque,
-                            onTap: () => _openReportFlow(lease),
+                            onTap: () => isLocked ? _showLockedBusinessNotice() : _openReportFlow(lease),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
                               color: Colors.transparent,
@@ -260,7 +450,7 @@ class _HomeShellState extends State<HomeShell> {
                                     style: TextStyle(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.w700,
-                                      color: reportLabelColor,
+                                      color: reportLabelColor.withValues(alpha: isLocked ? 0.42 : 1.0),
                                       letterSpacing: -0.2,
                                     ),
                                     maxLines: 1,
@@ -278,7 +468,14 @@ class _HomeShellState extends State<HomeShell> {
                             icon: Icons.explore_rounded,
                             outlineIcon: Icons.explore_outlined,
                             label: 'Explore',
-                            onTap: (idx) => setState(() => _currentIndex = idx),
+                            isLocked: isLocked,
+                            onTap: (idx) {
+                              if (isLocked) {
+                                _showLockedBusinessNotice();
+                                return;
+                              }
+                              setState(() => _currentIndex = idx);
+                            },
                           ),
                         ),
                         Expanded(
@@ -288,7 +485,14 @@ class _HomeShellState extends State<HomeShell> {
                             icon: Icons.person_rounded,
                             outlineIcon: Icons.person_outline_rounded,
                             label: 'Me',
-                            onTap: (idx) => setState(() => _currentIndex = idx),
+                            isLocked: isLocked,
+                            onTap: (idx) {
+                              if (isLocked) {
+                                _showLockedBusinessNotice();
+                                return;
+                              }
+                              setState(() => _currentIndex = idx);
+                            },
                           ),
                         ),
                       ],
@@ -302,41 +506,51 @@ class _HomeShellState extends State<HomeShell> {
                     child: Center(
                       child: GestureDetector(
                         behavior: HitTestBehavior.opaque,
-                        onTap: () => _openReportFlow(lease),
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [
-                                Color(0xFF21447D),
-                                Color(0xFF142C56),
+                        onTap: () => isLocked ? _showLockedBusinessNotice() : _openReportFlow(lease),
+                        child: Opacity(
+                          opacity: isLocked ? 0.55 : 1.0,
+                          child: Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: isLocked
+                                    ? const [
+                                        Color(0xFF6B7280),
+                                        Color(0xFF4B5563),
+                                      ]
+                                    : const [
+                                        Color(0xFF21447D),
+                                        Color(0xFF142C56),
+                                      ],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: (isLocked ? const Color(0xFF9CA3AF) : const Color(0xFF1E6BFF))
+                                    .withValues(alpha: 0.45),
+                                width: 1.2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (isLocked ? Colors.black : const Color(0xFF1E6BFF))
+                                      .withValues(alpha: 0.25),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                                BoxShadow(
+                                  color: const Color(0xFF0A1832).withValues(alpha: 0.20),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
                               ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
                             ),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: const Color(0xFF1E6BFF).withValues(alpha: 0.45),
-                              width: 1.2,
+                            child: Icon(
+                              isLocked ? Icons.lock_rounded : Icons.add_rounded,
+                              color: Colors.white,
+                              size: isLocked ? 20 : 26,
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF1E6BFF).withValues(alpha: 0.25),
-                                blurRadius: 10,
-                                offset: const Offset(0, 3),
-                              ),
-                              BoxShadow(
-                                color: const Color(0xFF0A1832).withValues(alpha: 0.20),
-                                blurRadius: 8,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.add_rounded,
-                            color: Colors.white,
-                            size: 26,
                           ),
                         ),
                       ),

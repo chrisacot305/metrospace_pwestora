@@ -197,27 +197,31 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       }
     }
 
-    // 2. Live Payments from API (or sample for demo)
+    // 2. Live Payments from API (never fabricate payments when a real lease exists)
     final now = DateTime.now();
     final isPastOrCurrent =
         _currentMonth.year < now.year ||
         (_currentMonth.year == now.year && _currentMonth.month <= now.month);
 
-    final effectivePayments = _apiPayments.isNotEmpty
+    final effectivePayments = widget.lease != null
         ? _apiPayments
-        : (isPastOrCurrent
-              ? [
-                  {
-                    'id': 'hist_${_currentMonth.year}_${_currentMonth.month}',
-                    'amount': rentNum,
-                    'paid_at':
-                        '${_currentMonth.year}-${_currentMonth.month.toString().padLeft(2, '0')}-05 14:30:00',
-                    'method': 'GCash / InstaPay',
-                  },
-                ]
-              : []);
+        : (_apiPayments.isNotEmpty
+              ? _apiPayments
+              : (isPastOrCurrent
+                    ? [
+                        {
+                          'id': 'hist_${_currentMonth.year}_${_currentMonth.month}',
+                          'amount': rentNum,
+                          'paid_at':
+                              '${_currentMonth.year}-${_currentMonth.month.toString().padLeft(2, '0')}-05 14:30:00',
+                          'method': 'GCash / InstaPay',
+                        },
+                      ]
+                    : []));
 
     for (final p in effectivePayments) {
+      final pStatus = (p['status'] ?? '').toString().toLowerCase();
+      if (pStatus == 'declined') continue;
       final paidAtStr = p['paid_at']?.toString() ?? '';
       DateTime? dt = DateTime.tryParse(paidAtStr);
       if (dt != null &&
@@ -228,8 +232,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
         list.add({
           'id': 'pay_${p['id']}',
-          'title': 'Monthly Rent Payment',
-          'subtitle': '₱${_formatMoney(amount)} Paid • $paidDateStr',
+          'title': pStatus == 'pending' ? 'Rent Payment (Pending)' : 'Monthly Rent Payment',
+          'subtitle': '₱${_formatMoney(amount)} ${pStatus == 'pending' ? 'Submitted' : 'Paid'} • $paidDateStr',
           'day': dt.day,
           'month': _getShortMonth(dt.month),
           'category': 'rent',
@@ -240,16 +244,21 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       }
     }
 
-    // 3. Rent Due date from active lease
+    // 3. Rent Due date from active lease contract due_day
     if (widget.lease != null) {
-      final lastDayOfMonth = _daysInMonth(_currentMonth);
-      final dueDateTime = DateTime(_currentMonth.year, _currentMonth.month, lastDayOfMonth);
+      final daysInCurMonth = _daysInMonth(_currentMonth);
+      final rawDueDay = widget.lease!['due_day'];
+      final parsedDueDay = rawDueDay is int
+          ? rawDueDay
+          : int.tryParse(rawDueDay?.toString() ?? '') ?? daysInCurMonth;
+      final clampedDueDay = parsedDueDay.clamp(1, daysInCurMonth);
+      final dueDateTime = DateTime(_currentMonth.year, _currentMonth.month, clampedDueDay);
       final dueStr = _formatDate(dueDateTime);
       list.add({
         'id': 'rent_due_${_currentMonth.year}_${_currentMonth.month}',
         'title': 'Rent Due',
         'subtitle': '₱${_formatMoney(rentNum)} • Due $dueStr',
-        'day': lastDayOfMonth,
+        'day': clampedDueDay,
         'month': _getShortMonth(_currentMonth.month),
         'category': 'rent',
         'categoryLabel': 'Rent',

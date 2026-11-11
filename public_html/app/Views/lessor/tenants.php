@@ -112,12 +112,22 @@
           <td style="color:var(--ink-500);"><?= $t['move_in_date']->format('M j, Y') ?></td>
           <td>
             <?php if ($t['next_due_date']): ?>
-              <div style="font-weight:600; color:<?= $t['is_overdue'] ? 'var(--error)' : 'var(--ink-900)' ?>;">
+              <?php $b = $t['billing'] ?? []; ?>
+              <div style="font-weight:600; color:<?= $t['is_overdue'] ? 'var(--error)' : ($t['is_grace_period'] ? 'var(--warning)' : 'var(--ink-900)') ?>;">
                 <?= $t['next_due_date']->format('M j, Y') ?>
                 <?php if ($t['is_overdue']): ?>
-                  <span class="badge badge-rejected" style="font-size:10px; padding:2px 6px; margin-left:4px;">Overdue</span>
+                  <span class="badge badge-rejected" style="font-size:10px; padding:2px 6px; margin-left:4px;">Overdue<?= !empty($b['strike_level']) ? ' · S' . (int)$b['strike_level'] : '' ?></span>
+                <?php elseif (!empty($t['is_grace_period'])): ?>
+                  <span class="badge" style="background:var(--warning-soft); color:var(--warning); font-size:10px; padding:2px 6px; margin-left:4px;"><?= (int)$t['grace_days_remaining'] ?>d Grace</span>
+                <?php elseif (($b['rent_status'] ?? '') === 'settled'): ?>
+                  <span class="badge" style="background:var(--success-soft); color:var(--success); font-size:10px; padding:2px 6px; margin-left:4px;">Paid</span>
                 <?php endif; ?>
               </div>
+              <?php if (($b['total_due'] ?? 0) > 0 && ($t['is_overdue'] || !empty($b['penalty_amount']))): ?>
+                <div style="font-size:11px; color:var(--error); font-weight:600; margin-top:2px;">
+                  Due: ₱<?= number_format((float)$b['total_due'], 0) ?><?= !empty($b['outstanding_months_label']) ? ' (' . htmlspecialchars($b['outstanding_months_label']) . ')' : '' ?>
+                </div>
+              <?php endif; ?>
               <div style="font-size:11px; color:var(--ink-400); margin-top:2px;">
                 <?php if ($t['last_payment_date']): ?>
                   Last paid: <?= $t['last_payment_date']->format('M j, Y') ?>
@@ -380,14 +390,25 @@
       <p style="margin:4px 0; font-size:13px;">
         <strong>Next Due Date:</strong> 
         <?php if ($viewingTenant['next_due_date']): ?>
-          <span style="font-weight:600; color:<?= $viewingTenant['is_overdue'] ? 'var(--error)' : 'var(--ink-900)' ?>;">
+          <span style="font-weight:600; color:<?= $viewingTenant['is_overdue'] ? 'var(--error)' : ($viewingTenant['is_grace_period'] ? 'var(--warning)' : 'var(--ink-900)') ?>;">
             <?= $viewingTenant['next_due_date']->format('M j, Y') ?>
-            <?= $viewingTenant['is_overdue'] ? ' (Overdue)' : '' ?>
+            <?= $viewingTenant['is_overdue'] ? ' (Overdue)' : ($viewingTenant['is_grace_period'] ? ' (' . (int)$viewingTenant['grace_days_remaining'] . 'd Grace)' : '') ?>
           </span>
         <?php else: ?>
           <span style="color:var(--ink-400);">—</span>
         <?php endif; ?>
       </p>
+      <?php if (!empty($viewingTenant['billing']) && (float)$viewingTenant['billing']['total_due'] > 0): ?>
+        <p style="margin:4px 0; font-size:13px;">
+          <strong>Live Balance Due:</strong>
+          <span style="font-weight:600; color:<?= $viewingTenant['is_overdue'] ? 'var(--error)' : 'var(--ink-900)' ?>;">
+            ₱<?= number_format((float)$viewingTenant['billing']['total_due'], 2) ?>
+            <?php if (!empty($viewingTenant['billing']['outstanding_months_label'])): ?>
+              (<?= htmlspecialchars($viewingTenant['billing']['outstanding_months_label']) ?>)
+            <?php endif; ?>
+          </span>
+        </p>
+      <?php endif; ?>
       <p style="margin:4px 0; font-size:13px;"><strong>Checklist:</strong> 
         <?php if (empty($viewingTenant['counter_offers'])): ?>
           <span style="color:var(--success); font-weight:600;"><?= $viewingTenant['checklist_agreed'] ?>/<?= $viewingTenant['checklist_total'] ?> (All Agreed)</span>

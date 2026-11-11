@@ -79,7 +79,7 @@ class LessorOverviewModel extends Model
         $stmt = $this->pdo->prepare(
             "SELECT p.*, t.tenant_name FROM payments p
              JOIN tenants t ON t.id = p.tenant_id
-             WHERE p.lessor_id = ? AND (p.logged_by IS NULL OR p.note LIKE '[PENDING]%') AND (p.note NOT LIKE '[DECLINED%')
+             WHERE p.lessor_id = ? AND (p.logged_by IS NULL OR p.note LIKE '[PENDING]%') AND (p.note IS NULL OR p.note NOT LIKE '[DECLINED%')
              ORDER BY p.id DESC"
         );
         $stmt->execute([$lessorId]);

@@ -75,10 +75,14 @@ final class Formatter
         $p['amount'] = (float) $p['amount'];
 
         $note = is_string($p['note'] ?? null) ? $p['note'] : '';
-        $isPending  = ($p['logged_by'] === null
-            || str_contains(strtoupper($note), '[PENDING]')
-            || stripos($note, 'pending verification') !== false);
-        $isDeclined = stripos($note, '[DECLINED') !== false;
+        $upperNote = strtoupper($note);
+        $isDeclined = str_contains($upperNote, '[DECLINED');
+        $isExplicitVerified = str_contains($upperNote, '[VERIFIED]') || str_contains($upperNote, '[AUTO-DEPOSIT]');
+        $isPending = !$isDeclined && (
+            str_contains($upperNote, '[PENDING]')
+            || stripos($note, 'pending verification') !== false
+            || ($p['logged_by'] === null && !$isExplicitVerified)
+        );
         $p['status'] = $isDeclined ? 'declined' : ($isPending ? 'pending' : 'approved');
 
         $p['reference_no'] = preg_match('/Ref:\s*([^|\r\n]+)/i', $note, $m) ? trim($m[1]) : '';
@@ -104,6 +108,8 @@ final class Formatter
         $v['tenant_id']    = (int) $v['tenant_id'];
         $v['lessor_id']    = (int) $v['lessor_id'];
         $v['strike']       = (int) $v['strike'];
+        $v['fine_amount']  = (float) ($v['fine_amount'] ?? ($v['strike'] === 2 ? 500.0 : ($v['strike'] >= 3 ? 1500.0 : 0.0)));
+        $v['is_paid']      = (bool) ($v['is_paid'] ?? false);
         $v['acknowledged'] = (bool) $v['acknowledged'];
         return $v;
     }

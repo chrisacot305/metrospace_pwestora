@@ -66,7 +66,7 @@ class PaymentModel extends Model
              LEFT JOIN properties p ON p.id = t.property_id
              WHERE pay.lessor_id = ? $searchSql
              ORDER BY
-               CASE WHEN (pay.logged_by IS NULL AND pay.note NOT LIKE '[DECLINED%') THEN 0 ELSE 1 END ASC,
+               CASE WHEN (pay.logged_by IS NULL AND (pay.note IS NULL OR pay.note NOT LIKE '[DECLINED%')) THEN 0 ELSE 1 END ASC,
                pay.paid_at DESC,
                pay.id DESC
              LIMIT 500",
@@ -88,7 +88,7 @@ class PaymentModel extends Model
     public function pendingCountForLessor(int $lessorId): int
     {
         return (int) $this->value(
-            "SELECT COUNT(*) FROM payments WHERE lessor_id = ? AND (logged_by IS NULL OR note LIKE '[PENDING]%') AND (note NOT LIKE '[DECLINED%')",
+            "SELECT COUNT(*) FROM payments WHERE lessor_id = ? AND (logged_by IS NULL OR note LIKE '[PENDING]%') AND (note IS NULL OR note NOT LIKE '[DECLINED%')",
             [$lessorId]
         );
     }
