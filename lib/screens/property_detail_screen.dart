@@ -19,6 +19,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   late Future<Map<String, dynamic>> _future;
   late final PageController _pageController = PageController();
   int _photoIndex = 0;
+  bool _descExpanded = false;
 
   @override
   void dispose() {
@@ -184,28 +185,22 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   itemCount: photos.length,
                                   onPageChanged: (i) =>
                                       setState(() => _photoIndex = i),
-                                  itemBuilder: (context, i) {
-                                    final rawUrl = photos[i];
-                                    final photoUrl = rawUrl.startsWith('http')
-                                        ? rawUrl
-                                        : '${ApiService.baseUrl.replaceAll('/api', '')}/${rawUrl.replaceFirst(RegExp(r'^/+'), '')}';
-                                    return Image.network(
-                                      photoUrl,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (c, e, s) => Container(
-                                        color: isDark
-                                            ? const Color(0xFF1E293B)
-                                            : AppColors.primaryLight,
-                                        child: const Center(
-                                          child: Icon(
-                                            Icons.apartment,
-                                            size: 48,
-                                            color: AppColors.tint,
-                                          ),
+                                  itemBuilder: (context, i) => Image.network(
+                                    _resolveImageUrl(photos[i]),
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (c, e, s) => Container(
+                                      color: isDark
+                                          ? const Color(0xFF1E293B)
+                                          : AppColors.primaryLight,
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons.apartment,
+                                          size: 48,
+                                          color: AppColors.tint,
                                         ),
                                       ),
-                                    );
-                                  },
+                                    ),
+                                  ),
                                 ),
                                 IgnorePointer(
                                   child: DecoratedBox(
@@ -594,6 +589,24 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             ],
                           ),
 
+                          ..._buildDescriptionSection(
+                            p,
+                            isDark: isDark,
+                            cardColor: cardColor,
+                            borderColor: borderColor,
+                            titleColor: titleColor,
+                            bodyTextColor: bodyTextColor,
+                          ),
+                          ..._buildExtraDetailsSection(
+                            p,
+                            isDark: isDark,
+                            cardColor: cardColor,
+                            borderColor: borderColor,
+                            titleColor: titleColor,
+                            subtextColor: subtextColor,
+                            bodyTextColor: bodyTextColor,
+                          ),
+
                           const SizedBox(height: 14),
 
                           // Lessor Contact Details: First Gmail, then Phone Number underneath
@@ -873,6 +886,14 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                               ),
                             ),
                           ),
+                          ..._buildLandmarkSection(
+                            p,
+                            isDark: isDark,
+                            cardColor: cardColor,
+                            borderColor: borderColor,
+                            titleColor: titleColor,
+                            subtextColor: subtextColor,
+                          ),
                         ],
                       ),
                     ),
@@ -1079,6 +1100,365 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         ],
       ),
     );
+  }
+
+  String _resolveImageUrl(String rawUrl) {
+    final trimmed = rawUrl.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+    final root = ApiService.baseUrl.replaceAll('/api', '');
+    return '$root/${trimmed.replaceFirst(RegExp(r'^/+'), '')}';
+  }
+
+  String? _nonEmpty(dynamic val) {
+    if (val == null) return null;
+    final s = val.toString().trim();
+    return s.isEmpty ? null : s;
+  }
+
+  /// Property description ("About this Space") displayed right below Key Information.
+  List<Widget> _buildDescriptionSection(
+    Map<String, dynamic> p, {
+    required bool isDark,
+    required Color cardColor,
+    required Color borderColor,
+    required Color titleColor,
+    required Color bodyTextColor,
+  }) {
+    final desc = _nonEmpty(p['description']);
+    if (desc == null) return const [];
+
+    final isLong = desc.length > 200 || '\n'.allMatches(desc).length >= 4;
+
+    return [
+      const SizedBox(height: 20),
+      Text(
+        'About this Space',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w800,
+          color: titleColor,
+        ),
+      ),
+      const SizedBox(height: 10),
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: borderColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              desc,
+              maxLines: (isLong && !_descExpanded) ? 4 : null,
+              overflow: (isLong && !_descExpanded)
+                  ? TextOverflow.ellipsis
+                  : TextOverflow.visible,
+              style: TextStyle(
+                fontSize: 13.5,
+                height: 1.55,
+                color: bodyTextColor,
+              ),
+            ),
+            if (isLong) ...[
+              const SizedBox(height: 8),
+              GestureDetector(
+                onTap: () => setState(() => _descExpanded = !_descExpanded),
+                child: Text(
+                  _descExpanded ? 'Show less' : 'Read more',
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.electricBlue,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    ];
+  }
+
+  /// Expanded space specs & amenities from the lessor portal (rendered only when set).
+  List<Widget> _buildExtraDetailsSection(
+    Map<String, dynamic> p, {
+    required bool isDark,
+    required Color cardColor,
+    required Color borderColor,
+    required Color titleColor,
+    required Color subtextColor,
+    required Color bodyTextColor,
+  }) {
+    final parking = p['parking_slots'];
+    final parkingText = (parking is num && parking > 0)
+        ? '${parking.toInt()} ${parking == 1 ? 'Slot' : 'Slots'}'
+        : null;
+
+    final specRows = <(IconData, String, String)>[
+      if (_nonEmpty(p['floor_level']) case final v?)
+        (Icons.layers_outlined, 'Floor / Level', v),
+      if (_nonEmpty(p['frontage']) case final v?)
+        (Icons.straighten_rounded, 'Frontage', v),
+      if (parkingText != null)
+        (Icons.local_parking_rounded, 'Parking', parkingText),
+      if (_nonEmpty(p['operating_hours']) case final v?)
+        (Icons.schedule_rounded, 'Access Hours', v),
+      if (_nonEmpty(p['permitted_use']) case final v?)
+        (Icons.storefront_outlined, 'Permitted Use', v),
+      if (_nonEmpty(p['utilities']) case final v?)
+        (Icons.bolt_rounded, 'Utilities', v),
+      if (_nonEmpty(p['deposit_terms']) case final v?)
+        (Icons.account_balance_wallet_outlined, 'Deposit & Advance', v),
+    ];
+
+    final rawAmenities = p['amenities'];
+    final amenities = rawAmenities is List
+        ? rawAmenities
+            .map((e) => e.toString().trim())
+            .where((e) => e.isNotEmpty)
+            .toList()
+        : <String>[];
+
+    if (specRows.isEmpty && amenities.isEmpty) return const [];
+
+    return [
+      const SizedBox(height: 16),
+      if (specRows.isNotEmpty)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'SPACE DETAILS & TERMS',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: subtextColor,
+                  letterSpacing: 0.6,
+                ),
+              ),
+              const SizedBox(height: 10),
+              for (int i = 0; i < specRows.length; i++) ...[
+                if (i > 0) const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      specRows[i].$1,
+                      size: 15,
+                      color: AppColors.electricBlue,
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 112,
+                      child: Text(
+                        specRows[i].$2,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: subtextColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        specRows[i].$3,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: bodyTextColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      if (amenities.isNotEmpty) ...[
+        const SizedBox(height: 14),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'AMENITIES',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                  color: subtextColor,
+                  letterSpacing: 0.6,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: amenities.map((item) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF1E293B)
+                          : AppColors.accentSoft,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 13,
+                          color: AppColors.electricBlue,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          item,
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: isDark
+                                ? const Color(0xFFE2E8F0)
+                                : AppColors.ink900,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ];
+  }
+
+  /// Nearby landmark card displayed under the Location map when set.
+  List<Widget> _buildLandmarkSection(
+    Map<String, dynamic> p, {
+    required bool isDark,
+    required Color cardColor,
+    required Color borderColor,
+    required Color titleColor,
+    required Color subtextColor,
+  }) {
+    final name = _nonEmpty(p['landmark_name']);
+    final dist = _nonEmpty(p['landmark_distance']);
+    final photo = _nonEmpty(p['landmark_photo']);
+    if (name == null && dist == null && photo == null) return const [];
+
+    return [
+      const SizedBox(height: 12),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          children: [
+            if (photo != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.network(
+                  _resolveImageUrl(photo),
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                  errorBuilder: (c, e, s) => Container(
+                    width: 48,
+                    height: 48,
+                    color: isDark
+                        ? const Color(0xFF1E293B)
+                        : AppColors.accentSoft,
+                    child: const Icon(
+                      Icons.place_rounded,
+                      size: 20,
+                      color: AppColors.electricBlue,
+                    ),
+                  ),
+                ),
+              )
+            else
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1E293B)
+                      : AppColors.accentSoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.near_me_rounded,
+                  size: 19,
+                  color: AppColors.electricBlue,
+                ),
+              ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'NEARBY LANDMARK',
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w800,
+                      color: subtextColor,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    name ?? 'Nearby Landmark',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: titleColor,
+                    ),
+                  ),
+                  if (dist != null)
+                    Text(
+                      dist,
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: subtextColor,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ];
   }
 
   String _formatMoney(double amount) {
