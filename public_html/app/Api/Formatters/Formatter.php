@@ -24,7 +24,12 @@ final class Formatter
         return $r;
     }
 
-    public static function propertyDetail(array $p, array $photoPaths, bool $saved): array
+    /**
+     * @param array $photoItems optional rows [photo_path, category, caption] (cover first) — adds
+     *                          "photo_items" for a categorized gallery; "photos" stays a plain URL list
+     *                          so older app builds keep working.
+     */
+    public static function propertyDetail(array $p, array $photoPaths, bool $saved, array $photoItems = []): array
     {
         $p['latitude']        = $p['latitude'] !== null ? (float) $p['latitude'] : null;
         $p['longitude']       = $p['longitude'] !== null ? (float) $p['longitude'] : null;
@@ -32,6 +37,18 @@ final class Formatter
         $p['total_units']     = isset($p['total_units']) ? (int) $p['total_units'] : 1;
         $p['available_units'] = isset($p['available_units']) ? (int) $p['available_units'] : 1;
         $p['photos']          = array_map([AppConfig::class, 'publicUrl'], $photoPaths);
+        $p['photo_items']     = array_map(static fn($ph) => [
+            'url'      => AppConfig::publicUrl($ph['photo_path']),
+            'category' => $ph['category'] ?? null,
+            'caption'  => $ph['caption'] ?? null,
+        ], $photoItems);
+        // Expanded info (Nov 2026). Landmark photo as a full URL; amenities as a list.
+        $p['landmark_photo']  = !empty($p['landmark_photo_path']) ? AppConfig::publicUrl($p['landmark_photo_path']) : null;
+        unset($p['landmark_photo_path']);
+        $p['parking_slots']   = isset($p['parking_slots']) && $p['parking_slots'] !== null ? (int) $p['parking_slots'] : null;
+        $p['amenities']       = !empty($p['amenities']) ? array_values(array_filter(array_map('trim', explode(',', (string) $p['amenities'])))) : [];
+        // Never expose verification documents through the public listing API.
+        unset($p['title_doc_path'], $p['tax_dec_path']);
         $p['saved']       = $saved;
         return $p;
     }

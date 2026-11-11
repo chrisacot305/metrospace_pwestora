@@ -52,9 +52,11 @@ final class PropertiesController extends Controller
                 }
             }
             if ($reviewing) {
-                $reviewingPhotos = $propertyModel->getPropertyPhotos($reviewId);
+                $reviewingPhotos = $propertyModel->photosWithIds($reviewId); // id, photo_path, category, caption
             }
         }
+
+        $photoCategories = PropertyModel::PHOTO_CATEGORIES;
 
         $docLabels = [
             'title_doc_path' => 'Land Title',

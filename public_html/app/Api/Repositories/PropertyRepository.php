@@ -7,7 +7,7 @@ use PDOException;
 final class PropertyRepository extends Repository
 {
     private const COVER_PHOTO_SUBQUERY =
-        '(SELECT pp.photo_path FROM property_photos pp WHERE pp.property_id = p.id ORDER BY pp.id ASC LIMIT 1) AS cover_photo';
+        '(SELECT pp.photo_path FROM property_photos pp WHERE pp.property_id = p.id ORDER BY pp.sort_order ASC, pp.id ASC LIMIT 1) AS cover_photo';
 
     /** Used by the older properties.php (optional type filter). */
     public function listVerifiedByType(?string $type): array
@@ -75,12 +75,32 @@ final class PropertyRepository extends Repository
         );
     }
 
+    /** Photo paths, cover first. */
     public function photoPaths(int $propertyId): array
     {
-        return $this->fetchColumnList(
-            'SELECT photo_path FROM property_photos WHERE property_id = ? ORDER BY id ASC',
-            [$propertyId]
-        );
+        try {
+            return $this->fetchColumnList(
+                'SELECT photo_path FROM property_photos WHERE property_id = ? ORDER BY sort_order ASC, id ASC',
+                [$propertyId]
+            );
+        } catch (PDOException $e) {
+            // Before tools/migrate.php adds sort_order.
+            return $this->fetchColumnList('SELECT photo_path FROM property_photos WHERE property_id = ? ORDER BY id ASC', [$propertyId]);
+        }
+    }
+
+    /** Photo rows with category + caption, cover first (for the app's categorized gallery). */
+    public function photoItems(int $propertyId): array
+    {
+        try {
+            return $this->fetchAll(
+                'SELECT photo_path, category, caption FROM property_photos WHERE property_id = ? ORDER BY sort_order ASC, id ASC',
+                [$propertyId]
+            );
+        } catch (PDOException $e) {
+            error_log('[API] property photo metadata unavailable (run tools/migrate.php): ' . $e->getMessage());
+            return array_map(static fn($p) => ['photo_path' => $p, 'category' => null, 'caption' => null], $this->photoPaths($propertyId)); // id order
+        }
     }
 
     public function savedPropertyIds(int $userId): array

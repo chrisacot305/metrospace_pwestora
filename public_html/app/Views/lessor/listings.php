@@ -4,6 +4,7 @@
  * Data comes from app/Controllers/Lessor/ListingsController.php
  */
 ?>
+<script src="/assets/js/photo-uploader.js?v=<?= @filemtime(APP_ROOT . '/assets/js/photo-uploader.js') ?: 1 ?>" defer></script>
 <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
   <div>
     <h2 style="margin:0 0 4px;">My Properties</h2>
@@ -89,6 +90,12 @@
           <p style="font-size:15px; font-weight:800; color:var(--primary); margin:4px 0 0;">₱<?= number_format($p['asking_rent'], 0) ?><span style="font-size:11px; font-weight:500; color:var(--ink-500);"> /month</span></p>
         <?php endif; ?>
         <div class="prop-card-address"><i class="bi bi-geo-alt"></i> <?= htmlspecialchars($p['address']) ?></div>
+        <?php if (!empty($p['landmark_name'])): ?>
+          <div class="pm-card-landmark">
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+            Near <?= htmlspecialchars($p['landmark_name']) ?><?= !empty($p['landmark_distance']) ? ' · ' . htmlspecialchars($p['landmark_distance']) : '' ?>
+          </div>
+        <?php endif; ?>
         <?php if ($p['latitude'] && $p['longitude']): ?>
           <a href="https://www.openstreetmap.org/?mlat=<?= $p['latitude'] ?>&mlon=<?= $p['longitude'] ?>#map=17/<?= $p['latitude'] ?>/<?= $p['longitude'] ?>"
              target="_blank" onclick="event.stopPropagation();" style="font-size:11.5px; color:var(--primary-light); font-weight:600; display:inline-block; margin-top:4px;">
@@ -189,200 +196,259 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
-<?php if ($editingProperty && !$listingSaved): ?>
+<?php if ($editingProperty && !$listingSaved):
+    $remainingSlots = max(0, $MAX_PHOTOS - count($editingPhotos));
+?>
 <!-- CUSTOMIZE / EDIT PROPERTY DRAWER -->
-<div style="position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; justify-content:flex-end; z-index:1050; backdrop-filter:blur(2px);">
-  <div style="background:#fff; width:540px; max-width:95vw; height:100%; padding:26px; overflow-y:auto; box-shadow:-4px 0 24px rgba(0,0,0,0.15);">
-    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:14px;">
+<div class="pm-overlay">
+  <div class="pm-drawer" id="pmEditDrawer">
+    <div class="pm-drawer-head">
       <div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <h3 style="margin:0; font-size:18px;">Customize Property</h3>
-          <span class="badge" style="font-size:11px; padding:3px 8px; <?= $editingProperty['status'] === 'verified' ? 'background:var(--success-soft); color:var(--success);' : 'background:var(--warning-soft); color:var(--warning);' ?>">
-            <?= ucfirst($editingProperty['status']) ?>
-          </span>
+        <div class="pm-title-row">
+          <h3>Customize Property</h3>
+          <span class="pm-status pm-status-<?= e($editingProperty['status']) ?>"><?= e(ucfirst($editingProperty['status'])) ?></span>
         </div>
-        <p style="font-size:12.5px; color:var(--ink-500); margin:4px 0 0;">Update details, reposition map pin, or manage photos for <strong><?= htmlspecialchars($editingProperty['name']) ?></strong>.</p>
+        <p class="pm-sub">Update details, landmark, map pin and photos for <strong><?= e($editingProperty['name']) ?></strong>.</p>
       </div>
-      <a href="/dashboard.php?page=listings" style="font-size:24px; color:var(--ink-500); text-decoration:none; line-height:1; padding:2px 6px;">&times;</a>
+      <a href="/dashboard.php?page=listings" class="pm-close" aria-label="Close">&times;</a>
     </div>
 
-    <?php if ($error): ?>
-      <div class="error-msg" style="margin-bottom:16px;"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
+    <nav class="pm-tabs" aria-label="Sections">
+      <button type="button" data-pm-jump="pmSecBasics" class="is-active">Basics</button>
+      <button type="button" data-pm-jump="pmSecMore">More info</button>
+      <button type="button" data-pm-jump="pmSecLocation">Location</button>
+      <button type="button" data-pm-jump="gallery">Photos <span class="pm-tab-count"><?= count($editingPhotos) ?></span></button>
+      <button type="button" data-pm-jump="pmSecDocs">Documents</button>
+    </nav>
 
-    <form method="POST" enctype="multipart/form-data">
-      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-      <input type="hidden" name="edit_property" value="1">
-      <input type="hidden" name="property_id" value="<?= $editingProperty['id'] ?>">
-
-      <div class="field">
-        <label style="font-weight:600; font-size:12.5px;">Property Name</label>
-        <input type="text" name="name" required value="<?= htmlspecialchars($_POST['name'] ?? $editingProperty['name']) ?>">
-      </div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div class="field">
-          <label style="font-weight:600; font-size:12.5px;">Commercial Type</label>
-          <select name="type" required>
-            <?php foreach ($PROPERTY_TYPES as $t): ?>
-              <option value="<?= $t ?>" <?= (($_POST['type'] ?? $editingProperty['type']) === $t) ? 'selected' : '' ?>><?= $t ?></option>
-            <?php endforeach; ?>
-          </select>
+    <div class="pm-drawer-body" id="pmEditBody">
+      <?php if ($justSaved): ?>
+        <div class="pm-toast" id="pmSavedToast">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          Changes saved.
         </div>
+      <?php endif; ?>
+      <?php if ($error): ?>
+        <div class="error-msg" data-pm-error style="margin-bottom:16px;"><?= e($error) ?></div>
+      <?php endif; ?>
 
-        <div class="field">
-          <label style="font-weight:600; font-size:12.5px;">Monthly Rent (₱)</label>
-          <input type="number" name="asking_rent" min="1" step="0.01" required
-                 value="<?= htmlspecialchars($_POST['asking_rent'] ?? $editingProperty['asking_rent']) ?>">
-        </div>
-      </div>
-
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-        <div class="field">
-          <label style="font-weight:600; font-size:12.5px;">Floor Area</label>
-          <input type="text" name="floor_area" placeholder="e.g. 600 SQM (3 floors)"
-                 value="<?= htmlspecialchars($_POST['floor_area'] ?? $editingProperty['floor_area'] ?? '') ?>">
-        </div>
-
-        <div class="field">
-          <label style="font-weight:600; font-size:12.5px;">Lease Term</label>
-          <input type="text" name="lease_term" placeholder="e.g. Minimum of 2 years"
-                 value="<?= htmlspecialchars($_POST['lease_term'] ?? $editingProperty['lease_term'] ?? '') ?>">
-        </div>
-      </div>
-
-      <div class="field">
-        <label style="font-weight:600; font-size:12.5px;">Annual Increase</label>
-        <input type="text" name="escalation" placeholder="e.g. 4% annual increase"
-               value="<?= htmlspecialchars($_POST['escalation'] ?? $editingProperty['escalation'] ?? '') ?>">
-      </div>
-
-      <div class="field">
-        <label style="font-weight:600; font-size:12.5px;">Property Description</label>
-        <textarea name="description" rows="3" placeholder="Describe the space, amenities, security, etc."
-                  style="width:100%; box-sizing:border-box; padding:8px 10px; font-family:inherit; font-size:13px; border:1px solid var(--border); border-radius:6px;"><?= htmlspecialchars($_POST['description'] ?? $editingProperty['description'] ?? '') ?></textarea>
-      </div>
-
-      <!-- RENTAL SPACES & VACANCY CAPACITY -->
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px; margin-bottom:14px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
-          <span style="font-size:13px; font-weight:700; color:var(--ink-800); display:flex; align-items:center; gap:6px;">
-            <i class="bi bi-grid-3x3-gap-fill" style="color:var(--primary);"></i> Rental Spaces & Vacancy Availability
-          </span>
-          <?php $currentActive = (int)($editingProperty['active_tenants_count'] ?? 0); ?>
-          <span style="font-size:11px; background:#e0f2fe; color:#0369a1; padding:3px 9px; border-radius:12px; font-weight:600;">
-            <i class="bi bi-people-fill"></i> <?= $currentActive ?> active tenant<?= $currentActive === 1 ? '' : 's' ?> in Pwestora
-          </span>
-        </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-          <div class="field" style="margin-bottom:0;">
-            <label style="font-weight:600; font-size:12px;">Total Spaces / Capacity</label>
-            <input type="number" name="total_units" id="edit_total_units" min="1" step="1" required
-                   value="<?= htmlspecialchars($_POST['total_units'] ?? $editingProperty['total_units'] ?? 1) ?>"
-                   style="font-size:13px; font-weight:600; width:100%; box-sizing:border-box;">
-            <p style="font-size:11px; color:var(--ink-500); margin:4px 0 0;">
-              Total rentable stalls/spaces (e.g. increase from 20 to 21 if you added a new space).
-            </p>
-          </div>
-
-          <div class="field" style="margin-bottom:0;">
-            <label style="font-weight:600; font-size:12px;">Available Vacancies</label>
-            <input type="number" name="available_units" id="edit_available_units" min="0" step="1" required
-                   value="<?= htmlspecialchars($_POST['available_units'] ?? $editingProperty['available_units'] ?? 1) ?>"
-                   style="font-size:13px; font-weight:600; width:100%; box-sizing:border-box;">
-            <p style="font-size:11px; color:var(--ink-500); margin:4px 0 0;">
-              Vacancies open for rent. Adjust if you take in walk-in tenants outside the app.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div class="field">
-        <label style="font-weight:600; font-size:12.5px;">Physical Address</label>
-        <input type="text" name="address" required value="<?= htmlspecialchars($_POST['address'] ?? $editingProperty['address']) ?>">
-      </div>
-
-      <!-- MAP PIN CUSTOMIZATION -->
-      <div class="field" style="margin-top:10px;">
-        <label style="font-weight:600; font-size:12.5px; display:flex; justify-content:space-between; align-items:center;">
-          <span>Pin Location on Map</span>
-          <span style="font-size:11px; color:var(--ink-500); font-weight:normal;">Click map or drag pin</span>
-        </label>
-        <input type="text" id="editMapSearch" placeholder="Search address or area in Bacolod…" style="margin-bottom:8px; font-size:12.5px;">
-        <div id="editPropertyMap" style="height:220px; border-radius:10px; border:1px solid var(--border); z-index:1;"></div>
-        <input type="hidden" name="latitude" id="editLatInput" value="<?= htmlspecialchars($_POST['latitude'] ?? $editingProperty['latitude'] ?? '') ?>">
-        <input type="hidden" name="longitude" id="editLngInput" value="<?= htmlspecialchars($_POST['longitude'] ?? $editingProperty['longitude'] ?? '') ?>">
-        <div style="font-size:11px; color:var(--ink-500); margin-top:5px; display:flex; justify-content:space-between;">
-          <span id="coordDisplay">GPS: <?= $editingProperty['latitude'] ? $editingProperty['latitude'] . ', ' . $editingProperty['longitude'] : 'Not pinned yet' ?></span>
-        </div>
-      </div>
-
-      <!-- PHOTO GALLERY MANAGEMENT -->
-      <div class="field" style="margin-top:16px;">
-        <label style="font-weight:600; font-size:12.5px; margin-bottom:8px; display:block;">
-          Property Photos Gallery (<?= count($editingPhotos) ?> uploaded)
-        </label>
-
-        <?php if ($editingPhotos): ?>
-          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:10px; margin-bottom:14px;">
-            <?php foreach ($editingPhotos as $ph): ?>
-              <div style="position:relative; border-radius:8px; overflow:hidden; border:1px solid var(--border); background:#f8fafc; height:80px;">
-                <img src="/<?= htmlspecialchars($ph['photo_path']) ?>" style="width:100%; height:100%; object-fit:cover;">
-                <button type="submit" name="delete_photo_trigger" value="<?= $ph['id'] ?>"
-                        onclick="if(confirm('Delete this photo?')){ document.getElementById('deletePhotoForm_<?= $ph['id'] ?>').submit(); } return false;"
-                        title="Delete photo"
-                        style="position:absolute; top:3px; right:3px; background:rgba(220,38,38,0.85); color:#fff; border:none; border-radius:4px; width:22px; height:22px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:11px;">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </div>
-            <?php endforeach; ?>
-          </div>
-        <?php else: ?>
-          <p style="font-size:12px; color:var(--ink-500); margin-bottom:10px;">No gallery photos uploaded yet.</p>
-        <?php endif; ?>
-
-        <label style="font-weight:600; font-size:12px; color:var(--ink-700);">Upload Additional Photos</label>
-        <input type="file" name="photos[]" accept=".jpg,.jpeg,.png,.webp" multiple style="font-size:12.5px;">
-        <p style="font-size:11px; color:var(--ink-500); margin-top:4px;">Accepts JPG, PNG, WEBP (up to <?= $MAX_PHOTOS ?> total photos).</p>
-      </div>
-
-      <!-- ATTACHED VERIFICATION DOCS -->
-      <div style="background:#f8fafc; border:1px solid var(--border); border-radius:8px; padding:12px; margin-top:16px;">
-        <div style="font-size:12px; font-weight:700; color:var(--ink-700); margin-bottom:6px;">Verification Documents on File</div>
-        <div style="display:flex; flex-direction:column; gap:6px; font-size:12px;">
-          <?php if ($editingProperty['title_doc_path']): ?>
-            <a href="/<?= htmlspecialchars($editingProperty['title_doc_path']) ?>" target="_blank" style="color:var(--primary); text-decoration:none; display:flex; align-items:center; gap:6px;">
-              <i class="bi bi-file-earmark-check"></i> Land Title Document <i class="bi bi-box-arrow-up-right" style="font-size:10px;"></i>
-            </a>
-          <?php endif; ?>
-          <?php if ($editingProperty['tax_dec_path']): ?>
-            <a href="/<?= htmlspecialchars($editingProperty['tax_dec_path']) ?>" target="_blank" style="color:var(--primary); text-decoration:none; display:flex; align-items:center; gap:6px;">
-              <i class="bi bi-file-earmark-check"></i> Tax Declaration Document <i class="bi bi-box-arrow-up-right" style="font-size:10px;"></i>
-            </a>
-          <?php endif; ?>
-        </div>
-      </div>
-
-      <div style="display:flex; gap:10px; margin-top:24px; padding-top:14px; border-top:1px solid var(--border);">
-        <button class="btn btn-primary" type="submit" style="flex:1;">Save Changes</button>
-        <a href="/dashboard.php?page=listings" class="btn" style="border:1px solid var(--border); text-align:center; padding:11px 18px; color:var(--ink-800); text-decoration:none;">Cancel</a>
-      </div>
-    </form>
-
-    <!-- Hidden Photo Delete Forms -->
-    <?php foreach ($editingPhotos as $ph): ?>
-      <form id="deletePhotoForm_<?= $ph['id'] ?>" method="POST" style="display:none;">
+      <form method="POST" enctype="multipart/form-data" id="editPropertyForm"
+            action="/dashboard.php?page=listings&amp;edit=<?= (int) $editingProperty['id'] ?>"
+            data-pm-progress data-max-total-mb="<?= (int) $MAX_POST_MB ?>">
         <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-        <input type="hidden" name="delete_photo" value="1">
-        <input type="hidden" name="photo_id" value="<?= $ph['id'] ?>">
-        <input type="hidden" name="property_id" value="<?= $editingProperty['id'] ?>">
-      </form>
-    <?php endforeach; ?>
+        <input type="hidden" name="edit_property" value="1">
+        <input type="hidden" name="property_id" value="<?= (int) $editingProperty['id'] ?>">
+        <div class="pm-form-error error-msg" hidden></div>
 
+        <!-- BASICS -->
+        <section class="pm-section" id="pmSecBasics">
+          <header class="pm-section-head">
+            <span class="pm-section-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M14 9h1M9 13h1M14 13h1M9 17h1M14 17h1"/></svg></span>
+            <div><h4>Basics</h4><p>Name, type, rent and terms shown on the listing.</p></div>
+          </header>
+
+          <div class="field">
+            <label>Property Name</label>
+            <input type="text" name="name" required maxlength="150" value="<?= e($_POST['name'] ?? $editingProperty['name']) ?>">
+          </div>
+
+          <div class="pm-grid-2">
+            <div class="field">
+              <label>Commercial Type</label>
+              <select name="type" required>
+                <?php foreach ($PROPERTY_TYPES as $t): ?>
+                  <option value="<?= e($t) ?>" <?= (($_POST['type'] ?? $editingProperty['type']) === $t) ? 'selected' : '' ?>><?= e($t) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="field">
+              <label>Monthly Rent (₱)</label>
+              <input type="number" name="asking_rent" min="1" step="0.01" required value="<?= e($_POST['asking_rent'] ?? $editingProperty['asking_rent']) ?>">
+            </div>
+            <div class="field">
+              <label>Floor Area</label>
+              <input type="text" name="floor_area" placeholder="e.g. 600 SQM (3 floors)" value="<?= e($_POST['floor_area'] ?? $editingProperty['floor_area'] ?? '') ?>">
+            </div>
+            <div class="field">
+              <label>Lease Term</label>
+              <input type="text" name="lease_term" placeholder="e.g. Minimum of 2 years" value="<?= e($_POST['lease_term'] ?? $editingProperty['lease_term'] ?? '') ?>">
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Annual Increase</label>
+            <input type="text" name="escalation" placeholder="e.g. 4% annual increase" value="<?= e($_POST['escalation'] ?? $editingProperty['escalation'] ?? '') ?>">
+          </div>
+
+          <div class="field">
+            <label>Property Description</label>
+            <textarea name="description" rows="4" placeholder="Describe the space, foot traffic, security, nearby businesses…"><?= e($_POST['description'] ?? $editingProperty['description'] ?? '') ?></textarea>
+          </div>
+
+          <!-- RENTAL SPACES & VACANCY CAPACITY -->
+          <div class="pm-subcard">
+            <div class="pm-subcard-head">
+              <span>Rental spaces &amp; vacancy</span>
+              <?php $currentActive = (int)($editingProperty['active_tenants_count'] ?? 0); ?>
+              <span class="pm-pill"><?= $currentActive ?> active tenant<?= $currentActive === 1 ? '' : 's' ?></span>
+            </div>
+            <div class="pm-grid-2">
+              <div class="field" style="margin-bottom:0;">
+                <label>Total Spaces / Capacity</label>
+                <input type="number" name="total_units" id="edit_total_units" min="1" step="1" required
+                       value="<?= e($_POST['total_units'] ?? $editingProperty['total_units'] ?? 1) ?>">
+                <p class="pm-help">Total rentable stalls/spaces (e.g. 20 → 21 if you added one).</p>
+              </div>
+              <div class="field" style="margin-bottom:0;">
+                <label>Available Vacancies</label>
+                <input type="number" name="available_units" id="edit_available_units" min="0" step="1" required
+                       value="<?= e($_POST['available_units'] ?? $editingProperty['available_units'] ?? 1) ?>">
+                <p class="pm-help">Adjust if you take walk-in tenants outside the app.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- EXPANDED INFO + LANDMARK -->
+        <div id="pmSecMore">
+          <?php $pxSrc = $editingProperty; $pxEdit = true; require __DIR__ . '/partials/property_extra_fields.php'; ?>
+        </div>
+
+        <!-- LOCATION -->
+        <section class="pm-section" id="pmSecLocation">
+          <header class="pm-section-head">
+            <span class="pm-section-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg></span>
+            <div><h4>Location</h4><p>Address and the exact pin tenants navigate to.</p></div>
+          </header>
+          <div class="field">
+            <label>Physical Address</label>
+            <input type="text" name="address" required maxlength="255" value="<?= e($_POST['address'] ?? $editingProperty['address']) ?>">
+          </div>
+          <div class="field">
+            <label class="pm-label-row"><span>Pin Location on Map</span><span class="pm-optional">click the map or drag the pin</span></label>
+            <input type="text" id="editMapSearch" placeholder="Search address or area in Bacolod…" style="margin-bottom:8px;">
+            <div id="editPropertyMap" class="pm-map"></div>
+            <input type="hidden" name="latitude" id="editLatInput" value="<?= e($_POST['latitude'] ?? $editingProperty['latitude'] ?? '') ?>">
+            <input type="hidden" name="longitude" id="editLngInput" value="<?= e($_POST['longitude'] ?? $editingProperty['longitude'] ?? '') ?>">
+            <p class="pm-help" id="coordDisplay">GPS: <?= $editingProperty['latitude'] ? e($editingProperty['latitude'] . ', ' . $editingProperty['longitude']) : 'Not pinned yet' ?></p>
+          </div>
+        </section>
+
+        <!-- PHOTOS -->
+        <section class="pm-section">
+          <?php require __DIR__ . '/partials/photo_gallery.php'; ?>
+
+          <label class="pm-label" style="margin-top:16px;">Add photos</label>
+          <?php
+            $pmName = 'photos[]'; $pmSingle = false; $pmMaxFiles = $remainingSlots; $pmRequired = false;
+            $pmTitle = 'Drag photos here or click to browse';
+            $pmHint = 'JPG, PNG or WEBP · up to ' . (int) $MAX_FILE_MB . ' MB each · ' . $remainingSlots . ' slot' . ($remainingSlots === 1 ? '' : 's') . ' left';
+            $pmCategories = $PHOTO_CATEGORIES; $pmFirstIsCover = !$editingPhotos;
+            require __DIR__ . '/partials/photo_uploader.php';
+          ?>
+          <p class="pm-help">Tip: include the facade, the inside of the space, the street, and a floor plan.</p>
+        </section>
+
+        <!-- DOCUMENTS -->
+        <section class="pm-section" id="pmSecDocs">
+          <header class="pm-section-head">
+            <span class="pm-section-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg></span>
+            <div><h4>Verification documents on file</h4><p>Reviewed by the Pwestora SuperAdmin. Not shown to tenants.</p></div>
+          </header>
+          <div class="pm-doclist">
+            <?php foreach (['title_doc_path' => 'Land Title Document', 'tax_dec_path' => 'Tax Declaration Document'] as $col => $label): ?>
+              <?php if (!empty($editingProperty[$col])): ?>
+                <a href="/<?= e(ltrim($editingProperty[$col], '/')) ?>" target="_blank" rel="noopener" class="pm-doc">
+                  <span class="pm-doc-icon ok"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+                  <span class="pm-doc-name"><?= e($label) ?></span>
+                  <span class="pm-doc-open">Open ↗</span>
+                </a>
+              <?php else: ?>
+                <div class="pm-doc">
+                  <span class="pm-doc-icon miss">!</span>
+                  <span class="pm-doc-name"><?= e($label) ?></span>
+                  <span class="pm-muted">Not uploaded</span>
+                </div>
+              <?php endif; ?>
+            <?php endforeach; ?>
+          </div>
+        </section>
+
+        <div class="pm-drawer-foot">
+          <a href="/dashboard.php?page=listings" class="pm-btn pm-btn-ghost">Cancel</a>
+          <button class="pm-btn pm-btn-primary" type="submit">Save Changes</button>
+        </div>
+      </form>
+
+      <!-- One hidden form for every gallery button (set cover / edit / delete) -->
+      <form id="pmPhotoActionForm" method="POST" action="/dashboard.php?page=listings&amp;edit=<?= (int) $editingProperty['id'] ?>" hidden>
+        <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+        <input type="hidden" name="property_id" value="<?= (int) $editingProperty['id'] ?>">
+        <input type="hidden" name="photo_id" value="">
+        <input type="hidden" name="category" value="">
+        <input type="hidden" name="caption" value="">
+      </form>
+    </div>
   </div>
 </div>
 
+<script>
+function pmToggleEdit(id) {
+  var box = document.getElementById('pmEdit' + id);
+  if (box) box.hidden = !box.hidden;
+}
+function pmPhotoAction(action, id) {
+  var f = document.getElementById('pmPhotoActionForm');
+  if (!f) return;
+  f.querySelectorAll('input.pm-action').forEach(function (n) { n.remove(); });
+  var a = document.createElement('input');
+  a.type = 'hidden'; a.name = action; a.value = '1'; a.className = 'pm-action';
+  f.appendChild(a);
+  f.photo_id.value = id;
+  if (action === 'update_photo') {
+    var box = document.getElementById('pmEdit' + id);
+    f.category.value = box.querySelector('[data-field=category]').value;
+    f.caption.value = box.querySelector('[data-field=caption]').value;
+  }
+  f.submit();
+}
+(function () {
+  // Section tabs: scroll inside the drawer and highlight the section in view.
+  var body = document.getElementById('pmEditBody');
+  var tabs = document.querySelectorAll('#pmEditDrawer [data-pm-jump]');
+  var lockUntil = 0;
+  function mark(tab) { tabs.forEach(function (t) { t.classList.toggle('is-active', t === tab); }); }
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      var target = document.getElementById(t.getAttribute('data-pm-jump'));
+      if (!target) return;
+      mark(t);
+      lockUntil = Date.now() + 900; // don't let the scroll-spy fight the smooth scroll
+      body.scrollTo({ top: target.offsetTop - 12, behavior: 'smooth' });
+    });
+  });
+  body.addEventListener('scroll', function () {
+    if (Date.now() < lockUntil) return;
+    var current = tabs[0];
+    tabs.forEach(function (t) {
+      var s = document.getElementById(t.getAttribute('data-pm-jump'));
+      if (s && s.offsetTop - 40 <= body.scrollTop) current = t;
+    });
+    // At the very bottom, the last section is the one in view.
+    if (body.scrollTop + body.clientHeight >= body.scrollHeight - 4) current = tabs[tabs.length - 1];
+    mark(current);
+  });
+  if (location.hash === '#gallery') {
+    var g = document.getElementById('gallery');
+    if (g) setTimeout(function () { body.scrollTop = g.offsetTop - 12; }, 50);
+  }
+  var toast = document.getElementById('pmSavedToast');
+  if (toast) {
+    if (window.history.replaceState) window.history.replaceState(null, '', '/dashboard.php?page=listings&edit=<?= (int) $editingProperty['id'] ?>');
+    setTimeout(function () { toast.classList.add('is-hiding'); }, 2600);
+  }
+})();
+</script>
 <script>
 (function () {
   if (typeof L === 'undefined') return;
@@ -469,127 +535,153 @@
 <?php endif; ?>
 
 <?php if (!$listingSaved && (isset($_GET['add']) || ($error && !$editingProperty))): ?>
-<div style="position:fixed; inset:0; background:rgba(0,0,0,.4); display:flex; justify-content:flex-end; z-index:1050; backdrop-filter:blur(2px);">
-  <div style="background:#fff; width:480px; max-width:92vw; height:100%; padding:24px; overflow-y:auto; box-shadow:-4px 0 24px rgba(0,0,0,0.15);">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-      <h3 style="margin:0;">Add a new commercial property</h3>
-      <a href="/dashboard.php?page=listings" style="font-size:20px; color:var(--ink-500); text-decoration:none;">&times;</a>
+<div class="pm-overlay">
+  <div class="pm-drawer">
+    <div class="pm-drawer-head">
+      <div>
+        <h3>Add a new commercial property</h3>
+        <p class="pm-sub">Submitted for SuperAdmin review — tenants won't see it until it's verified.</p>
+      </div>
+      <a href="/dashboard.php?page=listings" class="pm-close" aria-label="Close">&times;</a>
     </div>
-    <p style="font-size:12.5px; color:var(--ink-500); margin-bottom:16px;">
-      Submitted for SuperAdmin review, it won't be visible to tenants until verified.
-      <strong>All fields and all 3 document uploads are required.</strong> If any is missing, nothing gets saved.
-    </p>
 
-    <?php if ($error): ?>
-      <div class="error-msg"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
+    <ol class="pm-steps">
+      <li><span>1</span> Details</li>
+      <li><span>2</span> Location</li>
+      <li><span>3</span> Photos</li>
+      <li><span>4</span> Documents</li>
+    </ol>
 
-    <form method="POST" enctype="multipart/form-data">
-      <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
-      <div class="field">
-        <label>Property Name</label>
-        <input type="text" name="name" required value="<?= htmlspecialchars($_POST['name'] ?? '') ?>">
-      </div>
-      <div class="field">
-        <label>Type</label>
-        <select name="type" required>
-          <option value="">Select type…</option>
-          <?php foreach ($PROPERTY_TYPES as $t): ?>
-            <option value="<?= $t ?>" <?= (($_POST['type'] ?? '') === $t) ? 'selected' : '' ?>><?= $t ?></option>
+    <div class="pm-drawer-body">
+      <?php if ($error): ?>
+        <div class="error-msg" data-pm-error style="margin-bottom:16px;"><?= e($error) ?></div>
+      <?php endif; ?>
+
+      <form method="POST" enctype="multipart/form-data" id="addPropertyForm"
+            action="/dashboard.php?page=listings&amp;add=1"
+            data-pm-progress data-max-total-mb="<?= (int) $MAX_POST_MB ?>">
+        <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+        <input type="hidden" name="add_property" value="1">
+        <div class="pm-form-error error-msg" hidden></div>
+
+        <section class="pm-section">
+          <header class="pm-section-head">
+            <span class="pm-section-icon">1</span>
+            <div><h4>Property details</h4><p>Fields marked <span class="pm-req">*</span> are required.</p></div>
+          </header>
+          <div class="field">
+            <label>Property Name <span class="pm-req">*</span></label>
+            <input type="text" name="name" required maxlength="150" value="<?= e($_POST['name'] ?? '') ?>">
+          </div>
+          <div class="pm-grid-2">
+            <div class="field">
+              <label>Type <span class="pm-req">*</span></label>
+              <select name="type" required>
+                <option value="">Select type…</option>
+                <?php foreach ($PROPERTY_TYPES as $t): ?>
+                  <option value="<?= e($t) ?>" <?= (($_POST['type'] ?? '') === $t) ? 'selected' : '' ?>><?= e($t) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="field">
+              <label>Asking Monthly Rent (₱) <span class="pm-req">*</span></label>
+              <input type="number" name="asking_rent" min="1" step="0.01" required value="<?= e($_POST['asking_rent'] ?? '') ?>" placeholder="e.g. 35000">
+            </div>
+            <div class="field">
+              <label>Floor Area <span class="pm-req">*</span></label>
+              <input type="text" name="floor_area" placeholder="e.g. 600 SQM (3 floors)" required value="<?= e($_POST['floor_area'] ?? '') ?>">
+            </div>
+            <div class="field">
+              <label>Lease Term <span class="pm-req">*</span></label>
+              <input type="text" name="lease_term" placeholder="e.g. Minimum of 2 years" required value="<?= e($_POST['lease_term'] ?? '') ?>">
+            </div>
+          </div>
+          <div class="field">
+            <label>Escalation Rate <span class="pm-req">*</span></label>
+            <input type="text" name="escalation" placeholder="e.g. 4% annual increase" required value="<?= e($_POST['escalation'] ?? '') ?>">
+          </div>
+          <div class="field">
+            <label>Property Description <span class="pm-req">*</span></label>
+            <textarea name="description" rows="4" placeholder="Prime office space in Bacolod's business district…" required><?= e($_POST['description'] ?? '') ?></textarea>
+            <p class="pm-help">The rent shown here is the asking rate; the actual lease rent is finalized when you approve an application.</p>
+          </div>
+
+          <div class="pm-subcard">
+            <div class="pm-subcard-head"><span>Rental spaces &amp; vacancy</span></div>
+            <div class="pm-grid-2">
+              <div class="field" style="margin-bottom:0;">
+                <label>Total Spaces / Capacity <span class="pm-req">*</span></label>
+                <input type="number" name="total_units" id="add_total_units" min="1" step="1" required value="<?= e($_POST['total_units'] ?? '1') ?>" placeholder="e.g. 20">
+                <p class="pm-help">Total rentable stalls, rooms or units.</p>
+              </div>
+              <div class="field" style="margin-bottom:0;">
+                <label>Initial Available Spaces <span class="pm-req">*</span></label>
+                <input type="number" name="available_units" id="add_available_units" min="0" step="1" required value="<?= e($_POST['available_units'] ?? '1') ?>" placeholder="e.g. 20">
+                <p class="pm-help">How many are vacant now.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <?php $pxSrc = []; $pxEdit = false; require __DIR__ . '/partials/property_extra_fields.php'; ?>
+
+        <section class="pm-section">
+          <header class="pm-section-head">
+            <span class="pm-section-icon">2</span>
+            <div><h4>Location</h4><p>Pinning the exact spot is optional but strongly recommended.</p></div>
+          </header>
+          <div class="field">
+            <label>Address <span class="pm-req">*</span></label>
+            <input type="text" name="address" required maxlength="255" value="<?= e($_POST['address'] ?? '') ?>">
+          </div>
+          <div class="field">
+            <label>Pin the exact location</label>
+            <input type="text" id="mapSearchInput" placeholder="Search an address to jump the map…" style="margin-bottom:8px;">
+            <div id="propertyMap" class="pm-map"></div>
+            <input type="hidden" name="latitude" id="latInput" value="<?= e($_POST['latitude'] ?? '') ?>">
+            <input type="hidden" name="longitude" id="lngInput" value="<?= e($_POST['longitude'] ?? '') ?>">
+          </div>
+        </section>
+
+        <section class="pm-section">
+          <header class="pm-section-head">
+            <span class="pm-section-icon">3</span>
+            <div><h4>Property photos <span class="pm-req">*</span></h4><p>1–<?= (int) $MAX_PHOTOS ?> photos. The first one becomes the cover; you can change it later.</p></div>
+          </header>
+          <?php
+            $pmName = 'photos[]'; $pmSingle = false; $pmMaxFiles = $MAX_PHOTOS; $pmRequired = true;
+            $pmTitle = 'Drag photos here or click to browse';
+            $pmHint = 'JPG, PNG or WEBP · up to ' . (int) $MAX_FILE_MB . ' MB each · max ' . (int) $MAX_PHOTOS . ' photos';
+            $pmCategories = $PHOTO_CATEGORIES; $pmFirstIsCover = true;
+            require __DIR__ . '/partials/photo_uploader.php';
+          ?>
+        </section>
+
+        <section class="pm-section">
+          <header class="pm-section-head">
+            <span class="pm-section-icon">4</span>
+            <div><h4>Verification documents <span class="pm-req">*</span></h4><p>PDF, JPG or PNG, up to <?= (int) $MAX_FILE_MB ?> MB each. Only the SuperAdmin sees these.</p></div>
+          </header>
+          <?php foreach ($SINGLE_DOCS as $field => [$column, $label]): ?>
+            <label class="pm-filebox">
+              <span class="pm-filebox-icon"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+              <span class="pm-filebox-text">
+                <strong><?= e($label) ?> <span class="pm-req">*</span></strong>
+                <span class="pm-filebox-name" data-empty="No file chosen">No file chosen</span>
+              </span>
+              <span class="pm-btn pm-btn-ghost pm-btn-xs">Choose file</span>
+              <input type="file" name="<?= e($field) ?>" accept=".pdf,.jpg,.jpeg,.png" required
+                     onchange="var n=this.closest('.pm-filebox').querySelector('.pm-filebox-name'); n.textContent=this.files.length?this.files[0].name:n.getAttribute('data-empty'); this.closest('.pm-filebox').classList.toggle('is-set', !!this.files.length);">
+            </label>
           <?php endforeach; ?>
-        </select>
-      </div>
-      
-      <!-- NEW FIELDS: ADDED HERE -->
-      <div class="field">
-        <label>Floor Area</label>
-        <input type="text" name="floor_area" placeholder="e.g. 600 SQM (3 floors)" required value="<?= htmlspecialchars($_POST['floor_area'] ?? '') ?>">
-      </div>
+        </section>
 
-      <div class="field">
-        <label>Lease Term</label>
-        <input type="text" name="lease_term" placeholder="e.g. Minimum of 2 years" required value="<?= htmlspecialchars($_POST['lease_term'] ?? '') ?>">
-      </div>
-
-      <div class="field">
-        <label>Escalation Rate</label>
-        <input type="text" name="escalation" placeholder="e.g. 4% annual increase" required value="<?= htmlspecialchars($_POST['escalation'] ?? '') ?>">
-      </div>
-
-      <div class="field">
-        <label>Property Description</label>
-        <textarea name="description" rows="3" placeholder="Prime office space in Bacolod's business district..." required style="width:100%; padding:8px; border:1px solid var(--border); border-radius:4px; font-family:inherit; box-sizing:border-box;"><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
-      </div>
-      <!-- END NEW FIELDS -->
-
-      <!-- RENTAL SPACES & VACANCY CAPACITY -->
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px 16px; margin-bottom:14px;">
-        <div style="font-size:13px; font-weight:700; color:var(--ink-800); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
-          <i class="bi bi-grid-3x3-gap-fill" style="color:var(--primary);"></i> Rental Spaces & Vacancy Availability
+        <div class="pm-drawer-foot">
+          <a href="/dashboard.php?page=listings" class="pm-btn pm-btn-ghost">Cancel</a>
+          <button class="pm-btn pm-btn-primary" type="submit">Submit for Verification</button>
         </div>
-
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-          <div class="field" style="margin-bottom:0;">
-            <label style="font-weight:600; font-size:12px;">Total Spaces / Capacity</label>
-            <input type="number" name="total_units" id="add_total_units" min="1" step="1" required
-                   value="<?= htmlspecialchars($_POST['total_units'] ?? '1') ?>"
-                   placeholder="e.g. 20"
-                   style="font-size:13px; font-weight:600; width:100%; box-sizing:border-box;">
-            <p style="font-size:11px; color:var(--ink-500); margin:4px 0 0;">
-              Total rentable stalls, rooms, or units (e.g. 20).
-            </p>
-          </div>
-
-          <div class="field" style="margin-bottom:0;">
-            <label style="font-weight:600; font-size:12px;">Initial Available Spaces</label>
-            <input type="number" name="available_units" id="add_available_units" min="0" step="1" required
-                   value="<?= htmlspecialchars($_POST['available_units'] ?? '1') ?>"
-                   placeholder="e.g. 20"
-                   style="font-size:13px; font-weight:600; width:100%; box-sizing:border-box;">
-            <p style="font-size:11px; color:var(--ink-500); margin:4px 0 0;">
-              How many are vacant now. Adjust anytime in Customize Property.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Asking Monthly Rent (₱)</label>
-        <input type="number" name="asking_rent" min="1" step="0.01" required
-               value="<?= htmlspecialchars($_POST['asking_rent'] ?? '') ?>" placeholder="e.g. 35000">
-        <p style="font-size:11px; color:var(--ink-500); margin-top:4px;">Shown to tenants browsing, but the actual lease rent will be finalized when you approve an application.</p>
-      </div>
-
-      <div class="field">
-        <label>Address</label>
-        <input type="text" name="address" required value="<?= htmlspecialchars($_POST['address'] ?? '') ?>">
-      </div>
-
-      <div class="field">
-        <label>Pin the exact location</label>
-        <input type="text" id="mapSearchInput" placeholder="Search an address to jump the map…" style="margin-bottom:8px;">
-        <div id="propertyMap" style="height:240px; border-radius:10px; border:1px solid var(--border);"></div>
-        <input type="hidden" name="latitude" id="latInput" value="<?= htmlspecialchars($_POST['latitude'] ?? '') ?>">
-        <input type="hidden" name="longitude" id="lngInput" value="<?= htmlspecialchars($_POST['longitude'] ?? '') ?>">
-        <p style="font-size:11px; color:var(--ink-500); margin-top:6px;">
-          Optional but recommended
-        </p>
-      </div>
-
-      <?php foreach ($SINGLE_DOCS as $field => [$column, $label]): ?>
-        <div class="field">
-          <label><?= htmlspecialchars($label) ?> <span style="color:var(--error);">*</span></label>
-          <input type="file" name="<?= $field ?>" accept=".pdf,.jpg,.jpeg,.png" required>
-        </div>
-      <?php endforeach; ?>
-
-      <div class="field">
-        <label>Property Photos (1–<?= $MAX_PHOTOS ?>) <span style="color:var(--error);">*</span></label>
-        <input type="file" name="photos[]" accept=".jpg,.jpeg,.png,.webp" multiple required>
-      </div>
-
-      <button class="btn btn-primary" type="submit">Submit for Verification</button>
-    </form>
+      </form>
+    </div>
   </div>
 </div>
 <script>
@@ -681,3 +773,17 @@
 })();
 </script>
 <?php endif; ?>
+<!-- Upload progress (assets/js/photo-uploader.js) -->
+<div class="pm-progress" id="pmProgress" hidden>
+  <div class="pm-progress-card">
+    <div class="pm-progress-title">Saving your property</div>
+    <div class="pm-progress-track"><div class="pm-progress-fill"></div></div>
+    <div class="pm-progress-label">Preparing upload…</div>
+  </div>
+</div>
+
+<!-- Photo viewer -->
+<div class="pm-lightbox" id="pmLightbox" hidden>
+  <button type="button" class="pm-lightbox-close" aria-label="Close">&times;</button>
+  <figure><img src="" alt=""><figcaption class="pm-lightbox-cap"></figcaption></figure>
+</div>

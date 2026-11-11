@@ -1,7 +1,10 @@
 <?php
 /**
  * GET /api/properties_show.php?id=123
- * Response: { "ok": true, "property": { id, name, type, address, lessor_name, photos: [urls], saved } }
+ * Response: { "ok": true, "property": { id, name, type, address, lessor_name, photos: [urls],
+ *            photo_items: [{url, category, caption}], landmark_name, landmark_distance, landmark_photo,
+ *            floor_level, frontage, parking_slots, utilities, amenities: [..], permitted_use,
+ *            operating_hours, deposit_terms, saved } }
  */
 require __DIR__ . '/../app/init_api.php';
 
@@ -29,4 +32,4 @@ if (!$property) {
 $user  = (new AuthService(new UserRepository($pdo)))->currentLessee();
 $saved = $user ? $properties->isSaved((int) $user['id'], $id) : false;
 
-json_ok(['property' => Formatter::propertyDetail($property, $properties->photoPaths($id), $saved)]);
+json_ok(['property' => Formatter::propertyDetail($property, $properties->photoPaths($id), $saved, $properties->photoItems($id))]);

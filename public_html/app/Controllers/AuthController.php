@@ -72,6 +72,12 @@ final class AuthController extends Controller
                 ? $status['occupied']
                 : ($status[$r['occupancy_status'] ?? 'available'] ?? $status['available']);
 
+            // Landmark photo goes last in the gallery (only real property images, never documents).
+            $landmarkPath = ltrim((string) ($r['landmark_photo_path'] ?? ''), '/');
+            if ($landmarkPath !== '' && str_starts_with($landmarkPath, 'uploads/properties/')) {
+                $photos[] = '/' . $landmarkPath;
+            }
+
             $hasMap = $r['latitude'] !== null && $r['longitude'] !== null;
             $out[] = [
                 'id'          => (int) $r['id'],
@@ -83,6 +89,15 @@ final class AuthController extends Controller
                 'lease_term'  => (string) ($r['lease_term'] ?? ''),
                 'escalation'  => (string) ($r['escalation'] ?? ''),
                 'description' => mb_substr(trim((string) ($r['description'] ?? '')), 0, 600),
+                'landmark'    => trim((string) ($r['landmark_name'] ?? '') . (!empty($r['landmark_distance']) ? ' (' . $r['landmark_distance'] . ')' : '')),
+                'floor_level' => (string) ($r['floor_level'] ?? ''),
+                'frontage'    => (string) ($r['frontage'] ?? ''),
+                'parking'     => isset($r['parking_slots']) && $r['parking_slots'] !== null ? (int) $r['parking_slots'] : null,
+                'hours'       => (string) ($r['operating_hours'] ?? ''),
+                'deposit'     => (string) ($r['deposit_terms'] ?? ''),
+                'permitted'   => (string) ($r['permitted_use'] ?? ''),
+                'utilities'   => (string) ($r['utilities'] ?? ''),
+                'amenities'   => (string) ($r['amenities'] ?? ''),
                 'status'      => $label,
                 'tone'        => $tone,
                 'photos'      => $photos,

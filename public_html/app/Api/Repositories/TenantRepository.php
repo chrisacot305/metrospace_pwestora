@@ -56,7 +56,7 @@ final class TenantRepository extends Repository
                     COALESCE(NULLIF(t.business_name, ''), a.business_name, '') AS business_name,
                     t.unit_label,
                     p.name AS property_name, p.address AS property_address, p.type AS property_type,
-                    (SELECT photo_path FROM property_photos pp WHERE pp.property_id = p.id ORDER BY pp.id ASC LIMIT 1) AS cover_photo,
+                    (SELECT photo_path FROM property_photos pp WHERE pp.property_id = p.id ORDER BY pp.sort_order ASC, pp.id ASC LIMIT 1) AS cover_photo,
                     u.company_name AS lessor_name,
                     a.rent, a.term_months, a.submitted_at AS applied_at
              FROM tenants t

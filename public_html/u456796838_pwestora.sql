@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1:3306
--- Generation Time: Nov 08, 2026 at 02:42 PM
+-- Generation Time: Nov 11, 2026 at 03:13 PM
 -- Server version: 11.8.9-MariaDB-log
 -- PHP Version: 7.2.34
 
@@ -77,7 +77,9 @@ INSERT INTO `applications` (`id`, `property_id`, `lessor_id`, `lessee_id`, `tena
 (30, 4, 2, 40, 'Sanji Santos', 'BabyCakes', 36, 5000.00, 'approved', '2026-10-27 15:21:00', '{\"security_deposit\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_grace_period\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_restructuring_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"violations_discipline_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"Food & Beverage\",\"target_move_in\":\"2026-11-10\",\"fitout_grace_requested\":true}}', NULL, NULL, 'uploads/applications/30/valid_id_8f5446bb.jpg', 'uploads/applications/30/sec_dti_2b392306.jpg', 'uploads/applications/30/business_permit_f0643aba.jpg', 'uploads/applications/30/bir_cert_2f873f44.jpg'),
 (31, 17, 34, 32, 'Roger Intong', 'Guild Devata', 6, 250000.00, 'rejected', '2026-10-28 02:43:19', '{\"security_deposit\":{\"agreed\":false,\"rebuttal_note\":\"\"},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_grace_period\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_restructuring_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"violations_discipline_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"Food & Beverage\",\"target_move_in\":\"2026-11-11\",\"fitout_grace_requested\":true}}', NULL, NULL, NULL, NULL, NULL, NULL),
 (32, 19, 2, 41, 'Dave M', 'GoodItems', 36, 15000.00, 'approved', '2026-10-28 04:43:13', '{\"security_deposit\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_grace_period\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_restructuring_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"violations_discipline_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"General \\/ Other\",\"target_move_in\":\"2026-11-11\",\"fitout_grace_requested\":true},\"messages\":[{\"sender\":\"lessor\",\"sender_name\":\"Lessor\",\"message\":\"hello\",\"sent_at\":\"2026-10-28 04:45:58\"},{\"sender\":\"lessee\",\"sender_name\":\"Dave M\",\"message\":\"pwede ka ayu sng monthly payment\",\"sent_at\":\"2026-10-28 04:46:26\"}]}', 'hello', '2026-10-28 04:45:58', NULL, NULL, 'uploads/applications/32/business_permit_95a72f18.jpg', NULL),
-(33, 19, 2, 42, 'Zoro', 'Uncle coffee Shop', 24, 15000.00, 'approved', '2026-10-28 06:59:51', '{\"security_deposit\":{\"agreed\":false,\"rebuttal_note\":\"pwede 1 month lang\"},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_grace_period\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_restructuring_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"violations_discipline_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"Food & Beverage\",\"target_move_in\":\"2026-11-11\",\"fitout_grace_requested\":true},\"messages\":[{\"sender\":\"lessor\",\"sender_name\":\"Lessor\",\"message\":\"Can we meet up\",\"sent_at\":\"2026-10-28 07:00:55\"},{\"sender\":\"lessee\",\"sender_name\":\"Zoro\",\"message\":\"where?\",\"sent_at\":\"2026-10-28 07:01:55\"}]}', 'Can we meet up', '2026-10-28 07:00:55', NULL, NULL, NULL, NULL);
+(33, 19, 2, 42, 'Zoro', 'Uncle coffee Shop', 24, 15000.00, 'approved', '2026-10-28 06:59:51', '{\"security_deposit\":{\"agreed\":false,\"rebuttal_note\":\"pwede 1 month lang\"},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_grace_period\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_restructuring_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"violations_discipline_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"Food & Beverage\",\"target_move_in\":\"2026-11-11\",\"fitout_grace_requested\":true},\"messages\":[{\"sender\":\"lessor\",\"sender_name\":\"Lessor\",\"message\":\"Can we meet up\",\"sent_at\":\"2026-10-28 07:00:55\"},{\"sender\":\"lessee\",\"sender_name\":\"Zoro\",\"message\":\"where?\",\"sent_at\":\"2026-10-28 07:01:55\"}]}', 'Can we meet up', '2026-10-28 07:00:55', NULL, NULL, NULL, NULL),
+(34, 1, 2, 45, 'Raymundo Sudo', 'LaSole Avenue', 36, 2000.00, 'rejected', '2026-11-09 22:42:35', '{\"security_deposit\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_grace_period\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_restructuring_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"violations_discipline_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"Food & Beverage\",\"target_move_in\":\"2026-11-24\",\"fitout_grace_requested\":true}}', NULL, NULL, NULL, NULL, NULL, NULL),
+(35, 1, 2, 45, 'Raymundo Sudo', 'LaSole Avenue', 36, 2000.00, 'pending', '2026-11-09 22:46:14', '{\"security_deposit\":{\"agreed\":false,\"rebuttal_note\":\"is it okay that I will pay the first month for now?\"},\"rent_escalation\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_grace_period\":{\"agreed\":true,\"rebuttal_note\":null},\"rent_restructuring_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"violations_discipline_policy\":{\"agreed\":true,\"rebuttal_note\":null},\"lease_term\":{\"agreed\":true,\"rebuttal_note\":null},\"use_of_premises\":{\"agreed\":true,\"rebuttal_note\":null},\"maintenance\":{\"agreed\":true,\"rebuttal_note\":null},\"subleasing\":{\"agreed\":true,\"rebuttal_note\":null},\"termination_notice\":{\"agreed\":true,\"rebuttal_note\":null},\"insurance_compliance\":{\"agreed\":true,\"rebuttal_note\":null},\"_proposal_meta\":{\"category\":\"Food & Beverage\",\"target_move_in\":\"2026-11-24\",\"fitout_grace_requested\":true}}', NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -527,7 +529,7 @@ INSERT INTO `audit_logs` (`id`, `actor_id`, `action`, `details`, `created_at`) V
 (427, 2, 'Updated property details', 'Atrium Commercial Plaza', '2026-10-23 00:53:47'),
 (428, 12, 'login', '', '2026-10-23 01:02:47'),
 (429, 1, 'login', '', '2026-10-23 01:08:56'),
-(430, 39, 'Lessee registered & phone verified via app', 'george@gmail.com', '2026-10-23 01:14:08'),
+(430, NULL, 'Lessee registered & phone verified via app', 'george@gmail.com', '2026-10-23 01:14:08'),
 (431, 12, 'login', '', '2026-10-23 02:13:42'),
 (432, 1, 'login', '', '2026-10-23 02:14:23'),
 (433, 1, 'Active user', 'jakeperalta@gmail.com', '2026-10-23 02:14:43'),
@@ -677,7 +679,43 @@ INSERT INTO `audit_logs` (`id`, `actor_id`, `action`, `details`, `created_at`) V
 (577, 2, 'Started lease contract', 'Sanji Santos', '2026-11-08 12:04:22'),
 (578, 2, 'Started lease contract', 'Charmain Acot', '2026-11-08 12:27:32'),
 (579, 2, 'Started lease contract', 'Daniel Pastor', '2026-11-08 12:28:38'),
-(580, 2, 'login', '', '2026-11-08 13:51:38');
+(580, 2, 'login', '', '2026-11-08 13:51:38'),
+(581, 2, 'login', '', '2026-11-08 14:45:14'),
+(582, 2, 'Started lease contract', 'jm', '2026-11-08 14:55:41'),
+(583, 2, 'Started lease contract', 'Roger Intong', '2026-11-08 14:56:38'),
+(584, 2, 'Finalized lease contract v1', 'Roger Intong', '2026-11-08 14:57:08'),
+(585, 4, 'login', '', '2026-11-08 14:57:48'),
+(586, 4, 'Created contract template', 'Copy of Pwestora Standard', '2026-11-08 15:10:26'),
+(587, 2, 'Opened revision of lease contract (v2)', 'Roger Intong', '2026-11-08 15:14:27'),
+(588, 2, 'Finalized lease contract v2', 'Roger Intong', '2026-11-08 15:14:32'),
+(589, 2, 'Opened revision of lease contract (v3)', 'Roger Intong', '2026-11-08 15:34:05'),
+(590, 2, 'Finalized lease contract v3', 'Roger Intong', '2026-11-08 16:15:52'),
+(591, 32, 'Tenant declined lease contract v3', 'tenant_id 9', '2026-11-08 16:16:15'),
+(592, 1, 'login', '', '2026-11-09 00:01:43'),
+(593, 1, 'login', '', '2026-11-09 00:48:31'),
+(594, 1, 'login', '', '2026-11-09 06:40:57'),
+(595, 4, 'login', '', '2026-11-09 06:56:46'),
+(596, 4, 'login', '', '2026-11-09 07:16:13'),
+(597, 2, 'login', '', '2026-11-09 07:18:36'),
+(598, 2, 'login', '', '2026-11-09 07:42:31'),
+(599, 44, 'register', 'New lessor: Ribbon Inc', '2026-11-09 17:20:15'),
+(600, 44, 'login (OTP verified)', '', '2026-11-09 17:25:13'),
+(601, 34, 'login', '', '2026-11-09 17:26:41'),
+(602, 34, 'login', '', '2026-11-09 18:59:05'),
+(603, 1, 'login', '', '2026-11-09 19:12:19'),
+(604, 45, 'Lessee registered & phone verified via app', 'raymundsudo@gmail.com', '2026-11-09 22:28:23'),
+(605, 2, 'login', '', '2026-11-09 22:31:58'),
+(606, 2, 'Updated property details', 'Atrium Commercial Plaza', '2026-11-09 22:33:02'),
+(607, 2, 'Rejected application', 'Raymundo Sudo', '2026-11-09 22:44:08'),
+(608, 1, 'login', '', '2026-11-09 23:37:12'),
+(609, 1, 'login', '', '2026-11-09 23:38:13'),
+(610, 2, 'login', '', '2026-11-10 04:33:10'),
+(611, 2, 'login', '', '2026-11-11 13:22:07'),
+(612, 1, 'login', '', '2026-11-11 13:24:52'),
+(613, 2, 'login', '', '2026-11-11 13:25:03'),
+(614, 2, 'Updated property details', 'Loopwest', '2026-11-11 13:31:40'),
+(615, 1, 'login', '', '2026-11-11 14:23:23'),
+(616, 4, 'login', '', '2026-11-11 14:27:09');
 
 -- --------------------------------------------------------
 
@@ -695,6 +733,13 @@ CREATE TABLE `contract_templates` (
   `created_at` datetime DEFAULT current_timestamp(),
   `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+--
+-- Dumping data for table `contract_templates`
+--
+
+INSERT INTO `contract_templates` (`id`, `lessor_id`, `name`, `description`, `clauses`, `is_default`, `created_at`, `updated_at`) VALUES
+(1, 4, 'Copy of Pwestora Standard', 'w', '[{\"key\":\"security_deposit\",\"label\":\"Security Deposit\",\"text\":\"A security deposit equivalent to two (2) months\' rent will be collected and held. It is refundable within 30 days of lease-end, less any deductions for damages or unpaid obligations.\",\"ref\":\"Civil Code (RA 386) Art. 1306 (freedom of stipulation); Arts. 1665 & 1667 (return of premises; lessee liable for deterioration)\",\"base\":\"a64587579015558ea97c8b1abfde91d440cccd14\"},{\"key\":\"rent_escalation\",\"label\":\"Rent Escalation\",\"text\":\"Monthly rent may increase by up to five percent (5%) upon each annual renewal, consistent with standard commercial leasing practice.\",\"ref\":\"Civil Code Art. 1306 (stipulation of the parties). RA 9653 (Rent Control Act) covers residential units only, so commercial escalation is by agreement\",\"base\":\"8178e907b97c7ca15c94a219928b71cfa9876f35\"},{\"key\":\"use_of_premises\",\"label\":\"Use of Premises\",\"text\":\"The leased premises will be used solely for the business purpose stated in the tenant\'s application, and not for any illegal or unauthorized activity.\",\"ref\":\"Civil Code Art. 1657(2) (use for the purpose stipulated); Art. 1673 (judicial ejectment for use not stipulated)\",\"base\":\"2cd9e20f10ff9342abecb43736b3509fae344710\"},{\"key\":\"maintenance_responsibility\",\"label\":\"Maintenance Responsibility\",\"text\":\"Structural and major-system repairs are the lessor\'s responsibility. Interior fixtures, fittings, and day-to-day upkeep are the tenant\'s responsibility.\",\"ref\":\"Civil Code Art. 1654(2) (lessor makes necessary repairs); Arts. 1657(2) & 1663 (lessee\'s diligent use; duty to report needed repairs)\",\"base\":\"5facdff01e1161b4c4d6ec64bca0a2c69fc023b5\"},{\"key\":\"no_sublease\",\"label\":\"No Subleasing\",\"text\":\"The tenant will not sublease, assign, or transfer the lease to a third party without the lessor\'s prior written consent.\",\"ref\":\"Civil Code Art. 1649 (assignment needs lessor\'s consent); Art. 1650 (subleasing is allowed unless expressly prohibited, hence this clause)\",\"base\":\"5c8460e714c44422135d234cf2ad3b92737b62c2\"},{\"key\":\"termination_notice\",\"label\":\"Termination Notice\",\"text\":\"At least thirty (30) days\' written notice is required before vacating the premises or terminating the lease early.\",\"ref\":\"Civil Code Art. 1306 (stipulation); Arts. 1659 & 1673 (rescission; grounds for judicial ejectment)\",\"base\":\"c6c4ef85b8ccd054294868dfbc0ab2d5519212a4\"},{\"key\":\"insurance\",\"label\":\"Insurance\",\"text\":\"The tenant is responsible for insuring their own business property, inventory, and equipment within the premises.\",\"ref\":\"Civil Code Art. 1306 (stipulation); Insurance Code (PD 612, as amended by RA 10607)\",\"base\":\"0f7a51ceefce151310520d29e1a937b5b14479e4\"},{\"key\":\"compliance\",\"label\":\"Legal Compliance\",\"text\":\"The tenant will comply with all applicable national and local laws — including business permits, fire safety, and zoning regulations — for the duration of the lease.\",\"ref\":\"Local Government Code (RA 7160) on business permits; Fire Code of the Philippines (RA 9514); Civil Code Art. 1657\",\"base\":\"036ccccf18f9a7b67ac0b32c559ea5116fbbd9fe\"}]', 1, '2026-11-08 15:10:26', '2026-11-08 15:13:40');
 
 -- --------------------------------------------------------
 
@@ -854,11 +899,13 @@ CREATE TABLE `lease_contracts` (
 -- Dumping data for table `lease_contracts`
 --
 
-INSERT INTO `lease_contracts` (`id`, `tenant_id`, `lessor_id`, `template_id`, `template_name`, `monthly_rent`, `term_months`, `start_date`, `end_date`, `security_deposit`, `advance_rent`, `due_day`, `clauses`, `special_provisions`, `status`, `version`, `finalized_at`, `accepted_at`, `created_at`, `updated_at`) VALUES
-(1, 22, 2, NULL, 'Pwestora Standard', 15000.00, 24, '2026-10-28', NULL, 30000.00, 15000.00, 30, '[{\"key\":\"security_deposit\",\"label\":\"Security Deposit\",\"text\":\"A security deposit equivalent to two (2) months\' rent will be collected and held. It is refundable within 30 days of lease-end, less any deductions for damages or unpaid obligations.\",\"base\":\"a64587579015558ea97c8b1abfde91d440cccd14\"},{\"key\":\"rent_escalation\",\"label\":\"Rent Escalation\",\"text\":\"Monthly rent may increase by up to five percent (5%) upon each annual renewal, consistent with standard commercial leasing practice.\",\"base\":\"8178e907b97c7ca15c94a219928b71cfa9876f35\"},{\"key\":\"use_of_premises\",\"label\":\"Use of Premises\",\"text\":\"The leased premises will be used solely for the business purpose stated in the tenant\'s application, and not for any illegal or unauthorized activity.\",\"base\":\"2cd9e20f10ff9342abecb43736b3509fae344710\"},{\"key\":\"maintenance_responsibility\",\"label\":\"Maintenance Responsibility\",\"text\":\"Structural and major-system repairs are the lessor\'s responsibility. Interior fixtures, fittings, and day-to-day upkeep are the tenant\'s responsibility.\",\"base\":\"5facdff01e1161b4c4d6ec64bca0a2c69fc023b5\"},{\"key\":\"no_sublease\",\"label\":\"No Subleasing\",\"text\":\"The tenant will not sublease, assign, or transfer the lease to a third party without the lessor\'s prior written consent.\",\"base\":\"5c8460e714c44422135d234cf2ad3b92737b62c2\"},{\"key\":\"termination_notice\",\"label\":\"Termination Notice\",\"text\":\"At least thirty (30) days\' written notice is required before vacating the premises or terminating the lease early.\",\"base\":\"c6c4ef85b8ccd054294868dfbc0ab2d5519212a4\"},{\"key\":\"insurance\",\"label\":\"Insurance\",\"text\":\"The tenant is responsible for insuring their own business property, inventory, and equipment within the premises.\",\"base\":\"0f7a51ceefce151310520d29e1a937b5b14479e4\"},{\"key\":\"compliance\",\"label\":\"Legal Compliance\",\"text\":\"The tenant will comply with all applicable national and local laws — including business permits, fire safety, and zoning regulations — for the duration of the lease.\",\"base\":\"036ccccf18f9a7b67ac0b32c559ea5116fbbd9fe\"}]', '', 'draft', 1, NULL, NULL, '2026-11-08 12:01:55', '2026-11-08 12:01:55'),
-(2, 20, 2, NULL, 'Pwestora Standard', 5000.00, 36, '2026-10-27', NULL, 10000.00, 5000.00, 30, '[{\"key\":\"security_deposit\",\"label\":\"Security Deposit\",\"text\":\"A security deposit equivalent to two (2) months\' rent will be collected and held. It is refundable within 30 days of lease-end, less any deductions for damages or unpaid obligations.\",\"base\":\"a64587579015558ea97c8b1abfde91d440cccd14\"},{\"key\":\"rent_escalation\",\"label\":\"Rent Escalation\",\"text\":\"Monthly rent may increase by up to five percent (5%) upon each annual renewal, consistent with standard commercial leasing practice.\",\"base\":\"8178e907b97c7ca15c94a219928b71cfa9876f35\"},{\"key\":\"use_of_premises\",\"label\":\"Use of Premises\",\"text\":\"The leased premises will be used solely for the business purpose stated in the tenant\'s application, and not for any illegal or unauthorized activity.\",\"base\":\"2cd9e20f10ff9342abecb43736b3509fae344710\"},{\"key\":\"maintenance_responsibility\",\"label\":\"Maintenance Responsibility\",\"text\":\"Structural and major-system repairs are the lessor\'s responsibility. Interior fixtures, fittings, and day-to-day upkeep are the tenant\'s responsibility.\",\"base\":\"5facdff01e1161b4c4d6ec64bca0a2c69fc023b5\"},{\"key\":\"no_sublease\",\"label\":\"No Subleasing\",\"text\":\"The tenant will not sublease, assign, or transfer the lease to a third party without the lessor\'s prior written consent.\",\"base\":\"5c8460e714c44422135d234cf2ad3b92737b62c2\"},{\"key\":\"termination_notice\",\"label\":\"Termination Notice\",\"text\":\"At least thirty (30) days\' written notice is required before vacating the premises or terminating the lease early.\",\"base\":\"c6c4ef85b8ccd054294868dfbc0ab2d5519212a4\"},{\"key\":\"insurance\",\"label\":\"Insurance\",\"text\":\"The tenant is responsible for insuring their own business property, inventory, and equipment within the premises.\",\"base\":\"0f7a51ceefce151310520d29e1a937b5b14479e4\"},{\"key\":\"compliance\",\"label\":\"Legal Compliance\",\"text\":\"The tenant will comply with all applicable national and local laws — including business permits, fire safety, and zoning regulations — for the duration of the lease.\",\"base\":\"036ccccf18f9a7b67ac0b32c559ea5116fbbd9fe\"}]', '', 'draft', 1, NULL, NULL, '2026-11-08 12:04:22', '2026-11-08 12:04:22'),
-(3, 6, 2, NULL, 'Pwestora Standard', 1500.00, 12, '2026-09-14', NULL, 3000.00, 1500.00, 30, '[{\"key\":\"security_deposit\",\"label\":\"Security Deposit\",\"text\":\"A security deposit equivalent to two (2) months\' rent will be collected and held. It is refundable within 30 days of lease-end, less any deductions for damages or unpaid obligations.\",\"base\":\"a64587579015558ea97c8b1abfde91d440cccd14\"},{\"key\":\"rent_escalation\",\"label\":\"Rent Escalation\",\"text\":\"Monthly rent may increase by up to five percent (5%) upon each annual renewal, consistent with standard commercial leasing practice.\",\"base\":\"8178e907b97c7ca15c94a219928b71cfa9876f35\"},{\"key\":\"use_of_premises\",\"label\":\"Use of Premises\",\"text\":\"The leased premises will be used solely for the business purpose stated in the tenant\'s application, and not for any illegal or unauthorized activity.\",\"base\":\"2cd9e20f10ff9342abecb43736b3509fae344710\"},{\"key\":\"maintenance_responsibility\",\"label\":\"Maintenance Responsibility\",\"text\":\"Structural and major-system repairs are the lessor\'s responsibility. Interior fixtures, fittings, and day-to-day upkeep are the tenant\'s responsibility.\",\"base\":\"5facdff01e1161b4c4d6ec64bca0a2c69fc023b5\"},{\"key\":\"no_sublease\",\"label\":\"No Subleasing\",\"text\":\"The tenant will not sublease, assign, or transfer the lease to a third party without the lessor\'s prior written consent.\",\"base\":\"5c8460e714c44422135d234cf2ad3b92737b62c2\"},{\"key\":\"termination_notice\",\"label\":\"Termination Notice\",\"text\":\"At least thirty (30) days\' written notice is required before vacating the premises or terminating the lease early.\",\"base\":\"c6c4ef85b8ccd054294868dfbc0ab2d5519212a4\"},{\"key\":\"insurance\",\"label\":\"Insurance\",\"text\":\"The tenant is responsible for insuring their own business property, inventory, and equipment within the premises.\",\"base\":\"0f7a51ceefce151310520d29e1a937b5b14479e4\"},{\"key\":\"compliance\",\"label\":\"Legal Compliance\",\"text\":\"The tenant will comply with all applicable national and local laws — including business permits, fire safety, and zoning regulations — for the duration of the lease.\",\"base\":\"036ccccf18f9a7b67ac0b32c559ea5116fbbd9fe\"}]', '', 'draft', 1, NULL, NULL, '2026-11-08 12:27:32', '2026-11-08 12:27:32'),
-(4, 4, 2, NULL, 'Pwestora Standard', 7000.00, 24, '2026-09-06', NULL, 14000.00, 7000.00, 30, '[{\"key\":\"security_deposit\",\"label\":\"Security Deposit\",\"text\":\"A security deposit equivalent to two (2) months\' rent will be collected and held. It is refundable within 30 days of lease-end, less any deductions for damages or unpaid obligations.\",\"base\":\"a64587579015558ea97c8b1abfde91d440cccd14\"},{\"key\":\"rent_escalation\",\"label\":\"Rent Escalation\",\"text\":\"Monthly rent may increase by up to five percent (5%) upon each annual renewal, consistent with standard commercial leasing practice.\",\"base\":\"8178e907b97c7ca15c94a219928b71cfa9876f35\"},{\"key\":\"use_of_premises\",\"label\":\"Use of Premises\",\"text\":\"The leased premises will be used solely for the business purpose stated in the tenant\'s application, and not for any illegal or unauthorized activity.\",\"base\":\"2cd9e20f10ff9342abecb43736b3509fae344710\"},{\"key\":\"maintenance_responsibility\",\"label\":\"Maintenance Responsibility\",\"text\":\"Structural and major-system repairs are the lessor\'s responsibility. Interior fixtures, fittings, and day-to-day upkeep are the tenant\'s responsibility.\",\"base\":\"5facdff01e1161b4c4d6ec64bca0a2c69fc023b5\"},{\"key\":\"no_sublease\",\"label\":\"No Subleasing\",\"text\":\"The tenant will not sublease, assign, or transfer the lease to a third party without the lessor\'s prior written consent.\",\"base\":\"5c8460e714c44422135d234cf2ad3b92737b62c2\"},{\"key\":\"termination_notice\",\"label\":\"Termination Notice\",\"text\":\"At least thirty (30) days\' written notice is required before vacating the premises or terminating the lease early.\",\"base\":\"c6c4ef85b8ccd054294868dfbc0ab2d5519212a4\"},{\"key\":\"insurance\",\"label\":\"Insurance\",\"text\":\"The tenant is responsible for insuring their own business property, inventory, and equipment within the premises.\",\"base\":\"0f7a51ceefce151310520d29e1a937b5b14479e4\"},{\"key\":\"compliance\",\"label\":\"Legal Compliance\",\"text\":\"The tenant will comply with all applicable national and local laws — including business permits, fire safety, and zoning regulations — for the duration of the lease.\",\"base\":\"036ccccf18f9a7b67ac0b32c559ea5116fbbd9fe\"}]', '', 'draft', 1, NULL, NULL, '2026-11-08 12:28:38', '2026-11-08 12:29:12');
+INSERT INTO `lease_contracts` (`id`, `tenant_id`, `lessor_id`, `template_id`, `template_name`, `monthly_rent`, `term_months`, `start_date`, `end_date`, `security_deposit`, `advance_rent`, `due_day`, `clauses`, `special_provisions`, `status`, `version`, `finalized_at`, `accepted_at`, `rejected_at`, `rejection_reason`, `created_at`, `updated_at`) VALUES
+(1, 22, 2, NULL, 'Pwestora Standard', 15000.00, 24, '2026-10-28', NULL, 30000.00, 15000.00, 30, '[{\"key\":\"security_deposit\",\"label\":\"Security Deposit\",\"text\":\"A security deposit equivalent to two (2) months\' rent will be collected and held. It is refundable within 30 days of lease-end, less any deductions for damages or unpaid obligations.\",\"base\":\"a64587579015558ea97c8b1abfde91d440cccd14\"},{\"key\":\"rent_escalation\",\"label\":\"Rent Escalation\",\"text\":\"Monthly rent may increase by up to five percent (5%) upon each annual renewal, consistent with standard commercial leasing practice.\",\"base\":\"8178e907b97c7ca15c94a219928b71cfa9876f35\"},{\"key\":\"use_of_premises\",\"label\":\"Use of Premises\",\"text\":\"The leased premises will be used solely for the business purpose stated in the tenant\'s application, and not for any illegal or unauthorized activity.\",\"base\":\"2cd9e20f10ff9342abecb43736b3509fae344710\"},{\"key\":\"maintenance_responsibility\",\"label\":\"Maintenance Responsibility\",\"text\":\"Structural and major-system repairs are the lessor\'s responsibility. Interior fixtures, fittings, and day-to-day upkeep are the tenant\'s responsibility.\",\"base\":\"5facdff01e1161b4c4d6ec64bca0a2c69fc023b5\"},{\"key\":\"no_sublease\",\"label\":\"No Subleasing\",\"text\":\"The tenant will not sublease, assign, or transfer the lease to a third party without the lessor\'s prior written consent.\",\"base\":\"5c8460e714c44422135d234cf2ad3b92737b62c2\"},{\"key\":\"termination_notice\",\"label\":\"Termination Notice\",\"text\":\"At least thirty (30) days\' written notice is required before vacating the premises or terminating the lease early.\",\"base\":\"c6c4ef85b8ccd054294868dfbc0ab2d5519212a4\"},{\"key\":\"insurance\",\"label\":\"Insurance\",\"text\":\"The tenant is responsible for insuring their own business property, inventory, and equipment within the premises.\",\"base\":\"0f7a51ceefce151310520d29e1a937b5b14479e4\"},{\"key\":\"compliance\",\"label\":\"Legal Compliance\",\"text\":\"The tenant will comply with all applicable national and local laws — including business permits, fire safety, and zoning regulations — for the duration of the lease.\",\"base\":\"036ccccf18f9a7b67ac0b32c559ea5116fbbd9fe\"}]', '', 'draft', 1, NULL, NULL, NULL, NULL, '2026-11-08 12:01:55', '2026-11-08 12:01:55'),
+(2, 20, 2, NULL, 'Pwestora Standard', 5000.00, 36, '2026-10-27', NULL, 10000.00, 5000.00, 30, '[{\"key\":\"security_deposit\",\"label\":\"Security Deposit\",\"text\":\"A security deposit equivalent to two (2) months\' rent will be collected and held. It is refundable within 30 days of lease-end, less any deductions for damages or unpaid obligations.\",\"base\":\"a64587579015558ea97c8b1abfde91d440cccd14\"},{\"key\":\"rent_escalation\",\"label\":\"Rent Escalation\",\"text\":\"Monthly rent may increase by up to five percent (5%) upon each annual renewal, consistent with standard commercial leasing practice.\",\"base\":\"8178e907b97c7ca15c94a219928b71cfa9876f35\"},{\"key\":\"use_of_premises\",\"label\":\"Use of Premises\",\"text\":\"The leased premises will be used solely for the business purpose stated in the tenant\'s application, and not for any illegal or unauthorized activity.\",\"base\":\"2cd9e20f10ff9342abecb43736b3509fae344710\"},{\"key\":\"maintenance_responsibility\",\"label\":\"Maintenance Responsibility\",\"text\":\"Structural and major-system repairs are the lessor\'s responsibility. Interior fixtures, fittings, and day-to-day upkeep are the tenant\'s responsibility.\",\"base\":\"5facdff01e1161b4c4d6ec64bca0a2c69fc023b5\"},{\"key\":\"no_sublease\",\"label\":\"No Subleasing\",\"text\":\"The tenant will not sublease, assign, or transfer the lease to a third party without the lessor\'s prior written consent.\",\"base\":\"5c8460e714c44422135d234cf2ad3b92737b62c2\"},{\"key\":\"termination_notice\",\"label\":\"Termination Notice\",\"text\":\"At least thirty (30) days\' written notice is required before vacating the premises or terminating the lease early.\",\"base\":\"c6c4ef85b8ccd054294868dfbc0ab2d5519212a4\"},{\"key\":\"insurance\",\"label\":\"Insurance\",\"text\":\"The tenant is responsible for insuring their own business property, inventory, and equipment within the premises.\",\"base\":\"0f7a51ceefce151310520d29e1a937b5b14479e4\"},{\"key\":\"compliance\",\"label\":\"Legal Compliance\",\"text\":\"The tenant will comply with all applicable national and local laws — including business permits, fire safety, and zoning regulations — for the duration of the lease.\",\"base\":\"036ccccf18f9a7b67ac0b32c559ea5116fbbd9fe\"}]', '', 'draft', 1, NULL, NULL, NULL, NULL, '2026-11-08 12:04:22', '2026-11-08 12:04:22'),
+(3, 6, 2, NULL, 'Pwestora Standard', 1500.00, 12, '2026-09-14', NULL, 3000.00, 1500.00, 30, '[{\"key\":\"security_deposit\",\"label\":\"Security Deposit\",\"text\":\"A security deposit equivalent to two (2) months\' rent will be collected and held. It is refundable within 30 days of lease-end, less any deductions for damages or unpaid obligations.\",\"base\":\"a64587579015558ea97c8b1abfde91d440cccd14\"},{\"key\":\"rent_escalation\",\"label\":\"Rent Escalation\",\"text\":\"Monthly rent may increase by up to five percent (5%) upon each annual renewal, consistent with standard commercial leasing practice.\",\"base\":\"8178e907b97c7ca15c94a219928b71cfa9876f35\"},{\"key\":\"use_of_premises\",\"label\":\"Use of Premises\",\"text\":\"The leased premises will be used solely for the business purpose stated in the tenant\'s application, and not for any illegal or unauthorized activity.\",\"base\":\"2cd9e20f10ff9342abecb43736b3509fae344710\"},{\"key\":\"maintenance_responsibility\",\"label\":\"Maintenance Responsibility\",\"text\":\"Structural and major-system repairs are the lessor\'s responsibility. Interior fixtures, fittings, and day-to-day upkeep are the tenant\'s responsibility.\",\"base\":\"5facdff01e1161b4c4d6ec64bca0a2c69fc023b5\"},{\"key\":\"no_sublease\",\"label\":\"No Subleasing\",\"text\":\"The tenant will not sublease, assign, or transfer the lease to a third party without the lessor\'s prior written consent.\",\"base\":\"5c8460e714c44422135d234cf2ad3b92737b62c2\"},{\"key\":\"termination_notice\",\"label\":\"Termination Notice\",\"text\":\"At least thirty (30) days\' written notice is required before vacating the premises or terminating the lease early.\",\"base\":\"c6c4ef85b8ccd054294868dfbc0ab2d5519212a4\"},{\"key\":\"insurance\",\"label\":\"Insurance\",\"text\":\"The tenant is responsible for insuring their own business property, inventory, and equipment within the premises.\",\"base\":\"0f7a51ceefce151310520d29e1a937b5b14479e4\"},{\"key\":\"compliance\",\"label\":\"Legal Compliance\",\"text\":\"The tenant will comply with all applicable national and local laws — including business permits, fire safety, and zoning regulations — for the duration of the lease.\",\"base\":\"036ccccf18f9a7b67ac0b32c559ea5116fbbd9fe\"}]', '', 'draft', 1, NULL, NULL, NULL, NULL, '2026-11-08 12:27:32', '2026-11-08 12:27:32'),
+(4, 4, 2, NULL, 'Pwestora Standard', 7000.00, 24, '2026-09-06', NULL, 14000.00, 7000.00, 30, '[{\"key\":\"security_deposit\",\"label\":\"Security Deposit\",\"text\":\"A security deposit equivalent to two (2) months\' rent will be collected and held. It is refundable within 30 days of lease-end, less any deductions for damages or unpaid obligations.\",\"base\":\"a64587579015558ea97c8b1abfde91d440cccd14\"},{\"key\":\"rent_escalation\",\"label\":\"Rent Escalation\",\"text\":\"Monthly rent may increase by up to five percent (5%) upon each annual renewal, consistent with standard commercial leasing practice.\",\"base\":\"8178e907b97c7ca15c94a219928b71cfa9876f35\"},{\"key\":\"use_of_premises\",\"label\":\"Use of Premises\",\"text\":\"The leased premises will be used solely for the business purpose stated in the tenant\'s application, and not for any illegal or unauthorized activity.\",\"base\":\"2cd9e20f10ff9342abecb43736b3509fae344710\"},{\"key\":\"maintenance_responsibility\",\"label\":\"Maintenance Responsibility\",\"text\":\"Structural and major-system repairs are the lessor\'s responsibility. Interior fixtures, fittings, and day-to-day upkeep are the tenant\'s responsibility.\",\"base\":\"5facdff01e1161b4c4d6ec64bca0a2c69fc023b5\"},{\"key\":\"no_sublease\",\"label\":\"No Subleasing\",\"text\":\"The tenant will not sublease, assign, or transfer the lease to a third party without the lessor\'s prior written consent.\",\"base\":\"5c8460e714c44422135d234cf2ad3b92737b62c2\"},{\"key\":\"termination_notice\",\"label\":\"Termination Notice\",\"text\":\"At least thirty (30) days\' written notice is required before vacating the premises or terminating the lease early.\",\"base\":\"c6c4ef85b8ccd054294868dfbc0ab2d5519212a4\"},{\"key\":\"insurance\",\"label\":\"Insurance\",\"text\":\"The tenant is responsible for insuring their own business property, inventory, and equipment within the premises.\",\"base\":\"0f7a51ceefce151310520d29e1a937b5b14479e4\"},{\"key\":\"compliance\",\"label\":\"Legal Compliance\",\"text\":\"The tenant will comply with all applicable national and local laws — including business permits, fire safety, and zoning regulations — for the duration of the lease.\",\"base\":\"036ccccf18f9a7b67ac0b32c559ea5116fbbd9fe\"}]', '', 'draft', 1, NULL, NULL, NULL, NULL, '2026-11-08 12:28:38', '2026-11-08 12:29:12'),
+(5, 2, 2, NULL, 'Pwestora Standard', 0.00, 12, '2026-08-21', NULL, 0.00, 0.00, 30, '[{\"key\":\"security_deposit\",\"label\":\"Security Deposit\",\"text\":\"A security deposit equivalent to two (2) months\' rent will be collected and held. It is refundable within 30 days of lease-end, less any deductions for damages or unpaid obligations.\",\"ref\":\"Civil Code (RA 386) Art. 1306 (freedom of stipulation); Arts. 1665 & 1667 (return of premises; lessee liable for deterioration)\",\"base\":\"a64587579015558ea97c8b1abfde91d440cccd14\"},{\"key\":\"rent_escalation\",\"label\":\"Rent Escalation\",\"text\":\"Monthly rent may increase by up to five percent (5%) upon each annual renewal, consistent with standard commercial leasing practice.\",\"ref\":\"Civil Code Art. 1306 (stipulation of the parties). RA 9653 (Rent Control Act) covers residential units only, so commercial escalation is by agreement\",\"base\":\"8178e907b97c7ca15c94a219928b71cfa9876f35\"},{\"key\":\"use_of_premises\",\"label\":\"Use of Premises\",\"text\":\"The leased premises will be used solely for the business purpose stated in the tenant\'s application, and not for any illegal or unauthorized activity.\",\"ref\":\"Civil Code Art. 1657(2) (use for the purpose stipulated); Art. 1673 (judicial ejectment for use not stipulated)\",\"base\":\"2cd9e20f10ff9342abecb43736b3509fae344710\"},{\"key\":\"maintenance_responsibility\",\"label\":\"Maintenance Responsibility\",\"text\":\"Structural and major-system repairs are the lessor\'s responsibility. Interior fixtures, fittings, and day-to-day upkeep are the tenant\'s responsibility.\",\"ref\":\"Civil Code Art. 1654(2) (lessor makes necessary repairs); Arts. 1657(2) & 1663 (lessee\'s diligent use; duty to report needed repairs)\",\"base\":\"5facdff01e1161b4c4d6ec64bca0a2c69fc023b5\"},{\"key\":\"no_sublease\",\"label\":\"No Subleasing\",\"text\":\"The tenant will not sublease, assign, or transfer the lease to a third party without the lessor\'s prior written consent.\",\"ref\":\"Civil Code Art. 1649 (assignment needs lessor\'s consent); Art. 1650 (subleasing is allowed unless expressly prohibited, hence this clause)\",\"base\":\"5c8460e714c44422135d234cf2ad3b92737b62c2\"},{\"key\":\"termination_notice\",\"label\":\"Termination Notice\",\"text\":\"At least thirty (30) days\' written notice is required before vacating the premises or terminating the lease early.\",\"ref\":\"Civil Code Art. 1306 (stipulation); Arts. 1659 & 1673 (rescission; grounds for judicial ejectment)\",\"base\":\"c6c4ef85b8ccd054294868dfbc0ab2d5519212a4\"},{\"key\":\"insurance\",\"label\":\"Insurance\",\"text\":\"The tenant is responsible for insuring their own business property, inventory, and equipment within the premises.\",\"ref\":\"Civil Code Art. 1306 (stipulation); Insurance Code (PD 612, as amended by RA 10607)\",\"base\":\"0f7a51ceefce151310520d29e1a937b5b14479e4\"},{\"key\":\"compliance\",\"label\":\"Legal Compliance\",\"text\":\"The tenant will comply with all applicable national and local laws — including business permits, fire safety, and zoning regulations — for the duration of the lease.\",\"ref\":\"Local Government Code (RA 7160) on business permits; Fire Code of the Philippines (RA 9514); Civil Code Art. 1657\",\"base\":\"036ccccf18f9a7b67ac0b32c559ea5116fbbd9fe\"}]', '', 'draft', 1, NULL, NULL, NULL, NULL, '2026-11-08 14:55:41', '2026-11-08 14:55:41'),
+(6, 9, 2, NULL, 'Pwestora Standard', 3000.00, 24, '2026-10-19', NULL, 6000.00, 3000.00, 30, '[{\"key\":\"security_deposit\",\"label\":\"Security Deposit\",\"text\":\"A security deposit equivalent to two (2) months\' rent will be collected and held. It is refundable within 30 days of lease-end, less any deductions for damages or unpaid obligations.\",\"ref\":\"Civil Code (RA 386) Art. 1306 (freedom of stipulation); Arts. 1665 & 1667 (return of premises; lessee liable for deterioration)\",\"base\":\"a64587579015558ea97c8b1abfde91d440cccd14\"},{\"key\":\"rent_escalation\",\"label\":\"Rent Escalation\",\"text\":\"Monthly rent may increase by up to five percent (5%) upon each annual renewal, consistent with standard commercial leasing practice.\",\"ref\":\"Civil Code Art. 1306 (stipulation of the parties). RA 9653 (Rent Control Act) covers residential units only, so commercial escalation is by agreement\",\"base\":\"8178e907b97c7ca15c94a219928b71cfa9876f35\"},{\"key\":\"use_of_premises\",\"label\":\"Use of Premises\",\"text\":\"The leased premises will be used solely for the business purpose stated in the tenant\'s application, and not for any illegal or unauthorized activity.\",\"ref\":\"Civil Code Art. 1657(2) (use for the purpose stipulated); Art. 1673 (judicial ejectment for use not stipulated)\",\"base\":\"2cd9e20f10ff9342abecb43736b3509fae344710\"},{\"key\":\"maintenance_responsibility\",\"label\":\"Maintenance Responsibility\",\"text\":\"Structural and major-system repairs are the lessor\'s responsibility. Interior fixtures, fittings, and day-to-day upkeep are the tenant\'s responsibility.\",\"ref\":\"Civil Code Art. 1654(2) (lessor makes necessary repairs); Arts. 1657(2) & 1663 (lessee\'s diligent use; duty to report needed repairs)\",\"base\":\"5facdff01e1161b4c4d6ec64bca0a2c69fc023b5\"},{\"key\":\"no_sublease\",\"label\":\"No Subleasing\",\"text\":\"The tenant will not sublease, assign, or transfer the lease to a third party without the lessor\'s prior written consent.\",\"ref\":\"Civil Code Art. 1649 (assignment needs lessor\'s consent); Art. 1650 (subleasing is allowed unless expressly prohibited, hence this clause)\",\"base\":\"5c8460e714c44422135d234cf2ad3b92737b62c2\"},{\"key\":\"termination_notice\",\"label\":\"Termination Notice\",\"text\":\"At least thirty (30) days\' written notice is required before vacating the premises or terminating the lease early.\",\"ref\":\"Civil Code Art. 1306 (stipulation); Arts. 1659 & 1673 (rescission; grounds for judicial ejectment)\",\"base\":\"c6c4ef85b8ccd054294868dfbc0ab2d5519212a4\"},{\"key\":\"insurance\",\"label\":\"Insurance\",\"text\":\"The tenant is responsible for insuring their own business property, inventory, and equipment within the premises.\",\"ref\":\"Civil Code Art. 1306 (stipulation); Insurance Code (PD 612, as amended by RA 10607)\",\"base\":\"0f7a51ceefce151310520d29e1a937b5b14479e4\"},{\"key\":\"compliance\",\"label\":\"Legal Compliance\",\"text\":\"The tenant will comply with all applicable national and local laws — including business permits, fire safety, and zoning regulations — for the duration of the lease.\",\"ref\":\"Local Government Code (RA 7160) on business permits; Fire Code of the Philippines (RA 9514); Civil Code Art. 1657\",\"base\":\"036ccccf18f9a7b67ac0b32c559ea5116fbbd9fe\"},{\"key\":\"custom_262d0661\",\"label\":\"Bawal Inadik\",\"text\":\"nugay inadik di ha\",\"ref\":\"Civil Code Art. 1306 (stipulation of the parties)\",\"base\":\"\"}]', '', 'rejected', 3, '2026-11-08 16:15:52', NULL, '2026-11-08 16:16:15', 'ano gina mean mo nga inadik?', '2026-11-08 14:56:38', '2026-11-08 16:16:15');
 
 -- --------------------------------------------------------
 
@@ -875,6 +922,14 @@ CREATE TABLE `lease_contract_history` (
   `status_at_archive` varchar(20) NOT NULL,
   `archived_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+--
+-- Dumping data for table `lease_contract_history`
+--
+
+INSERT INTO `lease_contract_history` (`id`, `contract_id`, `tenant_id`, `version`, `snapshot`, `status_at_archive`, `archived_at`) VALUES
+(1, 6, 9, 1, '{\"id\":6,\"tenant_id\":9,\"lessor_id\":2,\"template_id\":null,\"template_name\":\"Pwestora Standard\",\"monthly_rent\":\"3000.00\",\"term_months\":24,\"start_date\":\"2026-10-19\",\"end_date\":null,\"security_deposit\":\"6000.00\",\"advance_rent\":\"3000.00\",\"due_day\":30,\"clauses\":\"[{\\\"key\\\":\\\"security_deposit\\\",\\\"label\\\":\\\"Security Deposit\\\",\\\"text\\\":\\\"A security deposit equivalent to two (2) months\' rent will be collected and held. It is refundable within 30 days of lease-end, less any deductions for damages or unpaid obligations.\\\",\\\"ref\\\":\\\"Civil Code (RA 386) Art. 1306 (freedom of stipulation); Arts. 1665 & 1667 (return of premises; lessee liable for deterioration)\\\",\\\"base\\\":\\\"a64587579015558ea97c8b1abfde91d440cccd14\\\"},{\\\"key\\\":\\\"rent_escalation\\\",\\\"label\\\":\\\"Rent Escalation\\\",\\\"text\\\":\\\"Monthly rent may increase by up to five percent (5%) upon each annual renewal, consistent with standard commercial leasing practice.\\\",\\\"ref\\\":\\\"Civil Code Art. 1306 (stipulation of the parties). RA 9653 (Rent Control Act) covers residential units only, so commercial escalation is by agreement\\\",\\\"base\\\":\\\"8178e907b97c7ca15c94a219928b71cfa9876f35\\\"},{\\\"key\\\":\\\"use_of_premises\\\",\\\"label\\\":\\\"Use of Premises\\\",\\\"text\\\":\\\"The leased premises will be used solely for the business purpose stated in the tenant\'s application, and not for any illegal or unauthorized activity.\\\",\\\"ref\\\":\\\"Civil Code Art. 1657(2) (use for the purpose stipulated); Art. 1673 (judicial ejectment for use not stipulated)\\\",\\\"base\\\":\\\"2cd9e20f10ff9342abecb43736b3509fae344710\\\"},{\\\"key\\\":\\\"maintenance_responsibility\\\",\\\"label\\\":\\\"Maintenance Responsibility\\\",\\\"text\\\":\\\"Structural and major-system repairs are the lessor\'s responsibility. Interior fixtures, fittings, and day-to-day upkeep are the tenant\'s responsibility.\\\",\\\"ref\\\":\\\"Civil Code Art. 1654(2) (lessor makes necessary repairs); Arts. 1657(2) & 1663 (lessee\'s diligent use; duty to report needed repairs)\\\",\\\"base\\\":\\\"5facdff01e1161b4c4d6ec64bca0a2c69fc023b5\\\"},{\\\"key\\\":\\\"no_sublease\\\",\\\"label\\\":\\\"No Subleasing\\\",\\\"text\\\":\\\"The tenant will not sublease, assign, or transfer the lease to a third party without the lessor\'s prior written consent.\\\",\\\"ref\\\":\\\"Civil Code Art. 1649 (assignment needs lessor\'s consent); Art. 1650 (subleasing is allowed unless expressly prohibited, hence this clause)\\\",\\\"base\\\":\\\"5c8460e714c44422135d234cf2ad3b92737b62c2\\\"},{\\\"key\\\":\\\"termination_notice\\\",\\\"label\\\":\\\"Termination Notice\\\",\\\"text\\\":\\\"At least thirty (30) days\' written notice is required before vacating the premises or terminating the lease early.\\\",\\\"ref\\\":\\\"Civil Code Art. 1306 (stipulation); Arts. 1659 & 1673 (rescission; grounds for judicial ejectment)\\\",\\\"base\\\":\\\"c6c4ef85b8ccd054294868dfbc0ab2d5519212a4\\\"},{\\\"key\\\":\\\"insurance\\\",\\\"label\\\":\\\"Insurance\\\",\\\"text\\\":\\\"The tenant is responsible for insuring their own business property, inventory, and equipment within the premises.\\\",\\\"ref\\\":\\\"Civil Code Art. 1306 (stipulation); Insurance Code (PD 612, as amended by RA 10607)\\\",\\\"base\\\":\\\"0f7a51ceefce151310520d29e1a937b5b14479e4\\\"},{\\\"key\\\":\\\"compliance\\\",\\\"label\\\":\\\"Legal Compliance\\\",\\\"text\\\":\\\"The tenant will comply with all applicable national and local laws \\u2014 including business permits, fire safety, and zoning regulations \\u2014 for the duration of the lease.\\\",\\\"ref\\\":\\\"Local Government Code (RA 7160) on business permits; Fire Code of the Philippines (RA 9514); Civil Code Art. 1657\\\",\\\"base\\\":\\\"036ccccf18f9a7b67ac0b32c559ea5116fbbd9fe\\\"},{\\\"key\\\":\\\"custom_262d0661\\\",\\\"label\\\":\\\"Bawal Inadik\\\",\\\"text\\\":\\\"nugay inadik di ha\\\",\\\"ref\\\":\\\"Civil Code Art. 1306 (stipulation of the parties)\\\",\\\"base\\\":\\\"\\\"}]\",\"special_provisions\":\"\",\"status\":\"finalized\",\"version\":1,\"finalized_at\":\"2026-11-08 14:57:08\",\"accepted_at\":null,\"created_at\":\"2026-11-08 14:56:38\",\"updated_at\":\"2026-11-08 14:57:08\"}', 'finalized', '2026-11-08 15:14:27'),
+(2, 6, 9, 2, '{\"id\":6,\"tenant_id\":9,\"lessor_id\":2,\"template_id\":null,\"template_name\":\"Pwestora Standard\",\"monthly_rent\":\"3000.00\",\"term_months\":24,\"start_date\":\"2026-10-19\",\"end_date\":null,\"security_deposit\":\"6000.00\",\"advance_rent\":\"3000.00\",\"due_day\":30,\"clauses\":\"[{\\\"key\\\":\\\"security_deposit\\\",\\\"label\\\":\\\"Security Deposit\\\",\\\"text\\\":\\\"A security deposit equivalent to two (2) months\' rent will be collected and held. It is refundable within 30 days of lease-end, less any deductions for damages or unpaid obligations.\\\",\\\"ref\\\":\\\"Civil Code (RA 386) Art. 1306 (freedom of stipulation); Arts. 1665 & 1667 (return of premises; lessee liable for deterioration)\\\",\\\"base\\\":\\\"a64587579015558ea97c8b1abfde91d440cccd14\\\"},{\\\"key\\\":\\\"rent_escalation\\\",\\\"label\\\":\\\"Rent Escalation\\\",\\\"text\\\":\\\"Monthly rent may increase by up to five percent (5%) upon each annual renewal, consistent with standard commercial leasing practice.\\\",\\\"ref\\\":\\\"Civil Code Art. 1306 (stipulation of the parties). RA 9653 (Rent Control Act) covers residential units only, so commercial escalation is by agreement\\\",\\\"base\\\":\\\"8178e907b97c7ca15c94a219928b71cfa9876f35\\\"},{\\\"key\\\":\\\"use_of_premises\\\",\\\"label\\\":\\\"Use of Premises\\\",\\\"text\\\":\\\"The leased premises will be used solely for the business purpose stated in the tenant\'s application, and not for any illegal or unauthorized activity.\\\",\\\"ref\\\":\\\"Civil Code Art. 1657(2) (use for the purpose stipulated); Art. 1673 (judicial ejectment for use not stipulated)\\\",\\\"base\\\":\\\"2cd9e20f10ff9342abecb43736b3509fae344710\\\"},{\\\"key\\\":\\\"maintenance_responsibility\\\",\\\"label\\\":\\\"Maintenance Responsibility\\\",\\\"text\\\":\\\"Structural and major-system repairs are the lessor\'s responsibility. Interior fixtures, fittings, and day-to-day upkeep are the tenant\'s responsibility.\\\",\\\"ref\\\":\\\"Civil Code Art. 1654(2) (lessor makes necessary repairs); Arts. 1657(2) & 1663 (lessee\'s diligent use; duty to report needed repairs)\\\",\\\"base\\\":\\\"5facdff01e1161b4c4d6ec64bca0a2c69fc023b5\\\"},{\\\"key\\\":\\\"no_sublease\\\",\\\"label\\\":\\\"No Subleasing\\\",\\\"text\\\":\\\"The tenant will not sublease, assign, or transfer the lease to a third party without the lessor\'s prior written consent.\\\",\\\"ref\\\":\\\"Civil Code Art. 1649 (assignment needs lessor\'s consent); Art. 1650 (subleasing is allowed unless expressly prohibited, hence this clause)\\\",\\\"base\\\":\\\"5c8460e714c44422135d234cf2ad3b92737b62c2\\\"},{\\\"key\\\":\\\"termination_notice\\\",\\\"label\\\":\\\"Termination Notice\\\",\\\"text\\\":\\\"At least thirty (30) days\' written notice is required before vacating the premises or terminating the lease early.\\\",\\\"ref\\\":\\\"Civil Code Art. 1306 (stipulation); Arts. 1659 & 1673 (rescission; grounds for judicial ejectment)\\\",\\\"base\\\":\\\"c6c4ef85b8ccd054294868dfbc0ab2d5519212a4\\\"},{\\\"key\\\":\\\"insurance\\\",\\\"label\\\":\\\"Insurance\\\",\\\"text\\\":\\\"The tenant is responsible for insuring their own business property, inventory, and equipment within the premises.\\\",\\\"ref\\\":\\\"Civil Code Art. 1306 (stipulation); Insurance Code (PD 612, as amended by RA 10607)\\\",\\\"base\\\":\\\"0f7a51ceefce151310520d29e1a937b5b14479e4\\\"},{\\\"key\\\":\\\"compliance\\\",\\\"label\\\":\\\"Legal Compliance\\\",\\\"text\\\":\\\"The tenant will comply with all applicable national and local laws \\u2014 including business permits, fire safety, and zoning regulations \\u2014 for the duration of the lease.\\\",\\\"ref\\\":\\\"Local Government Code (RA 7160) on business permits; Fire Code of the Philippines (RA 9514); Civil Code Art. 1657\\\",\\\"base\\\":\\\"036ccccf18f9a7b67ac0b32c559ea5116fbbd9fe\\\"},{\\\"key\\\":\\\"custom_262d0661\\\",\\\"label\\\":\\\"Bawal Inadik\\\",\\\"text\\\":\\\"nugay inadik di ha\\\",\\\"ref\\\":\\\"Civil Code Art. 1306 (stipulation of the parties)\\\",\\\"base\\\":\\\"\\\"}]\",\"special_provisions\":\"\",\"status\":\"finalized\",\"version\":2,\"finalized_at\":\"2026-11-08 15:14:32\",\"accepted_at\":null,\"created_at\":\"2026-11-08 14:56:38\",\"updated_at\":\"2026-11-08 15:14:32\"}', 'finalized', '2026-11-08 15:34:05');
 
 -- --------------------------------------------------------
 
@@ -907,7 +962,8 @@ INSERT INTO `lessor_profiles` (`user_id`, `business_permit_path`, `sec_dti_path`
 (36, 'uploads/verification/36/business_permit_5987a525.png', 'uploads/verification/36/sec_dti_c14cefb2.png', 'uploads/verification/36/bir_cert_cfbe587c.png', 'uploads/verification/36/land_title_abb9f4f5.png', 'uploads/verification/36/gov_id_154aa5b6.png', NULL, 1, '2026-10-22 23:05:17'),
 (37, 'uploads/verification/37/business_permit_d69c94ab.png', 'uploads/verification/37/sec_dti_a3180853.png', 'uploads/verification/37/bir_cert_8ecd7cea.png', 'uploads/verification/37/land_title_47b77b1b.png', 'uploads/verification/37/gov_id_51b6ad2c.png', NULL, 1, '2026-10-22 23:29:40'),
 (38, 'uploads/verification/38/business_permit_6243f954.png', 'uploads/verification/38/sec_dti_c7c7065c.png', 'uploads/verification/38/bir_cert_97cc11fd.png', 'uploads/verification/38/land_title_0e6f834b.png', 'uploads/verification/38/gov_id_323bd5b7.png', NULL, 1, '2026-10-22 23:44:19'),
-(43, 'uploads/verification/43/business_permit_f9a951ab.png', 'uploads/verification/43/sec_dti_133500aa.png', 'uploads/verification/43/bir_cert_633217c7.png', 'uploads/verification/43/land_title_d56770c7.png', 'uploads/verification/43/gov_id_a687515a.png', NULL, 1, '2026-10-28 06:50:14');
+(43, 'uploads/verification/43/business_permit_f9a951ab.png', 'uploads/verification/43/sec_dti_133500aa.png', 'uploads/verification/43/bir_cert_633217c7.png', 'uploads/verification/43/land_title_d56770c7.png', 'uploads/verification/43/gov_id_a687515a.png', NULL, 1, '2026-10-28 06:50:14'),
+(44, 'uploads/verification/44/business_permit_f04683c3.png', 'uploads/verification/44/sec_dti_63495880.png', 'uploads/verification/44/bir_cert_f4ceb07e.png', 'uploads/verification/44/land_title_6d7dbf8f.png', 'uploads/verification/44/gov_id_3de1416b.png', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1044,7 +1100,17 @@ INSERT INTO `messages` (`id`, `thread_id`, `sender`, `notice_type`, `body`, `sen
 (71, 15, 'lessor', 'Infraction Notice', '⚠️ OFFICIAL NOTICE OF INFRACTION (STRIKE 1 OF 3)\nCategory: Unpaid Rent Default (Past Due)\nAction Required: Immediate compliance with commercial property guidelines.\n\nA formal citation has been officially recorded against your lease agreement. Please review the citation details and disciplinary policy under your account.', '2026-10-28 07:07:22'),
 (72, 15, 'tenant', NULL, '🛠️ Maintenance Report (#SL-00017)\nCategory: Plumbing • Water leakage\nDescription: gatuko\nAttachments: 1 photo(s) attached\nStatus: Pending Review', '2026-10-28 07:17:44'),
 (73, 12, 'lessor', NULL, 'meg', '2026-11-03 14:48:35'),
-(74, 12, 'tenant', NULL, 'op?', '2026-11-03 14:48:43');
+(74, 12, 'tenant', NULL, 'op?', '2026-11-03 14:48:43'),
+(75, 10, 'lessor', 'Contract Revision Notice', '📝 NOTICE: CONTRACT REVISION IN PROGRESS (Draft v2)\n\nYour lessor has opened a revision for your lease contract at The J&R Commercial Center. Terms and clauses are currently being updated. You will receive an official notification once the revised contract is finalized for your review.', '2026-11-08 15:14:27'),
+(76, 10, 'lessor', 'Contract Notice', '📋 OFFICIAL NOTICE: LEASE CONTRACT FINALIZED (Version 2)\n\nYour lessor has finalized your customized lease contract for The J&R Commercial Center.\n\n• Monthly Rent: ₱3,000.00\n• Lease Term: 24 Months\n• Rent Payment Due: Every 30th of each month\n• Lease Start Date: 2026-10-19\n• Agreed Clauses: 9 terms\n\nAction Required: Please open your Pwestora app under Lease Agreement to review the finalized clauses and accept the agreement.', '2026-11-08 15:14:32'),
+(77, 10, 'lessor', 'Contract Revision Notice', '📝 NOTICE: CONTRACT REVISION IN PROGRESS (Draft v3)\n\nYour lessor has opened a revision for your lease contract at The J&R Commercial Center. Terms and clauses are currently being updated. You will receive an official notification once the revised contract is finalized for your review.', '2026-11-08 15:34:05'),
+(78, 10, 'tenant', NULL, 'hi', '2026-11-08 15:36:55'),
+(79, 10, 'lessor', 'Contract Notice', '📋 OFFICIAL NOTICE: LEASE CONTRACT FINALIZED (Version 3)\n\nYour lessor has finalized your customized lease contract for The J&R Commercial Center.\n\n• Monthly Rent: ₱3,000.00\n• Lease Term: 24 Months\n• Rent Payment Due: Every 30th of each month\n• Lease Start Date: 2026-10-19\n• Agreed Clauses: 9 terms\n\nAction Required: Please open your Pwestora app under Lease Agreement to review the finalized clauses and accept the agreement.', '2026-11-08 16:15:52'),
+(80, 10, 'tenant', 'Contract Notice', '⚠️ OFFICIAL NOTICE: CONTRACT REVISION REQUESTED (Version 3)\n\nRoger Intong has reviewed the lease agreement for The J&R Commercial Center and declined acceptance.\n\nTenant Feedback / Requested Revisions:\n\"ano gina mean mo nga inadik?\"\n\nAction Required: Please open your Lessor Dashboard under Contracts, review the feedback, and click \'Revise Contract\' to update the terms.', '2026-11-08 16:16:15'),
+(81, 2, 'tenant', NULL, 'Test', '2026-11-09 11:41:01'),
+(82, 2, 'tenant', NULL, 'Test', '2026-11-09 11:41:06'),
+(83, 2, 'tenant', NULL, 'Welcome to PWESTORA!.', '2026-11-09 11:43:13'),
+(84, 2, 'tenant', NULL, 'Test', '2026-11-09 11:43:25');
 
 -- --------------------------------------------------------
 
@@ -1081,6 +1147,33 @@ INSERT INTO `message_threads` (`id`, `lessor_id`, `tenant_id`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `notice_types`
+--
+
+CREATE TABLE `notice_types` (
+  `id` int(11) NOT NULL,
+  `name` varchar(60) NOT NULL,
+  `template` text DEFAULT NULL,
+  `color` varchar(20) NOT NULL DEFAULT 'blue',
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `sort_order` int(11) NOT NULL DEFAULT 0,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+--
+-- Dumping data for table `notice_types`
+--
+
+INSERT INTO `notice_types` (`id`, `name`, `template`, `color`, `is_active`, `sort_order`, `created_at`, `updated_at`) VALUES
+(1, 'General Announcement', 'Good day, Pwestora Partner!\n\nWe would like to share an update with all Pwestora partners:\n\n[Write your announcement here]\n\nThank you for being part of Pwestora.\n— Pwestora Admin', 'blue', 1, 1, '2026-11-11 14:20:56', '2026-11-11 14:20:56'),
+(2, 'Policy Update', 'Good day, Pwestora Partner!\n\nPlease be informed that Pwestora has updated the following policy:\n\n[Describe the policy change and its effective date]\n\nKindly review and comply. Reply through the platform if you have questions.\n— Pwestora Admin', 'purple', 1, 2, '2026-11-11 14:20:56', '2026-11-11 14:20:56'),
+(3, 'Verification Reminder', 'Good day, Pwestora Partner!\n\nThis is a reminder to complete or update your verification documents on Pwestora.\n\n[List the missing or expiring documents]\n\nUnverified listings will not be shown to tenants.\n— Pwestora Admin', 'orange', 1, 3, '2026-11-11 14:20:56', '2026-11-11 14:20:56'),
+(4, 'Compliance Notice', 'Good day, Pwestora Partner!\n\nWe noticed an item on your account that needs your attention:\n\n[Describe the compliance issue and the deadline]\n\nPlease settle this as soon as possible to avoid restrictions.\n— Pwestora Admin', 'red', 1, 4, '2026-11-11 14:20:56', '2026-11-11 14:20:56');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `notifications_log`
 --
 
@@ -1109,7 +1202,12 @@ INSERT INTO `notifications_log` (`id`, `sender_id`, `audience`, `title`, `body`,
 (9, 1, 'All lessors (5)', 'Policy Update', 'Prepare', '2026-10-22 20:06:41'),
 (10, 1, 'All lessors (5)', 'Policy Update', 'Please Prepare', '2026-10-22 20:11:46'),
 (11, 1, 'Barroness Tower', 'Policy Update', 'kfyuuf', '2026-10-28 07:10:27'),
-(12, 1, 'Secret', 'Policy Update', 'jkagkjrt', '2026-10-28 07:10:53');
+(12, 1, 'Secret', 'Policy Update', 'jkagkjrt', '2026-10-28 07:10:53'),
+(13, 2, 'tenant', 'Contract Revision Opened', 'A revision has been opened for your lease contract at The J&R Commercial Center (v2). You will be notified once it is finalized.', '2026-11-08 15:14:27'),
+(14, 2, 'tenant', 'Contract Finalized', 'Your lease contract for The J&R Commercial Center (Version 2) has been finalized and is ready for your review and acceptance.', '2026-11-08 15:14:32'),
+(15, 2, 'tenant', 'Contract Revision Opened', 'A revision has been opened for your lease contract at The J&R Commercial Center (v3). You will be notified once it is finalized.', '2026-11-08 15:34:05'),
+(16, 2, 'tenant', 'Contract Finalized', 'Your lease contract for The J&R Commercial Center (Version 3) has been finalized and is ready for your review and acceptance.', '2026-11-08 16:15:52'),
+(17, 32, 'lessor', 'Contract Revision Requested', 'Roger Intong declined Lease Agreement v3 for The J&R Commercial Center. Reason: \"ano gina mean mo nga inadik?\"', '2026-11-08 16:16:15');
 
 -- --------------------------------------------------------
 
@@ -1146,7 +1244,12 @@ INSERT INTO `notification_recipients` (`id`, `notification_id`, `user_id`, `read
 (18, 10, 6, NULL),
 (19, 10, 2, '2026-10-23 05:13:32'),
 (20, 11, 36, NULL),
-(21, 12, 2, '2026-11-03 14:41:51');
+(21, 12, 2, '2026-11-03 14:41:51'),
+(22, 13, 32, NULL),
+(23, 14, 32, NULL),
+(24, 15, 32, NULL),
+(25, 16, 32, NULL),
+(26, 17, 2, NULL);
 
 -- --------------------------------------------------------
 
@@ -1267,24 +1370,35 @@ CREATE TABLE `properties` (
   `tax_dec_path` varchar(255) DEFAULT NULL,
   `photos_path` varchar(255) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
-  `occupancy_status` enum('available','occupied','reserved','under_maintenance') NOT NULL DEFAULT 'available'
+  `occupancy_status` enum('available','occupied','reserved','under_maintenance') NOT NULL DEFAULT 'available',
+  `landmark_name` varchar(150) DEFAULT NULL,
+  `landmark_distance` varchar(60) DEFAULT NULL,
+  `landmark_photo_path` varchar(255) DEFAULT NULL,
+  `floor_level` varchar(60) DEFAULT NULL,
+  `frontage` varchar(60) DEFAULT NULL,
+  `parking_slots` int(11) DEFAULT NULL,
+  `utilities` varchar(255) DEFAULT NULL,
+  `amenities` text DEFAULT NULL,
+  `permitted_use` varchar(255) DEFAULT NULL,
+  `operating_hours` varchar(100) DEFAULT NULL,
+  `deposit_terms` varchar(150) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `properties`
 --
 
-INSERT INTO `properties` (`id`, `lessor_id`, `name`, `type`, `address`, `latitude`, `longitude`, `asking_rent`, `floor_area`, `lease_term`, `escalation`, `total_units`, `available_units`, `description`, `status`, `title_doc_path`, `tax_dec_path`, `photos_path`, `created_at`, `occupancy_status`) VALUES
-(1, 2, 'Atrium Commercial Plaza', 'Commercial Lot', 'Lacson Street, Bacolod City', 10.6812024, 122.9551428, 2000.00, '5 x 5', '1', '5', 25, 19, NULL, 'verified', 'uploads/properties/1/title_doc_97bf08ad.jpg', 'uploads/properties/1/tax_dec_253bc4b8.jpg', 'uploads/properties/1/photos_37ca3a94.jpg', '2026-08-21 02:59:19', 'available'),
-(4, 2, 'MS City Bacolod', 'Commercial Lot', 'MS City Bacolod, Bacolod, 6100 Negros Occidental', 10.6718045, 122.9443041, 5000.00, '500', '1', '2', 40, 37, NULL, 'verified', 'uploads/properties/4/title_doc_f73183f9.png', 'uploads/properties/4/tax_dec_1d65cb1f.png', NULL, '2026-09-23 13:25:34', 'available'),
-(5, 2, 'The J&R Commercial Center', 'Retail', 'Vista Street, Brgy. Alijis, Bacolod City', 10.6451105, 122.9403127, 3000.00, '1 x 1', '1', '2', 15, 12, NULL, 'verified', 'uploads/properties/5/title_doc_d87ad8e1.jpg', 'uploads/properties/5/tax_dec_a844b423.jpg', NULL, '2026-09-23 13:35:54', 'available'),
-(7, 34, 'Mattel\'s Buidling', 'Office', '88 Locsin A. Palanca Avenue, Bacolod City, Western Visayas, Philippines', 10.6724620, 122.9426982, 100000.00, '1000', '1', '3%', 2, 0, NULL, 'verified', 'uploads/properties/7/title_doc_33a37df7.png', 'uploads/properties/7/tax_dec_0b60f19b.jpg', NULL, '2026-10-20 16:30:39', 'available'),
-(8, 34, 'BeeHive', 'Coworking Space', '108-C Locsin A. Palanca Ave, Bacolod City', 10.6785042, 122.9496882, 200000.00, NULL, NULL, NULL, 3, 0, NULL, 'verified', 'uploads/properties/8/title_doc_f9f31492.png', 'uploads/properties/8/tax_dec_5d986ee3.png', NULL, '2026-10-20 17:43:22', 'available'),
-(15, 34, 'Lacson Retail Strip', 'Retail', 'Lacson St., Bacolod City', 10.6773951, 122.9541565, 65000.00, '120 SQM (1 floor)', '2', '5', 1, 1, 'High-traffic ground floor retail space perfect for a boutique or showroom.', 'verified', 'uploads/properties/15/title_doc_f377ec92.png', 'uploads/properties/15/tax_dec_e2170025.png', NULL, '2026-10-27 18:13:10', 'available'),
-(16, 34, 'Bacolod Cyber Plaza', 'Office', 'BS Aquino Drive, Bacolod City', NULL, NULL, 180000.00, '450 SQM (2 floors)', '3', '4', 1, 1, 'Fully fitted office space with meeting rooms and pantry.', 'verified', 'uploads/properties/16/title_doc_a1f48a71.png', 'uploads/properties/16/tax_dec_bf30ef47.png', NULL, '2026-10-27 18:17:15', 'available'),
-(17, 34, 'Alijis Logistics Hub', 'Warehouse', 'Alijis Road, Bacolod City', NULL, NULL, 250000.00, '1,200 SQM', '5', '5', 1, 1, 'Spacious warehouse with high ceilings, gated security, and loading docks.', 'verified', 'uploads/properties/17/title_doc_5a356fe6.png', 'uploads/properties/17/tax_dec_80f0ebb7.png', NULL, '2026-10-27 18:20:49', 'available'),
-(18, 34, 'MedCare Clinic Suites', 'Medical/Clinic', 'Burgos St., Bacolod City', NULL, NULL, 45000.00, '85 SQM', '2', '4', 1, 1, 'Medical clinic with reception, patient waiting area, and private rooms.', 'verified', 'uploads/properties/18/title_doc_38c90e5e.png', 'uploads/properties/18/tax_dec_7e0b2c2d.png', NULL, '2026-10-27 18:26:03', 'available'),
-(19, 2, 'Loopwest', 'Retail', 'Burgos-Circumferential Road, Burgos, 6100, Bacolod, 610...', 10.6789040, 122.9617700, 15000.00, '2 Floors', '1', '3', 20, 18, 'The Loopwest complex is a vibrant, multi-level commercial center featuring a bold green, orange, and blue facade framed by tall ornamental columns and a large steel-truss canopy on top. Its ground floor accommodates retail shops, a supermarket, and sheltered walkways fronted by an open parking area facing a busy street.', 'verified', 'uploads/properties/19/title_doc_6304b82f.jpg', 'uploads/properties/19/tax_dec_3c1b0b80.jpg', NULL, '2026-10-28 01:07:47', 'available');
+INSERT INTO `properties` (`id`, `lessor_id`, `name`, `type`, `address`, `latitude`, `longitude`, `asking_rent`, `floor_area`, `lease_term`, `escalation`, `total_units`, `available_units`, `description`, `status`, `title_doc_path`, `tax_dec_path`, `photos_path`, `created_at`, `occupancy_status`, `landmark_name`, `landmark_distance`, `landmark_photo_path`, `floor_level`, `frontage`, `parking_slots`, `utilities`, `amenities`, `permitted_use`, `operating_hours`, `deposit_terms`) VALUES
+(1, 2, 'Atrium Commercial Plaza', 'Commercial Lot', 'Lacson Street, Bacolod City', 10.6812024, 122.9551428, 2000.00, '100 sqm', '1', '5', 25, 19, NULL, 'verified', 'uploads/properties/1/title_doc_97bf08ad.jpg', 'uploads/properties/1/tax_dec_253bc4b8.jpg', 'uploads/properties/1/photos_37ca3a94.jpg', '2026-08-21 02:59:19', 'available', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(4, 2, 'MS City Bacolod', 'Commercial Lot', 'MS City Bacolod, Bacolod, 6100 Negros Occidental', 10.6718045, 122.9443041, 5000.00, '500', '1', '2', 40, 37, NULL, 'verified', 'uploads/properties/4/title_doc_f73183f9.png', 'uploads/properties/4/tax_dec_1d65cb1f.png', NULL, '2026-09-23 13:25:34', 'available', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(5, 2, 'The J&R Commercial Center', 'Retail', 'Vista Street, Brgy. Alijis, Bacolod City', 10.6451105, 122.9403127, 3000.00, '1 x 1', '1', '2', 15, 12, NULL, 'verified', 'uploads/properties/5/title_doc_d87ad8e1.jpg', 'uploads/properties/5/tax_dec_a844b423.jpg', NULL, '2026-09-23 13:35:54', 'available', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(7, 34, 'Mattel\'s Buidling', 'Office', '88 Locsin A. Palanca Avenue, Bacolod City, Western Visayas, Philippines', 10.6724620, 122.9426982, 100000.00, '1000', '1', '3%', 2, 0, NULL, 'verified', 'uploads/properties/7/title_doc_33a37df7.png', 'uploads/properties/7/tax_dec_0b60f19b.jpg', NULL, '2026-10-20 16:30:39', 'available', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(8, 34, 'BeeHive', 'Coworking Space', '108-C Locsin A. Palanca Ave, Bacolod City', 10.6785042, 122.9496882, 200000.00, NULL, NULL, NULL, 3, 0, NULL, 'verified', 'uploads/properties/8/title_doc_f9f31492.png', 'uploads/properties/8/tax_dec_5d986ee3.png', NULL, '2026-10-20 17:43:22', 'available', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(15, 34, 'Lacson Retail Strip', 'Retail', 'Lacson St., Bacolod City', 10.6773951, 122.9541565, 65000.00, '120 SQM (1 floor)', '2', '5', 1, 1, 'High-traffic ground floor retail space perfect for a boutique or showroom.', 'verified', 'uploads/properties/15/title_doc_f377ec92.png', 'uploads/properties/15/tax_dec_e2170025.png', NULL, '2026-10-27 18:13:10', 'available', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(16, 34, 'Bacolod Cyber Plaza', 'Office', 'BS Aquino Drive, Bacolod City', NULL, NULL, 180000.00, '450 SQM (2 floors)', '3', '4', 1, 1, 'Fully fitted office space with meeting rooms and pantry.', 'verified', 'uploads/properties/16/title_doc_a1f48a71.png', 'uploads/properties/16/tax_dec_bf30ef47.png', NULL, '2026-10-27 18:17:15', 'available', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(17, 34, 'Alijis Logistics Hub', 'Warehouse', 'Alijis Road, Bacolod City', NULL, NULL, 250000.00, '1,200 SQM', '5', '5', 1, 1, 'Spacious warehouse with high ceilings, gated security, and loading docks.', 'verified', 'uploads/properties/17/title_doc_5a356fe6.png', 'uploads/properties/17/tax_dec_80f0ebb7.png', NULL, '2026-10-27 18:20:49', 'available', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(18, 34, 'MedCare Clinic Suites', 'Medical/Clinic', 'Burgos St., Bacolod City', NULL, NULL, 45000.00, '85 SQM', '2', '4', 1, 1, 'Medical clinic with reception, patient waiting area, and private rooms.', 'verified', 'uploads/properties/18/title_doc_38c90e5e.png', 'uploads/properties/18/tax_dec_7e0b2c2d.png', NULL, '2026-10-27 18:26:03', 'available', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(19, 2, 'Loopwest', 'Retail', 'Burgos-Circumferential Road, Burgos, 6100, Bacolod, 610...', 10.6789040, 122.9617700, 15000.00, '2 Floors', '1', '3', 20, 18, 'The Loopwest complex is a vibrant, multi-level commercial center featuring a bold green, orange, and blue facade framed by tall ornamental columns and a large steel-truss canopy on top. Its ground floor accommodates retail shops, a supermarket, and sheltered walkways fronted by an open parking area facing a busy street.', 'verified', 'uploads/properties/19/title_doc_6304b82f.jpg', 'uploads/properties/19/tax_dec_3c1b0b80.jpg', NULL, '2026-10-28 01:07:47', 'available', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1296,24 +1410,28 @@ CREATE TABLE `property_photos` (
   `id` int(11) NOT NULL,
   `property_id` int(11) NOT NULL,
   `photo_path` varchar(255) NOT NULL,
-  `uploaded_at` datetime NOT NULL DEFAULT current_timestamp()
+  `uploaded_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `category` varchar(30) NOT NULL DEFAULT 'exterior',
+  `caption` varchar(150) DEFAULT NULL,
+  `sort_order` int(11) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `property_photos`
 --
 
-INSERT INTO `property_photos` (`id`, `property_id`, `photo_path`, `uploaded_at`) VALUES
-(2, 1, 'uploads/properties/1/photo_3fa34348.jpg', '2026-09-14 12:52:31'),
-(3, 4, 'uploads/properties/4/photo_16c39c8d.jpg', '2026-09-23 13:25:34'),
-(4, 5, 'uploads/properties/5/photo_200efb27.jpg', '2026-09-23 13:35:54'),
-(6, 7, 'uploads/properties/7/photo_20c334f6.webp', '2026-10-20 16:30:39'),
-(7, 8, 'uploads/properties/8/photo_dffcd817.jpg', '2026-10-20 17:43:22'),
-(14, 15, 'uploads/properties/15/photo_fc356a10.jpg', '2026-10-27 18:13:10'),
-(15, 16, 'uploads/properties/16/photo_b9bcc07c.jpg', '2026-10-27 18:17:15'),
-(18, 17, 'uploads/properties/17/photo_47d35256.jpg', '2026-10-27 18:22:07'),
-(19, 18, 'uploads/properties/18/photo_a9df8a60.jpg', '2026-10-27 18:26:03'),
-(21, 19, 'uploads/properties/19/photo_517b783e.jpg', '2026-10-28 01:10:41');
+INSERT INTO `property_photos` (`id`, `property_id`, `photo_path`, `uploaded_at`, `category`, `caption`, `sort_order`) VALUES
+(2, 1, 'uploads/properties/1/photo_3fa34348.jpg', '2026-09-14 12:52:31', 'exterior', NULL, 0),
+(3, 4, 'uploads/properties/4/photo_16c39c8d.jpg', '2026-09-23 13:25:34', 'exterior', NULL, 0),
+(4, 5, 'uploads/properties/5/photo_200efb27.jpg', '2026-09-23 13:35:54', 'exterior', NULL, 0),
+(6, 7, 'uploads/properties/7/photo_20c334f6.webp', '2026-10-20 16:30:39', 'exterior', NULL, 0),
+(7, 8, 'uploads/properties/8/photo_dffcd817.jpg', '2026-10-20 17:43:22', 'exterior', NULL, 0),
+(14, 15, 'uploads/properties/15/photo_fc356a10.jpg', '2026-10-27 18:13:10', 'exterior', NULL, 0),
+(15, 16, 'uploads/properties/16/photo_b9bcc07c.jpg', '2026-10-27 18:17:15', 'exterior', NULL, 0),
+(18, 17, 'uploads/properties/17/photo_47d35256.jpg', '2026-10-27 18:22:07', 'exterior', NULL, 0),
+(19, 18, 'uploads/properties/18/photo_a9df8a60.jpg', '2026-10-27 18:26:03', 'exterior', NULL, 0),
+(21, 19, 'uploads/properties/19/photo_517b783e.jpg', '2026-10-28 01:10:41', 'exterior', NULL, 0),
+(22, 19, 'uploads/properties/19/photo_176dbe2a.jpg', '2026-11-11 13:31:40', 'exterior', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -1326,6 +1444,19 @@ CREATE TABLE `rate_limits` (
   `hits` int(10) UNSIGNED NOT NULL DEFAULT 0,
   `window_start` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci;
+
+--
+-- Dumping data for table `rate_limits`
+--
+
+INSERT INTO `rate_limits` (`rl_key`, `hits`, `window_start`) VALUES
+('3b775430a0269f98bd2adb5c6bb9d57b106bcb2b42b6fa56300db6acfb30cb97', 2, '2026-11-09 00:45:28'),
+('4fe2ff04143f3642ac38a7b7eccf6526d2f988f670b8f9981a10d81cea152e52', 1, '2026-11-09 22:27:49'),
+('8b394fc22c9171d5a8c05fad4ee00bf47c8472853e2a13f0192c7abc0d60238c', 1, '2026-11-08 14:48:14'),
+('a65fff4561168c8698118042b177b1c20289c94d715145214494738a9905944e', 2, '2026-11-09 00:45:28'),
+('ca851568fe04addde608b66492c2f05df8f8645891bf9d3e4a2063101964e792', 1, '2026-11-08 14:48:14'),
+('e263dc2e82aa0ad8a1c8c88bf24885b07084fdaf7451c33854a16b5bc58cf96f', 1, '2026-11-09 22:47:33'),
+('e78c69a9cd838c5c28aec517c11f0e8097e148271ef1a658c91336b10eebac44', 1, '2026-11-09 22:27:49');
 
 -- --------------------------------------------------------
 
@@ -1399,7 +1530,7 @@ INSERT INTO `tenants` (`id`, `lessor_id`, `property_id`, `application_id`, `less
 (6, 2, 1, 8, 17, 'Charmain Acot', NULL, NULL, NULL, NULL, '2026-09-14 12:32:28', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
 (7, 2, 5, 11, NULL, 'Jeremy Gonzales', NULL, NULL, NULL, NULL, '2026-09-28 10:48:16', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
 (8, 2, 4, 12, 30, 'Chris Acot', NULL, NULL, NULL, NULL, '2026-10-12 15:59:55', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
-(9, 2, 5, 15, 32, 'Roger Intong', NULL, NULL, NULL, NULL, '2026-10-19 08:01:23', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
+(9, 2, 5, 15, 32, 'Roger Intong', NULL, NULL, NULL, NULL, '2026-10-19 08:01:23', 3000.00, 30, '2026-10-19', '2028-10-18', 0.00, 0.00, NULL, 'active'),
 (10, 2, 5, 13, 30, 'Chris Acot', NULL, NULL, NULL, NULL, '2026-10-19 14:36:46', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
 (11, 2, 4, 16, 12, 'Jake Peralta', NULL, NULL, NULL, NULL, '2026-10-20 15:27:23', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
 (12, 34, 7, 17, NULL, 'Barbie Demor', NULL, NULL, NULL, NULL, '2026-10-20 17:36:43', 0.00, 30, NULL, NULL, 0.00, 0.00, NULL, 'active'),
@@ -1441,7 +1572,7 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`id`, `role`, `status`, `company_name`, `full_name`, `email`, `phone`, `password_hash`, `api_token`, `otp_code`, `otp_expires_at`, `created_at`, `updated_at`, `avatar_url`, `fcm_token`) VALUES
 (1, 'superadmin', 'active', NULL, 'John Michael Antinola', 'pwestora.unknownprogrammer@gmail.com', NULL, '$2y$10$A5DbzVabC1Ysu14JAMBJGeX/fzdO8a/iZzNsy8flypxo/4ETM2Mc2', NULL, NULL, NULL, '2026-08-21 02:22:51', '2026-08-23 08:50:49', NULL, NULL),
-(2, 'lessor', 'active', 'Secret', 'glenn', 'jmantinola54@gmail.com', '0911', '$2y$10$ohDDjgx2N4pe9KTIlgXJx.kBFQpI9FOuYvilQVaGAO1fTranky/Ga', NULL, NULL, NULL, '2026-08-21 02:32:16', '2026-10-28 00:56:44', NULL, NULL),
+(2, 'lessor', 'active', 'JM Enterprise', 'glenn', 'jmantinola54@gmail.com', '092301994821', '$2y$10$ohDDjgx2N4pe9KTIlgXJx.kBFQpI9FOuYvilQVaGAO1fTranky/Ga', NULL, NULL, NULL, '2026-08-21 02:32:16', '2026-11-09 22:39:28', NULL, NULL),
 (3, 'lessee', 'active', NULL, 'jm', 'jm@gmail.com', '588558', '$2y$10$2CE9Oa3PYijMUq5uqdbqquZZrXBQfvIZ4UmWChFna43VN3.xUW22.', '529f64c6af45b83b98a6eeef6de9d037ae4741876177a771e3fa550ca4dee281', NULL, NULL, '2026-08-21 09:27:25', '2026-10-19 05:08:07', NULL, NULL),
 (4, 'lessor', 'active', 'gwapo ako', 'gwaposiglenn?', 'glennxlord@gmail.com', '09646454545454', '$2y$10$6JQXg1fjpn0kZCXeSWdHBOeLtLnpBkJTEVy68Z45xocNcm1fDQmse', NULL, NULL, NULL, '2026-08-21 14:16:11', '2026-10-28 00:57:07', NULL, NULL),
 (5, 'lessee', 'suspended', NULL, 'h', 'glenn@gmail.com', '39', '$2y$10$0r35W.kN81dvkhWSdBPn6eKxU0DekhtdAkzK0SClosxYxnqBEDK2.', '930ba507aa99e10f3a0ee2e9b3ad3883582f27bae87da55c6f9ce9ef81db758b', NULL, NULL, '2026-08-21 22:11:11', '2026-10-22 05:45:25', NULL, NULL),
@@ -1449,7 +1580,7 @@ INSERT INTO `users` (`id`, `role`, `status`, `company_name`, `full_name`, `email
 (7, 'lessee', 'active', NULL, 'glenn', 'witness.22.15@gmail.com', '123456789', '$2y$10$wRXV/KSPpzMW1DwdSqmLJu4AWxPDSbhUkqGprZQPQpKjGCrO7OCMa', '6b6d6103c433884bb22083a687d56f013b9ef800090b200c89e2f9f5bc42aebe', NULL, NULL, '2026-08-27 01:01:54', '2026-08-27 01:01:54', NULL, NULL),
 (8, 'lessee', 'active', NULL, 'glenngwapo', 'paolopastorcot305@gmail.com', '09649454588', '$2y$10$S.HX8Fdw.foiE.P.UiM4vuZACi/o5X5m5V7O7CjhCocNfgcSf/KZS', '56cf9e21c7a26e381914ca2d070443b59fed3367c9b15916d2253f2a003517d7', NULL, NULL, '2026-08-27 01:36:11', '2026-08-27 01:36:11', NULL, NULL),
 (11, 'lessee', 'active', NULL, 'jm', 'it.prolifemanagement@gmail.com', '688686', '$2y$10$RLnytSI9nOSeF6wGjN2pHuXyQv7loqcTDewbwjkIpyUVrCBFlEYEy', '7ff2e5cd78e6ce9c86fafcb37f4f0bab50fd6a3acc3ff3b28d9f5465f5c696da', NULL, NULL, '2026-09-07 05:34:38', '2026-09-07 05:34:38', NULL, NULL),
-(12, 'lessee', 'active', NULL, 'Jake Peralta', 'jakeperalta@gmail.com', '09123141146', '$2y$10$bbfDBJyaOx6adVzjLmCxwe2kPEaWvg6vpVGj48xEqUeTZ6JYsS4jW', 'e6418fd847203d0b1f7885fcac80266e69b57bc523fd41bf9cc6dcd64d1c39cf', NULL, NULL, '2026-09-07 10:00:21', '2026-11-03 14:45:07', NULL, NULL),
+(12, 'lessee', 'active', NULL, 'Jake Peralta', 'jakeperalta@gmail.com', '09123141146', '$2y$10$bbfDBJyaOx6adVzjLmCxwe2kPEaWvg6vpVGj48xEqUeTZ6JYsS4jW', 'f28635e96ce8cef988f0cd0ae7e2f1540d864fc3e79216b64a63c998f419999e', NULL, NULL, '2026-09-07 10:00:21', '2026-11-09 23:03:08', NULL, NULL),
 (13, 'lessee', 'active', NULL, 'John Sazon', 'johnsazon@gmail.com', '09945884122', '$2y$10$42L/ToWnbwHocHQbFzcI6edodd3dt4CMnS/FyAPA.CppA6C1OyicC', '85425aead077c44f4aa287f70aca9d1794a9166646dbf52e51404bb05a94bbfd', NULL, NULL, '2026-09-07 13:48:40', '2026-09-08 00:44:53', NULL, NULL),
 (14, 'lessee', 'active', NULL, 'Holt Raymund', 'holt@gmail.com', '09266982730', '$2y$10$PMnMN9NGUEkkrSCyqs5g1uBBmuwRQHqe.GyZNaCcqiLUrBVUEFM0C', '0604c2fffb69cfaa6c297c9566a16e4d519f8beea49c532f1f65a05b864f0948', NULL, NULL, '2026-09-12 04:33:22', '2026-09-12 04:33:22', NULL, NULL),
 (17, 'lessee', 'active', NULL, 'Charmain Acot', 'charmaine@gmail.com', '09937481293', '$2y$10$t0AQW/DB63EKZBQVJj2QI.dcgzK9t2FjUAtzHkYmrQHiutqVMQX5S', '363147476a08922748fc2dab03f23a2eba9b9b6e5d64f60beb60cb06807e00df', NULL, NULL, '2026-09-14 11:12:40', '2026-09-14 13:44:14', NULL, NULL),
@@ -1460,17 +1591,18 @@ INSERT INTO `users` (`id`, `role`, `status`, `company_name`, `full_name`, `email
 (25, 'lessee', 'suspended', NULL, 'Jason Yap', 'jason@gmail.com', '92664319734', '$2y$10$F8PtzAcLZkKYA0bjoD2II./SWu15qB16haAVZOeybSartuiY4f1Sm', 'aedbcd1058a386eff7b42f84ab5191e0acaec020d3a0f61a510c7139d4f868b3', NULL, NULL, '2026-09-29 00:56:06', '2026-10-23 05:15:36', NULL, NULL),
 (30, 'lessee', 'suspended', NULL, 'Chris Acot', 'chrisdanielacot305@gmail.com', '09945884126', '$2y$10$dvTOlZBQm5H1KUekjkaIseSK3wV3JBaFUv.CicPEEfqbCMsU6bI8W', '97492c58f1781fff99698273c718f23cb6d29c0aac9deaff4fad89f99f588c08', NULL, NULL, '2026-10-12 14:45:54', '2026-11-02 04:18:05', NULL, NULL),
 (31, 'lessee', 'active', NULL, 'Anton', 'anton@gmail.com', '09673254411', '$2y$10$8zAYf8Lwq7gpAWQRpQ/77.cjXedW.a7.XhoOhC0ud/RSmH/LBw9ai', 'eca80432a9131de51c1637b63377159bf49056972e6ba5f64cf3251f1ccfb0d4', NULL, NULL, '2026-10-19 05:09:01', '2026-10-19 05:09:01', NULL, NULL),
-(32, 'lessee', 'active', NULL, 'Roger Intong', 'roger@gmail.com', '09770260508', '$2y$10$/76JrEkBCZHnwHtlcomV5eZPBAmR7hPd4zAZCJiLBei0QPrrdAQua', '39bfef28f039c5fde7aed7cb8a4dee17e59e1ae38f97b63042a3376b48039d81', NULL, NULL, '2026-10-19 07:56:19', '2026-11-06 02:32:39', NULL, NULL),
+(32, 'lessee', 'active', NULL, 'Roger Intong', 'roger@gmail.com', '09770260508', '$2y$10$/76JrEkBCZHnwHtlcomV5eZPBAmR7hPd4zAZCJiLBei0QPrrdAQua', 'daf6622603a89d04b3f9861f77b645794a11fac6c18c5aa851d8f8c566505cd1', NULL, NULL, '2026-10-19 07:56:19', '2026-11-08 14:48:28', NULL, NULL),
 (34, 'lessor', 'active', 'Mattel Cosmetic', 'Aireys Ann Ibugan', 'aireysanni@gmail.com', '09052119399', '$2y$10$BCMa03V1nq1dyJ3ERTBdee4qTnRqHmR3UesqQ6dND4Tzk2vetkSMW', NULL, NULL, NULL, '2026-10-20 15:56:43', '2026-10-21 05:50:33', NULL, NULL),
 (35, 'lessor', 'active', 'Gether\'s Business', 'Gether Medel', 'g.medel@usls.edu.ph', '09457250735', '$2y$10$C0gYcyF5XgsD2pnQJKfYq.GNXpbbujREFkKDDCO7Q/tbidXMER6Hi', NULL, NULL, NULL, '2026-10-21 05:54:16', '2026-10-21 06:00:20', NULL, NULL),
 (36, 'lessor', 'active', 'Barroness Tower', 'Dame Barroness', 'damebarroness@gmail.com', '09052119399', '$2y$10$2HPWzDvxsjCBWjOgzhlRz.tvMo9Pl4.NmFjiKs7EgM4cfYbhz24CS', NULL, NULL, NULL, '2026-10-22 19:14:30', '2026-10-22 23:05:17', NULL, NULL),
 (37, 'lessor', 'active', 'Lux Tower', 'Aireys Ann', 'sirensaireys63@gmail.com', '09052119399', '$2y$10$6orxB4qW57JO1Tv/MmEqpOfYIMZmDisJkLHWPoJGzCVVdUC8XH9FK', NULL, NULL, NULL, '2026-10-22 23:18:20', '2026-10-22 23:29:40', NULL, NULL),
 (38, 'lessor', 'active', 'Flower TOwer', 'Aireys Ann', 's2301268@usls.edu.ph', '09052119399', '$2y$10$Ak9l0aC1fxF.BdP1Y573NuEbFr4l4/5IgofK1uHK/746cHJTMfX36', NULL, NULL, NULL, '2026-10-22 23:43:50', '2026-10-22 23:44:19', NULL, NULL),
-(39, 'lessee', 'active', NULL, 'George Jeremy', 'george@gmail.com', '09266931720', '$2y$10$9xoBTB0Vc4MCkDE5rKo6vu08vWOQ14vEbS85q3EWN1Dwr8G2piZLO', '72c47872ddbff09b063d4354cae44c435ce47467573645e28b8b744bc5a5fe2d', NULL, NULL, '2026-10-23 01:14:08', '2026-10-23 05:15:29', NULL, NULL),
 (40, 'lessee', 'active', NULL, 'Sanji Santos', 'sanji@gmail.com', '09668928490', '$2y$10$HVc7SexPv3Snnue5e07eT.ma/wjDOaYKB/2RNV0/0sl.eC0lTbyP2', 'd65fab4a8845c8b574b2ad097a4d9746f999dfdd7f8310c020e86f29535e0e82', NULL, NULL, '2026-10-27 15:18:06', '2026-10-28 03:41:31', NULL, NULL),
 (41, 'lessee', 'active', NULL, 'Dave M', 'any@any.com', '09758743655', '$2y$10$9flKWURqDOSwV/cRkfdtbuizj8jWgpYuSTfagazawa9I5FQWWgoEy', '0ffe13c93cfbc17a7bb5a2dec2b59f1d341e4daef3ba2e908a7520732184107b', NULL, NULL, '2026-10-28 04:29:26', '2026-10-28 04:29:26', NULL, NULL),
 (42, 'lessee', 'active', NULL, 'Zoro', 'zoro@gmail.com', '09277450985', '$2y$10$kxWEEIE150PakJVxNKytC.XgaD2PrvFG2urGboNE58fYpikTn2wMO', '5d5b514fff3c3d415689416b5c1fec12d052c0baf81fdeb27cd62c6af38d2beb', NULL, NULL, '2026-10-28 06:45:20', '2026-10-28 06:56:50', NULL, NULL),
-(43, 'lessor', 'suspended', 'Lopues Build', 'Anton Luis Corrales', 's1010287@usls.edu.ph', '09673254411', '$2y$10$PHbsajntV77IsqQ56UAKbO.HPQw6L8zbUXAME1z1XrgycqO17I8IC', NULL, NULL, NULL, '2026-10-28 06:48:56', '2026-10-28 07:09:32', NULL, NULL);
+(43, 'lessor', 'suspended', 'Lopues Build', 'Anton Luis Corrales', 's1010287@usls.edu.ph', '09673254411', '$2y$10$PHbsajntV77IsqQ56UAKbO.HPQw6L8zbUXAME1z1XrgycqO17I8IC', NULL, NULL, NULL, '2026-10-28 06:48:56', '2026-10-28 07:09:32', NULL, NULL),
+(44, 'lessor', 'pending', 'Ribbon Inc', 'Aireys Ann Ibugan', 'antonluiscorrales3601@gmail.com', '09052119399', '$2y$10$qDjJXEAfoQgAx4wwAhQ9g.llKcW49JUxsJAzmrEb6F/D5pitIY5Fm', NULL, NULL, NULL, '2026-11-09 17:20:15', '2026-11-09 17:25:13', NULL, NULL),
+(45, 'lessee', 'active', NULL, 'Raymundo Sudo', 'raymundsudo@gmail.com', '09266931720', '$2y$10$KMHKjNX39pkUQ1vkEGA32eAelLRf8BFbjjYualuy3NUn2W4znq03m', '59e3e8b200aa4f702f0b3ab841473934cb871040fe9aea998a771258a51809d8', NULL, NULL, '2026-11-09 22:28:23', '2026-11-09 22:28:23', NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -1625,6 +1757,13 @@ ALTER TABLE `message_threads`
   ADD KEY `tenant_id` (`tenant_id`);
 
 --
+-- Indexes for table `notice_types`
+--
+ALTER TABLE `notice_types`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_name` (`name`);
+
+--
 -- Indexes for table `notifications_log`
 --
 ALTER TABLE `notifications_log`
@@ -1730,19 +1869,19 @@ ALTER TABLE `violations`
 -- AUTO_INCREMENT for table `applications`
 --
 ALTER TABLE `applications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=34;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `audit_logs`
 --
 ALTER TABLE `audit_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=581;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=617;
 
 --
 -- AUTO_INCREMENT for table `contract_templates`
 --
 ALTER TABLE `contract_templates`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `deposits`
@@ -1772,13 +1911,13 @@ ALTER TABLE `lease_checklist_acknowledgments`
 -- AUTO_INCREMENT for table `lease_contracts`
 --
 ALTER TABLE `lease_contracts`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `lease_contract_history`
 --
 ALTER TABLE `lease_contract_history`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `maintenance_tickets`
@@ -1790,7 +1929,7 @@ ALTER TABLE `maintenance_tickets`
 -- AUTO_INCREMENT for table `messages`
 --
 ALTER TABLE `messages`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=85;
 
 --
 -- AUTO_INCREMENT for table `message_threads`
@@ -1799,16 +1938,22 @@ ALTER TABLE `message_threads`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
+-- AUTO_INCREMENT for table `notice_types`
+--
+ALTER TABLE `notice_types`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
 -- AUTO_INCREMENT for table `notifications_log`
 --
 ALTER TABLE `notifications_log`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `notification_recipients`
 --
 ALTER TABLE `notification_recipients`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
 --
 -- AUTO_INCREMENT for table `payments`
@@ -1826,7 +1971,7 @@ ALTER TABLE `properties`
 -- AUTO_INCREMENT for table `property_photos`
 --
 ALTER TABLE `property_photos`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `saved_properties`
@@ -1850,7 +1995,7 @@ ALTER TABLE `tenants`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
 
 --
 -- AUTO_INCREMENT for table `violations`

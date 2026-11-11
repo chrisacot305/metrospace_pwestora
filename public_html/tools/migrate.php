@@ -168,4 +168,56 @@ add_column($pdo, 'violations', 'contract_ref', 'VARCHAR(60) NULL');
 add_column($pdo, 'violations', 'clause_text', 'TEXT NULL');
 add_column($pdo, 'violations', 'clause_ref', 'VARCHAR(300) NULL');
 
+// --- Property media & expanded property info (Nov 2026) ---------------------
+// Landmark: a nearby, well-known place that helps tenants find the space, with its own photo.
+add_column($pdo, 'properties', 'landmark_name', 'VARCHAR(150) NULL');
+add_column($pdo, 'properties', 'landmark_distance', 'VARCHAR(60) NULL');
+add_column($pdo, 'properties', 'landmark_photo_path', 'VARCHAR(255) NULL');
+// Expanded property information shown to tenants and to the SuperAdmin reviewer.
+add_column($pdo, 'properties', 'floor_level', 'VARCHAR(60) NULL');
+add_column($pdo, 'properties', 'frontage', 'VARCHAR(60) NULL');
+add_column($pdo, 'properties', 'parking_slots', 'INT NULL');
+add_column($pdo, 'properties', 'utilities', 'VARCHAR(255) NULL');
+add_column($pdo, 'properties', 'amenities', 'TEXT NULL');
+add_column($pdo, 'properties', 'permitted_use', 'VARCHAR(255) NULL');
+add_column($pdo, 'properties', 'operating_hours', 'VARCHAR(100) NULL');
+add_column($pdo, 'properties', 'deposit_terms', 'VARCHAR(150) NULL');
+// Photo gallery: category (exterior, interior, ...), caption and order (sort_order 0 = cover).
+add_column($pdo, 'property_photos', 'category', "VARCHAR(30) NOT NULL DEFAULT 'exterior'");
+add_column($pdo, 'property_photos', 'caption', 'VARCHAR(150) NULL');
+add_column($pdo, 'property_photos', 'sort_order', 'INT NOT NULL DEFAULT 0');
+
+// --- Editable notice types (SuperAdmin → Notify Lessors) --------------------
+// Each type has a message template that pre-fills the composer. SuperAdmin can add,
+// rename, edit the template of, hide, or delete types.
+$pdo->exec("CREATE TABLE IF NOT EXISTS notice_types (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(60) NOT NULL,
+    template TEXT NULL,
+    color VARCHAR(20) NOT NULL DEFAULT 'blue',
+    is_active TINYINT(1) NOT NULL DEFAULT 1,
+    sort_order INT NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uniq_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+echo "  ok table notice_types\n";
+
+$seed = [
+    ['General Announcement', "Good day, Pwestora Partner!\n\nWe would like to share an update with all Pwestora partners:\n\n[Write your announcement here]\n\nThank you for being part of Pwestora.\n— Pwestora Admin", 'blue', 1],
+    ['Policy Update', "Good day, Pwestora Partner!\n\nPlease be informed that Pwestora has updated the following policy:\n\n[Describe the policy change and its effective date]\n\nKindly review and comply. Reply through the platform if you have questions.\n— Pwestora Admin", 'purple', 2],
+    ['Verification Reminder', "Good day, Pwestora Partner!\n\nThis is a reminder to complete or update your verification documents on Pwestora.\n\n[List the missing or expiring documents]\n\nUnverified listings will not be shown to tenants.\n— Pwestora Admin", 'orange', 3],
+    ['Compliance Notice', "Good day, Pwestora Partner!\n\nWe noticed an item on your account that needs your attention:\n\n[Describe the compliance issue and the deadline]\n\nPlease settle this as soon as possible to avoid restrictions.\n— Pwestora Admin", 'red', 4],
+];
+// Seed only on first run, so types the SuperAdmin deleted don't come back.
+if ((int) $pdo->query('SELECT COUNT(*) FROM notice_types')->fetchColumn() === 0) {
+    $ins = $pdo->prepare('INSERT INTO notice_types (name, template, color, sort_order) VALUES (?, ?, ?, ?)');
+    foreach ($seed as $row) {
+        $ins->execute($row);
+    }
+    echo "  + seeded default notice types\n";
+} else {
+    echo "  = notice types already set up\n";
+}
+
 echo "Done.\n";

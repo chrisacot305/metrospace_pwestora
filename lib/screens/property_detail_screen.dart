@@ -17,7 +17,14 @@ class PropertyDetailScreen extends StatefulWidget {
 
 class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   late Future<Map<String, dynamic>> _future;
+  late final PageController _pageController = PageController();
   int _photoIndex = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -170,34 +177,53 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                               fit: StackFit.expand,
                               children: [
                                 PageView.builder(
+                                  controller: _pageController,
+                                  physics: const AlwaysScrollableScrollPhysics(
+                                    parent: BouncingScrollPhysics(),
+                                  ),
                                   itemCount: photos.length,
                                   onPageChanged: (i) =>
                                       setState(() => _photoIndex = i),
-                                  itemBuilder: (context, i) => Image.network(
-                                    photos[i],
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (c, e, s) => Container(
-                                      color: isDark
-                                          ? const Color(0xFF1E293B)
-                                          : AppColors.primaryLight,
+                                  itemBuilder: (context, i) {
+                                    final rawUrl = photos[i];
+                                    final photoUrl = rawUrl.startsWith('http')
+                                        ? rawUrl
+                                        : '${ApiService.baseUrl.replaceAll('/api', '')}/${rawUrl.replaceFirst(RegExp(r'^/+'), '')}';
+                                    return Image.network(
+                                      photoUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (c, e, s) => Container(
+                                        color: isDark
+                                            ? const Color(0xFF1E293B)
+                                            : AppColors.primaryLight,
+                                        child: const Center(
+                                          child: Icon(
+                                            Icons.apartment,
+                                            size: 48,
+                                            color: AppColors.tint,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                                IgnorePointer(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Colors.black.withValues(alpha: 0.45),
+                                          Colors.transparent,
+                                          Colors.black.withValues(alpha: 0.65),
+                                        ],
+                                        stops: const [0.0, 0.5, 1.0],
+                                      ),
                                     ),
                                   ),
                                 ),
-                                DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Colors.black.withValues(alpha: 0.45),
-                                        Colors.transparent,
-                                        Colors.black.withValues(alpha: 0.65),
-                                      ],
-                                      stops: const [0.0, 0.5, 1.0],
-                                    ),
-                                  ),
-                                ),
-                                if (photos.length > 1)
+                                if (photos.length > 1) ...[
                                   Positioned(
                                     bottom: 16,
                                     left: 0,
@@ -209,27 +235,107 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                         i,
                                       ) {
                                         final active = i == _photoIndex;
-                                        return AnimatedContainer(
-                                          duration: const Duration(
-                                            milliseconds: 250,
-                                          ),
-                                          width: active ? 22 : 7,
-                                          height: 7,
-                                          margin: const EdgeInsets.symmetric(
-                                            horizontal: 3,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: active
-                                                ? Colors.white
-                                                : Colors.white54,
-                                            borderRadius: BorderRadius.circular(
-                                              999,
+                                        return GestureDetector(
+                                          behavior: HitTestBehavior.opaque,
+                                          onTap: () {
+                                            _pageController.animateToPage(
+                                              i,
+                                              duration: const Duration(
+                                                milliseconds: 250,
+                                              ),
+                                              curve: Curves.easeInOut,
+                                            );
+                                          },
+                                          child: AnimatedContainer(
+                                            duration: const Duration(
+                                              milliseconds: 250,
+                                            ),
+                                            width: active ? 22 : 7,
+                                            height: 7,
+                                            margin: const EdgeInsets.symmetric(
+                                              horizontal: 3,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: active
+                                                  ? Colors.white
+                                                  : Colors.white54,
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
                                             ),
                                           ),
                                         );
                                       }),
                                     ),
                                   ),
+                                  Positioned(
+                                    left: 8,
+                                    top: 0,
+                                    bottom: 0,
+                                    child: Center(
+                                      child: _photoIndex > 0
+                                          ? GestureDetector(
+                                              behavior: HitTestBehavior.opaque,
+                                              onTap: () {
+                                                _pageController.previousPage(
+                                                  duration: const Duration(
+                                                    milliseconds: 250,
+                                                  ),
+                                                  curve: Curves.easeInOut,
+                                                );
+                                              },
+                                              child: Container(
+                                                width: 32,
+                                                height: 32,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.35),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.chevron_left_rounded,
+                                                  color: Colors.white,
+                                                  size: 22,
+                                                ),
+                                              ),
+                                            )
+                                          : const SizedBox.shrink(),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    right: 8,
+                                    top: 0,
+                                    bottom: 0,
+                                    child: Center(
+                                      child: _photoIndex < photos.length - 1
+                                          ? GestureDetector(
+                                              behavior: HitTestBehavior.opaque,
+                                              onTap: () {
+                                                _pageController.nextPage(
+                                                  duration: const Duration(
+                                                    milliseconds: 250,
+                                                  ),
+                                                  curve: Curves.easeInOut,
+                                                );
+                                              },
+                                              child: Container(
+                                                width: 32,
+                                                height: 32,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black
+                                                      .withValues(alpha: 0.35),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: const Icon(
+                                                  Icons.chevron_right_rounded,
+                                                  color: Colors.white,
+                                                  size: 22,
+                                                ),
+                                              ),
+                                            )
+                                          : const SizedBox.shrink(),
+                                    ),
+                                  ),
+                                ],
                               ],
                             )
                           : Container(

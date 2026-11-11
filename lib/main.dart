@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'theme.dart';
 import 'services/api_service.dart';
@@ -23,6 +24,15 @@ class PwestoraApp extends StatelessWidget {
         return MaterialApp(
           title: 'Pwestora',
           debugShowCheckedModeBanner: false,
+          scrollBehavior: const MaterialScrollBehavior().copyWith(
+            dragDevices: {
+              PointerDeviceKind.touch,
+              PointerDeviceKind.mouse,
+              PointerDeviceKind.trackpad,
+              PointerDeviceKind.stylus,
+              PointerDeviceKind.invertedStylus,
+            },
+          ),
           theme: buildAppTheme(),
           darkTheme: buildDarkAppTheme(),
           themeMode: currentThemeMode,

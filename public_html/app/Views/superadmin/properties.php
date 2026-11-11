@@ -4,7 +4,7 @@
  * Presentation layer for Property Verification.
  */
 ?>
-<link rel="stylesheet" href="/assets/css/style.css?v=<?= filemtime(APP_ROOT . '/assets/css/style.css') ?>">
+<script src="/assets/js/photo-uploader.js?v=<?= @filemtime(APP_ROOT . '/assets/js/photo-uploader.js') ?: 1 ?>" defer></script>
 <h2 class="page-title">Property Verification</h2>
 
 <?php if (!empty($error)): ?>
@@ -97,12 +97,60 @@
       <a href="/dashboard.php?page=properties" class="drawer-close">&times;</a>
     </div>
 
-    <div class="card drawer-card">
-      <p class="info-text"><strong>Property:</strong> <?= htmlspecialchars($reviewing['name']) ?></p>
-      <p class="info-text"><strong>Lessor:</strong> <?= htmlspecialchars($reviewing['lessor_name']) ?></p>
-      <p class="info-text"><strong>Type:</strong> <?= htmlspecialchars($reviewing['type']) ?></p>
-      <p class="info-text"><strong>Address:</strong> <?= htmlspecialchars($reviewing['address']) ?></p>
+    <?php
+      $rv = $reviewing;
+      $facts = array_filter([
+          'Property'        => $rv['name'],
+          'Lessor'          => $rv['lessor_name'],
+          'Type'            => $rv['type'],
+          'Asking rent'     => $rv['asking_rent'] !== null ? '₱' . number_format((float) $rv['asking_rent'], 2) . ' / month' : null,
+          'Floor area'      => $rv['floor_area'] ?? null,
+          'Floor / level'   => $rv['floor_level'] ?? null,
+          'Frontage'        => $rv['frontage'] ?? null,
+          'Spaces'          => isset($rv['total_units']) ? (int) $rv['available_units'] . ' of ' . (int) $rv['total_units'] . ' available' : null,
+          'Parking'         => isset($rv['parking_slots']) && $rv['parking_slots'] !== null ? (int) $rv['parking_slots'] . ' slot(s)' : null,
+          'Hours'           => $rv['operating_hours'] ?? null,
+          'Lease term'      => $rv['lease_term'] ?? null,
+          'Escalation'      => $rv['escalation'] ?? null,
+          'Deposit & advance' => $rv['deposit_terms'] ?? null,
+          'Permitted use'   => $rv['permitted_use'] ?? null,
+          'Utilities'       => $rv['utilities'] ?? null,
+      ], static fn($v) => $v !== null && $v !== '');
+      $wide = ['Property', 'Permitted use', 'Utilities', 'Deposit & advance'];
+      $amen = array_filter(array_map('trim', explode(',', (string) ($rv['amenities'] ?? ''))));
+    ?>
+    <div class="sa-facts">
+      <?php foreach ($facts as $label => $val): ?>
+        <div class="sa-fact<?= in_array($label, $wide, true) ? ' wide' : '' ?>"><span><?= e($label) ?></span><strong><?= e($val) ?></strong></div>
+      <?php endforeach; ?>
+      <div class="sa-fact wide"><span>Address</span><strong><?= e($rv['address']) ?>
+        <?php if ($rv['latitude'] && $rv['longitude']): ?>
+          · <a href="https://www.google.com/maps?q=<?= e(rawurlencode($rv['latitude'] . ',' . $rv['longitude'])) ?>" target="_blank" rel="noopener">View pin ↗</a>
+        <?php endif; ?></strong></div>
     </div>
+
+    <?php if (!empty($rv['description'])): ?>
+      <p class="drawer-section-title">Description</p>
+      <p class="info-text" style="white-space:pre-line; margin-bottom:16px;"><?= e($rv['description']) ?></p>
+    <?php endif; ?>
+
+    <?php if ($amen): ?>
+      <p class="drawer-section-title">Amenities</p>
+      <div class="sa-amenities"><?php foreach ($amen as $a): ?><span><?= e($a) ?></span><?php endforeach; ?></div>
+    <?php endif; ?>
+
+    <?php if (!empty($rv['landmark_name']) || !empty($rv['landmark_photo_path'])): ?>
+      <p class="drawer-section-title">Nearby landmark</p>
+      <div class="sa-landmark">
+        <?php if (!empty($rv['landmark_photo_path'])): $lp = '/' . ltrim($rv['landmark_photo_path'], '/'); ?>
+          <a href="#" class="sa-photo" data-pm-zoom="<?= e($lp) ?>" data-pm-caption="<?= e($rv['landmark_name'] ?? 'Landmark') ?>"><img src="<?= e($lp) ?>" alt="Landmark"></a>
+        <?php endif; ?>
+        <div>
+          <strong style="display:block; font-size:13px;"><?= e($rv['landmark_name'] ?: 'Landmark photo') ?></strong>
+          <span style="font-size:12px; color:var(--ink-500);"><?= e($rv['landmark_distance'] ?? '') ?></span>
+        </div>
+      </div>
+    <?php endif; ?>
 
     <p class="drawer-section-title">Documents</p>
     <div class="doc-list-wrap">
@@ -119,15 +167,22 @@
     </div>
 
     <p class="drawer-section-title">Photos (<?= count($reviewingPhotos) ?>)</p>
-    <div class="photo-grid">
-      <?php if (!$reviewingPhotos): ?>
-        <p class="doc-missing col-span-full">No photos uploaded.</p>
-      <?php else: foreach ($reviewingPhotos as $photo): ?>
-        <a href="/<?= htmlspecialchars(ltrim($photo, '/')) ?>" target="_blank">
-          <img src="/<?= htmlspecialchars(ltrim($photo, '/')) ?>" alt="Property photo" class="photo-thumb">
-        </a>
-      <?php endforeach; endif; ?>
-    </div>
+    <?php if (!$reviewingPhotos): ?>
+      <p class="doc-missing" style="margin-bottom:16px;">No photos uploaded.</p>
+    <?php else: ?>
+      <div class="sa-photo-grid">
+        <?php foreach ($reviewingPhotos as $i => $ph):
+            $src = '/' . ltrim($ph['photo_path'], '/');
+            $cat = $photoCategories[$ph['category'] ?? ''] ?? 'Photo';
+        ?>
+          <a href="#" class="sa-photo" data-pm-zoom="<?= e($src) ?>" data-pm-caption="<?= e(($ph['caption'] ?? '') ?: $cat) ?>">
+            <img src="<?= e($src) ?>" alt="<?= e($cat) ?>" loading="lazy">
+            <?php if ($i === 0): ?><span class="pm-chip pm-chip-cover">Cover</span><?php endif; ?>
+            <span class="pm-chip pm-chip-cat"><?= e($cat) ?></span>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
 
     <?php if ($reviewing['status'] === 'pending'): ?>
       <div class="action-group">
@@ -150,6 +205,10 @@
       </div>
     <?php endif; ?>
   </div>
+</div>
+<div class="pm-lightbox" id="pmLightbox" hidden>
+  <button type="button" class="pm-lightbox-close" aria-label="Close">&times;</button>
+  <figure><img src="" alt=""><figcaption class="pm-lightbox-cap"></figcaption></figure>
 </div>
 <?php endif; ?>
 

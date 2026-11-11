@@ -320,6 +320,15 @@ function openListing(i) {
   if (L.floor_area) facts.push(['Floor area', /^\d+(\.\d+)?$/.test(L.floor_area) ? L.floor_area + ' sqm' : L.floor_area]);
   if (L.lease_term) facts.push(['Lease term', /^\d+$/.test(L.lease_term) ? L.lease_term + (L.lease_term === '1' ? ' month' : ' months') : L.lease_term]);
   if (L.escalation) facts.push(['Escalation', /^\d+(\.\d+)?$/.test(L.escalation) ? L.escalation + '% / year' : L.escalation]);
+  if (L.floor_level) facts.push(['Floor / level', L.floor_level]);
+  if (L.frontage) facts.push(['Frontage', L.frontage]);
+  if (L.parking !== null && L.parking !== undefined) facts.push(['Parking', L.parking + (L.parking === 1 ? ' slot' : ' slots')]);
+  if (L.hours) facts.push(['Hours', L.hours]);
+  if (L.deposit) facts.push(['Deposit & advance', L.deposit]);
+  if (L.landmark) facts.push(['Near', L.landmark]);
+  if (L.permitted) facts.push(['Permitted use', L.permitted]);
+  if (L.utilities) facts.push(['Utilities', L.utilities]);
+  if (L.amenities) facts.push(['Amenities', L.amenities]);
   if (L.listed) facts.push(['Listed', L.listed]);
   var box = document.getElementById('lmFacts'); box.innerHTML = '';
   facts.forEach(function (f) {

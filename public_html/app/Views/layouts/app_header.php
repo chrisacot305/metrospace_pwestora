@@ -15,6 +15,7 @@
 <title><?= APP_NAME ?> · <?= htmlspecialchars(ucfirst($page)) ?></title>
 <link rel="stylesheet" href="/assets/css/style.css?v=13">
 <link rel="stylesheet" href="/assets/css/style.css?v=<?= filemtime(APP_ROOT . '/assets/css/style.css') ?>">
+<link rel="stylesheet" href="/assets/css/enhancements.css?v=<?= @filemtime(APP_ROOT . '/assets/css/enhancements.css') ?: 1 ?>">
 <link rel="icon" type="image/png" href="/assets/img/icon.png">
 <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png?v=2">
 <link rel="manifest" href="/manifest.json">
