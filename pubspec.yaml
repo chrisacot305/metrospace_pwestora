@@ -28,3 +28,7 @@ flutter:
   uses-material-design: true
   assets:
     - img/
+    - img/logo.png
+    - img/frame_2.png
+    - img/Frame 2.png
+    - img/invert.png

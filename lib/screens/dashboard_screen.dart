@@ -45,6 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _userName = '';
   String _companyName = '';
   final Set<int> _checkedTenantIds = {};
+  final Set<int> _dismissedViolationIds = {};
 
   // GlobeOne-style multi-account switcher state
   List<Map<String, dynamic>> _allLeases = [];
@@ -209,11 +210,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return true;
       }).toList();
 
-      final unack = violations
-          .where((v) => (v['acknowledged'] == 0 || v['acknowledged'] == false))
-          .toList();
+      final unack = <Map<String, dynamic>>[];
+      for (final v in violations) {
+        final ack = v['acknowledged'];
+        final isAck = ack == true || ack == 1 || ack == '1';
+        final disp = v['disputed'];
+        final isDisp = disp == true || disp == 1 || disp == '1';
+        final rev = v['is_revoked'];
+        final isRev = rev == true || rev == 1 || rev == '1';
+
+        // Revoked, disputed, or already acknowledged citations MUST NEVER auto-popup!
+        if (isAck || isDisp || isRev) continue;
+
+        final int vId = v['id'] is int
+            ? v['id'] as int
+            : int.tryParse(v['id']?.toString() ?? '0') ?? 0;
+        if (vId > 0) {
+          if (_dismissedViolationIds.contains(vId)) continue;
+          final isDismissed = await ApiService.isViolationDismissed(vId);
+          if (isDismissed) {
+            _dismissedViolationIds.add(vId);
+            continue;
+          }
+        }
+
+        unack.add(v);
+      }
+
       if (unack.isNotEmpty) {
         final target = unack.first;
+        final int targetId = target['id'] is int
+            ? target['id'] as int
+            : int.tryParse(target['id']?.toString() ?? '0') ?? 0;
+
+        // Immediately record as dismissed so any concurrent or immediate subsequent re-checks don't duplicate
+        if (targetId > 0) {
+          _dismissedViolationIds.add(targetId);
+          await ApiService.markViolationDismissed(targetId);
+        }
+
+        if (!mounted) return;
+
         await ViolationNoticeSheet.show(
           context,
           violation: target,
@@ -512,10 +549,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Image.asset(
-                          isDark ? 'img/invert.png' : 'img/Frame 2.png',
+                          isDark ? 'img/invert.png' : 'img/logo.png',
                           width: 26,
                           height: 26,
                           fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            width: 26,
+                            height: 26,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            alignment: Alignment.center,
+                            child: const Text('P', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -1042,7 +1089,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         size: 15,
                                         color: isApproved
                                             ? const Color(0xFF10B981)
-                                            : const Color(0xFFD97706),
+                                            : AppColors.electricBlue,
                                       ),
                                       const SizedBox(width: 8),
                                       Expanded(
@@ -1148,17 +1195,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     return true;
                   }).toList();
 
-                  final unpaidViolations = violations
-                      .where((v) => v['is_paid'] != true && v['is_paid'] != 1)
-                      .toList();
-                  if (unpaidViolations.isEmpty) return const SizedBox.shrink();
+                  final activeViolations = violations.where((v) {
+                    final isRevoked = v['is_revoked'] == true ||
+                        v['is_revoked'] == 1 ||
+                        v['is_revoked'] == '1';
+                    final isDisputed = v['disputed'] == true ||
+                        v['disputed'] == 1 ||
+                        v['disputed'] == '1';
+                    final disputeStatus = (v['dispute_status'] ?? '').toString().toLowerCase();
+                    final isPendingDispute = isDisputed && disputeStatus != 'rejected';
+                    final isPaid = v['is_paid'] == true ||
+                        v['is_paid'] == 1 ||
+                        v['is_paid'] == '1';
+                    return !isRevoked && !isPendingDispute && !isPaid;
+                  }).toList();
+                  if (activeViolations.isEmpty) return const SizedBox.shrink();
 
-                  final latest = unpaidViolations.first;
+                  final latest = activeViolations.first;
                   final strike = latest['strike'] is int
                       ? latest['strike'] as int
                       : int.tryParse(latest['strike']?.toString() ?? '1') ?? 1;
+                  final isLateRent = latest['category'] == 'past_due' || latest['category'] == 'overdue_rent';
                   final fineAmt = (latest['fine_amount'] as num?)?.toDouble() ??
-                      (strike >= 3 ? 1500.0 : (strike == 2 ? 500.0 : 0.0));
+                      (strike >= 3 ? 1000.0 : ((strike == 2 && isLateRent) ? 500.0 : 0.0));
                   final isEviction = strike >= 3;
 
                   return Padding(
@@ -1204,10 +1263,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Expanded(
                               child: Text(
                                 isEviction
-                                    ? 'Final Notice: Lease Default (View Notice)'
+                                    ? 'Final Notice: Strike $strike Eviction Default • ₱${_formatMoney(fineAmt)} Penalty'
                                     : (fineAmt > 0
-                                          ? 'Strike $strike Notice: ₱${_formatMoney(fineAmt)} Penalty Billed (View)'
-                                          : 'Formal Notice: Strike $strike Infraction on Record (View)'),
+                                          ? 'Strike $strike Notice: ₱${_formatMoney(fineAmt)} Late Penalty (View)'
+                                          : 'Formal Notice: Strike $strike Infraction on Record • ₱0 Fine (View)'),
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
@@ -1548,7 +1607,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       FutureBuilder<List<Map<String, dynamic>>>(
                         future: _violationsFuture,
                         builder: (context, snapshot) {
-                          final violations = snapshot.data ?? [];
+                          final allViolations = snapshot.data ?? [];
+                          final violations = allViolations.where((v) {
+                            final isRevoked = v['is_revoked'] == true ||
+                                v['is_revoked'] == 1 ||
+                                v['is_revoked'] == '1';
+                            final isDisputed = v['disputed'] == true ||
+                                v['disputed'] == 1 ||
+                                v['disputed'] == '1';
+                            final disputeStatus = (v['dispute_status'] ?? '').toString().toLowerCase();
+                            final isPendingDispute = isDisputed && disputeStatus != 'rejected';
+                            return !isRevoked && !isPendingDispute;
+                          }).toList();
                           if (violations.isEmpty) {
                             return const SizedBox.shrink();
                           }

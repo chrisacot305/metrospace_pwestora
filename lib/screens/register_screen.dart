@@ -244,8 +244,9 @@ class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObse
                           ],
                         ),
                         child: Image.asset(
-                          isDark ? 'img/invert.png' : 'img/Frame 2.png',
+                          isDark ? 'img/invert.png' : 'img/logo.png',
                           fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => const SizedBox(),
                         ),
                       ),
                     ),
@@ -477,8 +478,9 @@ class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObse
                               child: Image.asset(
                                 Theme.of(context).brightness == Brightness.dark
                                     ? 'img/invert.png'
-                                    : 'img/Frame 2.png',
+                                    : 'img/logo.png',
                                 fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) => const SizedBox(),
                               ),
                             ),
                           ),

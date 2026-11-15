@@ -13,6 +13,7 @@ use Api\Http\Request;
 use Api\Repositories\PropertyRepository;
 use Api\Repositories\UserRepository;
 use Api\Services\AuthService;
+use App\Services\ContractService;
 
 Request::requireMethod('GET');
 
@@ -32,4 +33,6 @@ if (!$property) {
 $user  = (new AuthService(new UserRepository($pdo)))->currentLessee();
 $saved = $user ? $properties->isSaved((int) $user['id'], $id) : false;
 
-json_ok(['property' => Formatter::propertyDetail($property, $properties->photoPaths($id), $saved, $properties->photoItems($id))]);
+$contractTemplate = ContractService::resolveTemplateForProperty($pdo, $id, (int) ($property['lessor_id'] ?? 0));
+
+json_ok(['property' => Formatter::propertyDetail($property, $properties->photoPaths($id), $saved, $properties->photoItems($id), $contractTemplate)]);

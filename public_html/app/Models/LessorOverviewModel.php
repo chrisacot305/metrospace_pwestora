@@ -31,17 +31,17 @@ class LessorOverviewModel extends Model
 
     public function getViolationStats(int $lessorId, string $since30): array {
         return [
-            'total'       => $this->count('violations', 'lessor_id = ?', [$lessorId]),
-            'last_30d'    => $this->count('violations', 'lessor_id = ? AND issued_at >= ?', [$lessorId, $since30]),
-            'strike1'     => $this->count('violations', 'lessor_id = ? AND strike = 1', [$lessorId]),
+            'total'       => $this->count('violations', 'lessor_id = ? AND (is_revoked = 0 OR is_revoked IS NULL)', [$lessorId]),
+            'last_30d'    => $this->count('violations', 'lessor_id = ? AND issued_at >= ? AND (is_revoked = 0 OR is_revoked IS NULL)', [$lessorId, $since30]),
+            'strike1'     => $this->count('violations', 'lessor_id = ? AND strike = 1 AND (is_revoked = 0 OR is_revoked IS NULL)', [$lessorId]),
             'strike2plus' => $this->getStrike2Plus($lessorId),
-            'evictions'   => $this->count('violations', 'lessor_id = ? AND strike >= 3', [$lessorId]),
+            'evictions'   => $this->count('violations', 'lessor_id = ? AND strike >= 3 AND (is_revoked = 0 OR is_revoked IS NULL)', [$lessorId]),
         ];
     }
     
     // Fallback for the distinct count above
     public function getStrike2Plus(int $lessorId): int {
-        $stmt = $this->pdo->prepare('SELECT COUNT(DISTINCT tenant_id) FROM violations WHERE lessor_id = ? AND strike >= 2');
+        $stmt = $this->pdo->prepare('SELECT COUNT(DISTINCT tenant_id) FROM violations WHERE lessor_id = ? AND strike >= 2 AND (is_revoked = 0 OR is_revoked IS NULL)');
         $stmt->execute([$lessorId]);
         return (int) $stmt->fetchColumn();
     }
@@ -51,7 +51,7 @@ class LessorOverviewModel extends Model
             'active_leases'  => $this->count('tenants', 'lessor_id = ?', [$lessorId]),
             'pending_apps'   => $this->count('applications', 'lessor_id = ? AND status = "pending"', [$lessorId]),
             'open_tickets'   => $this->count('maintenance_tickets', 'lessor_id = ? AND stage < 7', [$lessorId]),
-            'open_violations'=> $this->count('violations', 'lessor_id = ?', [$lessorId]) // Assuming all are open for KPI
+            'open_violations'=> $this->count('violations', 'lessor_id = ? AND (is_revoked = 0 OR is_revoked IS NULL)', [$lessorId])
         ];
     }
 

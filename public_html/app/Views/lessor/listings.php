@@ -5,6 +5,30 @@
  */
 ?>
 <script src="/assets/js/photo-uploader.js?v=<?= @filemtime(APP_ROOT . '/assets/js/photo-uploader.js') ?: 1 ?>" defer></script>
+<script>
+// On refresh: land where you were, then glide smoothly back up to the top.
+(function () {
+  var KEY = 'pmListingsScrollY';
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || null;
+  var isReload = !!(nav && nav.type === 'reload');
+  var y = 0;
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  try { y = parseInt(sessionStorage.getItem(KEY) || '0', 10) || 0; sessionStorage.removeItem(KEY); } catch (e) {}
+  window.addEventListener('pagehide', function () {
+    try { sessionStorage.setItem(KEY, String(Math.round(window.pageYOffset || 0))); } catch (e) {}
+  });
+  window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  if (isReload && y > 40) {
+    window.addEventListener('load', function () {
+      window.scrollTo({ top: y, left: 0, behavior: 'instant' });
+      setTimeout(function () {
+        window.scrollTo({ top: 0, left: 0, behavior: reduce ? 'instant' : 'smooth' });
+      }, 300);
+    });
+  }
+})();
+</script>
 <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
   <div>
     <h2 style="margin:0 0 4px;">My Properties</h2>
@@ -43,7 +67,7 @@
   </select>
 </div>
 
-<div class="card-grid-fixed" id="prop-grid" style="margin-bottom:28px;">
+<div class="card-grid-4" id="prop-grid" style="margin-bottom:28px;">
   <?php if (!$properties): ?>
     <p style="color:var(--ink-500); font-size:13px; grid-column:1/-1;">You haven't submitted any properties yet so click "Add Property" to add your first one.</p>
   <?php else: foreach ($properties as $p):
@@ -215,7 +239,7 @@
 
     <nav class="pm-tabs" aria-label="Sections">
       <button type="button" data-pm-jump="pmSecBasics" class="is-active">Basics</button>
-      <button type="button" data-pm-jump="pmSecMore">More info</button>
+      <button type="button" data-pm-jump="pmSecContract">Contract</button>
       <button type="button" data-pm-jump="pmSecLocation">Location</button>
       <button type="button" data-pm-jump="gallery">Photos <span class="pm-tab-count"><?= count($editingPhotos) ?></span></button>
       <button type="button" data-pm-jump="pmSecDocs">Documents</button>
@@ -309,10 +333,12 @@
           </div>
         </section>
 
-        <!-- EXPANDED INFO + LANDMARK -->
-        <div id="pmSecMore">
-          <?php $pxSrc = $editingProperty; $pxEdit = true; require __DIR__ . '/partials/property_extra_fields.php'; ?>
-        </div>
+        <!-- CONTRACT TEMPLATE & CHECKLIST -->
+        <?php
+          $pcfFormPrefix = 'edit';
+          $pcfSelectedId = (int) ($selectedTemplateId ?? 0);
+          require __DIR__ . '/partials/property_contract_field.php';
+        ?>
 
         <!-- LOCATION -->
         <section class="pm-section" id="pmSecLocation">
@@ -353,21 +379,43 @@
         <section class="pm-section" id="pmSecDocs">
           <header class="pm-section-head">
             <span class="pm-section-icon"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg></span>
-            <div><h4>Verification documents on file</h4><p>Reviewed by the Pwestora SuperAdmin. Not shown to tenants.</p></div>
+            <div><h4>Documents Photos</h4><p>Official property verification documents on file for SuperAdmin review. Click photo to view full-screen.</p></div>
           </header>
-          <div class="pm-doclist">
-            <?php foreach (['title_doc_path' => 'Land Title Document', 'tax_dec_path' => 'Tax Declaration Document'] as $col => $label): ?>
-              <?php if (!empty($editingProperty[$col])): ?>
-                <a href="/<?= e(ltrim($editingProperty[$col], '/')) ?>" target="_blank" rel="noopener" class="pm-doc">
-                  <span class="pm-doc-icon ok"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
-                  <span class="pm-doc-name"><?= e($label) ?></span>
-                  <span class="pm-doc-open">Open ↗</span>
-                </a>
+          <div class="pm-gallery" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
+            <?php foreach (['title_doc_path' => 'Land Title Document', 'tax_dec_path' => 'Tax Declaration Document'] as $col => $label): 
+                $docPath = !empty($editingProperty[$col]) ? '/' . ltrim($editingProperty[$col], '/') : '';
+                $isPdf = !empty($docPath) && preg_match('/\.pdf$/i', $docPath);
+            ?>
+              <?php if ($docPath): ?>
+                <figure class="pm-tile" style="margin:0; border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                  <?php if ($isPdf): ?>
+                    <a href="<?= e($docPath) ?>" target="_blank" rel="noopener" class="pm-tile-img" style="aspect-ratio:4/3; background:#FFF1F2; display:flex; flex-direction:column; align-items:center; justify-content:center; text-decoration:none; color:#E11D48;">
+                      <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M10 13h4M10 17h4"/></svg>
+                      <span style="font-size:11.5px; font-weight:700; margin-top:6px;">PDF Document</span>
+                      <span class="badge" style="position:absolute; top:8px; left:8px; background:var(--success-soft); color:var(--success); font-size:10px; font-weight:700;">Verified on file</span>
+                      <span style="position:absolute; bottom:8px; right:8px; font-size:11px; font-weight:600; color:var(--primary); background:rgba(255,255,255,0.9); padding:2px 8px; border-radius:6px;">Open PDF ↗</span>
+                    </a>
+                  <?php else: ?>
+                    <a href="#" class="pm-tile-img" data-pm-zoom="<?= e($docPath) ?>" data-pm-caption="<?= e($label) ?>" title="Click to view full screen" style="aspect-ratio:4/3; display:block; position:relative; background:var(--bg); cursor:zoom-in;">
+                      <img src="<?= e($docPath) ?>" alt="<?= e($label) ?>" loading="lazy" style="width:100%; height:100%; object-fit:cover; display:block;">
+                      <span class="badge" style="position:absolute; top:8px; left:8px; background:var(--success-soft); color:var(--success); font-size:10px; font-weight:700;">Verified on file</span>
+                      <span style="position:absolute; bottom:8px; right:8px; font-size:11px; font-weight:600; color:#fff; background:rgba(0,0,0,0.65); padding:2px 7px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;">
+                        <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/></svg> Full screen
+                      </span>
+                    </a>
+                  <?php endif; ?>
+                  <figcaption style="padding:10px 12px; font-size:12.5px; font-weight:700; color:var(--ink-900); border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                    <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"><?= e($label) ?></span>
+                    <a href="<?= e($docPath) ?>" target="_blank" rel="noopener" style="font-size:11px; color:var(--primary); font-weight:600; text-decoration:none;" title="Open high-res in new tab">↗</a>
+                  </figcaption>
+                </figure>
               <?php else: ?>
-                <div class="pm-doc">
-                  <span class="pm-doc-icon miss">!</span>
-                  <span class="pm-doc-name"><?= e($label) ?></span>
-                  <span class="pm-muted">Not uploaded</span>
+                <div style="padding:18px 14px; border:1.5px dashed var(--border); border-radius:12px; background:var(--bg); display:flex; align-items:center; gap:10px;">
+                  <span class="pm-doc-icon miss" style="width:28px; height:28px; font-size:14px; flex-shrink:0;">!</span>
+                  <div>
+                    <div style="font-size:12.5px; font-weight:700; color:var(--ink-900);"><?= e($label) ?></div>
+                    <div style="font-size:11px; color:var(--ink-400);">Not uploaded on file</div>
+                  </div>
                 </div>
               <?php endif; ?>
             <?php endforeach; ?>
@@ -438,9 +486,30 @@ function pmPhotoAction(action, id) {
     if (body.scrollTop + body.clientHeight >= body.scrollHeight - 4) current = tabs[tabs.length - 1];
     mark(current);
   });
+  // Always open the drawer at the top; only jump to Photos right after a photo action (#gallery).
+  var DKEY = 'pmDrawerScrollY';
+  var reduceD = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var navD = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || null;
+  var dY = 0;
+  try { dY = parseInt(sessionStorage.getItem(DKEY) || '0', 10) || 0; sessionStorage.removeItem(DKEY); } catch (e) {}
+  window.addEventListener('pagehide', function () {
+    try { sessionStorage.setItem(DKEY, String(Math.round(body.scrollTop || 0))); } catch (e) {}
+  });
+  body.scrollTop = 0;
+  // On refresh, show where you were, then glide the drawer back up to the top.
+  if (navD && navD.type === 'reload' && dY > 40 && location.hash !== '#gallery') {
+    window.addEventListener('load', function () {
+      body.scrollTop = dY;
+      setTimeout(function () {
+        body.scrollTo({ top: 0, behavior: reduceD ? 'auto' : 'smooth' });
+      }, 300);
+    });
+  }
   if (location.hash === '#gallery') {
     var g = document.getElementById('gallery');
     if (g) setTimeout(function () { body.scrollTop = g.offsetTop - 12; }, 50);
+    // Drop the hash so a refresh opens at the top instead of jumping to Photos again.
+    if (window.history.replaceState) window.history.replaceState(null, '', location.pathname + location.search);
   }
   var toast = document.getElementById('pmSavedToast');
   if (toast) {
@@ -624,6 +693,9 @@ function pmPhotoAction(action, id) {
         </section>
 
         <?php $pxSrc = []; $pxEdit = false; require __DIR__ . '/partials/property_extra_fields.php'; ?>
+
+        <!-- CONTRACT TEMPLATE & CHECKLIST -->
+  
 
         <section class="pm-section">
           <header class="pm-section-head">

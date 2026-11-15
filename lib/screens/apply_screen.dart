@@ -18,12 +18,14 @@ class ApplyScreen extends StatefulWidget {
   final int propertyId;
   final String propertyName;
   final double? askingRent;
+  final Map<String, dynamic>? contractTemplate;
 
   const ApplyScreen({
     super.key,
     required this.propertyId,
     required this.propertyName,
     this.askingRent,
+    this.contractTemplate,
   });
 
   @override
@@ -94,100 +96,206 @@ class _ApplyScreenState extends State<ApplyScreen> {
     },
   ];
 
-  // Standard Commercial Lease Clauses
-  final List<Map<String, dynamic>> _checklistClauses = [
-    {
-      'key': 'security_deposit',
-      'label': 'Security Deposit (2 Months)',
-      'standard': "Equivalent to two (2) months' rent, held securely and refundable within 30 days of lease expiration less valid deductions.",
+  // Dynamic Commercial Lease Clauses (loaded from the listing's assigned contract template)
+  List<Map<String, dynamic>> _checklistClauses = [];
+  bool _contractLoading = false;
+  String _templateName = 'Pwestora Commercial Lease';
+  bool _isCustomTemplate = false;
+  Map<String, dynamic>? _savedDraftChecklist;
+
+  static const Set<String> _kPlatformRuleKeys = {
+    'rent_grace_period',
+    'violations_discipline_policy',
+    'rent_restructuring_policy',
+  };
+
+  static List<Map<String, dynamic>> _defaultPlatformRules() {
+    return [
+      {
+        'key': 'rent_grace_period',
+        'label': '5-Day Rent Grace Period & Default Rules',
+        'standard':
+            "Monthly rent is due on the contract due date. A 5-calendar-day grace period is granted with zero late penalty. If unpaid by Day 5, any Security Deposit balance is auto-applied to cover rent; remaining unpaid rent past Day 5 carries over to the next billing cycle and triggers 3-strike escalation (Strike 1: ₱0 warning, Strike 2: ₱500 late fee, Strike 3: ₱1,000 fee & Eviction Lock).",
+        'ref': 'Civil Code Art. 1169 & Art. 1657; Pwestora Automated Billing Standard',
+      },
+      {
+        'key': 'violations_discipline_policy',
+        'label': 'Contractual Compliance & 3-Strike Disciplinary Policy',
+        'standard':
+            "Violations of lease terms (noise, parking, alterations, unauthorized use) or late rent past grace period trigger the unified 3-Strike Disciplinary Policy. Conduct infractions issued by Admin/Lessor record a strike with ₱0 fine. Automated late rent triggers contract late fees (Strike 2: ₱500, Strike 3: ₱1,000). Reaching Strike 3 under any combination triggers Eviction Standing and the ₱1,000 eviction fee. Maintaining a clean record for 2 consecutive months (60 days) with on-time payments reduces active strikes by 1.",
+        'ref': 'Civil Code Art. 1659 & Art. 1673; Pwestora Platform Enforcement Protocol',
+      },
+      {
+        'key': 'rent_restructuring_policy',
+        'label': 'Rent Restructuring Hardship Policy',
+        'standard':
+            "Tenants facing temporary cash-flow difficulty may request to split monthly rent into 2 or 3 installments subject to lessor approval. Late fees are frozen provided agreed installment deadlines are strictly settled.",
+        'ref': 'Civil Code Art. 1231 & Art. 1306 (Freedom of Stipulation & Novation)',
+      },
+    ];
+  }
+
+  late final List<Map<String, dynamic>> _platformRules = _defaultPlatformRules();
+
+  static List<Map<String, dynamic>> _defaultClauses() {
+    return [
+      {
+        'key': 'security_deposit',
+        'label': 'Security Deposit (2 Months)',
+        'standard': "Equivalent to two (2) months' rent, held securely and refundable within 30 days of lease expiration less valid deductions.",
+        'ref': 'Pwestora Commercial Lease Standard §3.1',
+      },
+      {
+        'key': 'rent_escalation',
+        'label': 'Annual Rent Escalation (5%)',
+        'standard': "Monthly rent may increase by up to 5% upon annual lease renewal consistent with Philippine commercial lease standards.",
+        'ref': 'Pwestora Commercial Lease Standard §4.2',
+      },
+      {
+        'key': 'lease_term',
+        'label': 'Proposed Lease Duration',
+        'standard': "Full commercial occupancy term as requested in the proposal with option to renew upon mutual agreement.",
+        'ref': 'Pwestora Commercial Lease Standard §2.1',
+      },
+      {
+        'key': 'use_of_premises',
+        'label': 'Permitted Commercial Use',
+        'standard': "Premises will be used solely for the registered business concept stated in this lease application.",
+        'ref': 'Pwestora Commercial Lease Standard §6.1',
+      },
+      {
+        'key': 'maintenance',
+        'label': 'Structural & Day-to-Day Maintenance',
+        'standard': "Lessor covers structural, roof, and main pipes. Tenant maintains internal fixtures, daily upkeep, and tenant installations.",
+        'ref': 'Pwestora Commercial Lease Standard §7.3',
+      },
+      {
+        'key': 'subleasing',
+        'label': 'Subleasing & Space Assignment',
+        'standard': "No subleasing or assigning space to a third party without express prior written consent from the lessor.",
+        'ref': 'Pwestora Commercial Lease Standard §8.1',
+      },
+      {
+        'key': 'termination_notice',
+        'label': 'Early Termination Notice (30 Days)',
+        'standard': "At least thirty (30) days advance formal written notice required before early termination or vacating.",
+        'ref': 'Pwestora Commercial Lease Standard §11.1',
+      },
+      {
+        'key': 'insurance_compliance',
+        'label': 'Insurance & Business Compliance',
+        'standard': "Lessee is responsible for insuring merchandise/equipment and maintaining valid municipal business permits and fire clearances.",
+        'ref': 'Pwestora Commercial Lease Standard §10.2',
+      },
+    ];
+  }
+
+  Map<String, dynamic> _buildClauseItem(Map<String, dynamic> raw) {
+    final key = (raw['key'] ?? '').toString();
+    String placeholder;
+    if (key == 'security_deposit') {
+      placeholder = 'e.g. Requesting 1-month deposit instead of 2 months';
+    } else if (key == 'rent_escalation') {
+      placeholder = 'e.g. Requesting fixed rent with no escalation for 2 years';
+    } else if (key == 'lease_term') {
+      placeholder = 'e.g. Requesting 6 months trial period instead of 1 year';
+    } else if (key == 'termination_notice') {
+      placeholder = 'e.g. Requesting 60 days notice period for both parties';
+    } else {
+      placeholder = 'e.g. Counter-offer or proposed term change...';
+    }
+
+    return {
+      'key': key,
+      'label': (raw['label'] ?? key).toString(),
+      'standard': (raw['standard'] ?? raw['text'] ?? '').toString(),
+      'ref': (raw['ref'] ?? '').toString(),
       'agreed': true,
+      'isMandatory': false,
       'controller': TextEditingController(),
-      'defaultCounterPlaceholder': 'e.g. Requesting 1-month deposit instead of 2 months',
-    },
-    {
-      'key': 'rent_escalation',
-      'label': 'Annual Rent Escalation (5%)',
-      'standard': "Monthly rent may increase by up to 5% upon annual lease renewal consistent with Philippine commercial lease standards.",
-      'agreed': true,
-      'controller': TextEditingController(),
-      'defaultCounterPlaceholder': 'e.g. Requesting fixed rent with no escalation for 2 years',
-    },
-    {
-      'key': 'rent_grace_period',
-      'label': '5-Day Rent Grace Period & Default Rules',
-      'standard': "Monthly rent is due on the contract due date. A 5-calendar-day grace period is granted with zero late penalty. If unpaid by Day 5, any Security Deposit balance is auto-applied; remaining unpaid rent past Day 5 carries over to the next billing cycle and triggers 3-strike escalation (Strike 1: ₱0 warning, Strike 2: ₱500 fine, Strike 3: ₱1,500 fine & Eviction Lock).",
-      'agreed': true,
-      'isMandatory': true,
-      'controller': TextEditingController(),
-      'defaultCounterPlaceholder': 'e.g. Requesting extended grace period for bank clearance',
-    },
-    {
-      'key': 'rent_restructuring_policy',
-      'label': 'Rent Restructuring Policy',
-      'standard': "Tenants facing temporary cash-flow difficulty may request to split monthly rent into 2 or 3 installments subject to lessor approval. Late fees are frozen provided agreed installment deadlines are strictly settled.",
-      'agreed': true,
-      'isMandatory': true,
-      'controller': TextEditingController(),
-      'defaultCounterPlaceholder': '',
-    },
-    {
-      'key': 'violations_discipline_policy',
-      'label': 'Violations & 3-Strike Disciplinary Policy',
-      'standard': "Unpaid rent past grace period, broken restructuring plans, or unauthorized space alterations trigger a 3-strike escalation (Strike 1: Warning, Strike 2: Notice & Fine, Strike 3: Lease Termination and Eviction).",
-      'agreed': true,
-      'isMandatory': true,
-      'controller': TextEditingController(),
-      'defaultCounterPlaceholder': '',
-    },
-    {
-      'key': 'lease_term',
-      'label': 'Proposed Lease Duration',
-      'standard': "Full commercial occupancy term as requested in the proposal with option to renew upon mutual agreement.",
-      'agreed': true,
-      'controller': TextEditingController(),
-      'defaultCounterPlaceholder': 'e.g. Requesting 6 months trial period instead of 1 year',
-    },
-    {
-      'key': 'use_of_premises',
-      'label': 'Permitted Commercial Use',
-      'standard': "Premises will be used solely for the registered business concept stated in this lease application.",
-      'agreed': true,
-      'controller': TextEditingController(),
-      'defaultCounterPlaceholder': 'e.g. Requesting inclusion of outdoor pop-up kiosk events',
-    },
-    {
-      'key': 'maintenance',
-      'label': 'Structural & Day-to-Day Maintenance',
-      'standard': "Lessor covers structural, roof, and main pipes. Tenant maintains internal fixtures, daily upkeep, and tenant installations.",
-      'agreed': true,
-      'controller': TextEditingController(),
-      'defaultCounterPlaceholder': 'e.g. Requesting lessor to cover AC motor replacement if defective',
-    },
-    {
-      'key': 'subleasing',
-      'label': 'Subleasing & Space Assignment',
-      'standard': "No subleasing or assigning space to a third party without express prior written consent from the lessor.",
-      'agreed': true,
-      'controller': TextEditingController(),
-      'defaultCounterPlaceholder': 'e.g. Requesting permission to sublet corner booth to partner',
-    },
-    {
-      'key': 'termination_notice',
-      'label': 'Early Termination Notice (30 Days)',
-      'standard': "At least thirty (30) days advance formal written notice required before early termination or vacating.",
-      'agreed': true,
-      'controller': TextEditingController(),
-      'defaultCounterPlaceholder': 'e.g. Requesting 60 days notice period for both parties',
-    },
-    {
-      'key': 'insurance_compliance',
-      'label': 'Insurance & Business Compliance',
-      'standard': "Lessee is responsible for insuring merchandise/equipment and maintaining valid municipal business permits and fire clearances.",
-      'agreed': true,
-      'controller': TextEditingController(),
-      'defaultCounterPlaceholder': 'e.g. Requesting 30-day grace period to process city business permit',
-    },
-  ];
+      'defaultCounterPlaceholder': placeholder,
+    };
+  }
+
+  void _setClauses(List<dynamic> items, {String? templateName, bool? isCustom}) {
+    for (final c in _checklistClauses) {
+      final ctrl = c['controller'];
+      if (ctrl is TextEditingController) {
+        ctrl.dispose();
+      }
+    }
+
+    final newClauses = <Map<String, dynamic>>[];
+    for (final item in items) {
+      if (item is Map) {
+        final key = (item['key'] ?? '').toString();
+        if (_kPlatformRuleKeys.contains(key)) continue;
+        newClauses.add(_buildClauseItem(Map<String, dynamic>.from(item)));
+      }
+    }
+
+    if (newClauses.isEmpty) {
+      for (final raw in _defaultClauses()) {
+        final key = (raw['key'] ?? '').toString();
+        if (_kPlatformRuleKeys.contains(key)) continue;
+        newClauses.add(_buildClauseItem(raw));
+      }
+    }
+
+    _checklistClauses = newClauses;
+    if (templateName != null && templateName.isNotEmpty) {
+      _templateName = templateName;
+    }
+    if (isCustom != null) {
+      _isCustomTemplate = isCustom;
+    }
+
+    if (_savedDraftChecklist != null) {
+      _applyChecklistDraft(_savedDraftChecklist!);
+    }
+  }
+
+  void _applyChecklistDraft(Map<String, dynamic> checklistMap) {
+    for (final clause in _checklistClauses) {
+      final key = clause['key'] as String;
+      if (checklistMap.containsKey(key)) {
+        final item = checklistMap[key] as Map<String, dynamic>;
+        final isMandatory = clause['isMandatory'] == true;
+        if (!isMandatory && item['agreed'] != null) {
+          clause['agreed'] = item['agreed'] as bool;
+        }
+        if (item['note'] != null && (item['note'] as String).isNotEmpty) {
+          final ctrl = clause['controller'];
+          if (ctrl is TextEditingController) {
+            ctrl.text = item['note'] as String;
+          }
+        }
+      }
+    }
+  }
+
+  Future<void> _fetchContractFromApi() async {
+    setState(() => _contractLoading = true);
+    try {
+      final res = await ApiService.fetchChecklistForProperty(widget.propertyId);
+      final rawItems = res['items'] as List<dynamic>?;
+      if (rawItems != null && rawItems.isNotEmpty && mounted) {
+        setState(() {
+          _setClauses(
+            rawItems,
+            templateName: res['template_name'] as String?,
+            isCustom: res['is_custom'] == true,
+          );
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching contract template for property: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _contractLoading = false);
+      }
+    }
+  }
 
   String get _draftStorageKey => 'apply_draft_prop_${widget.propertyId}';
 
@@ -198,6 +306,19 @@ class _ApplyScreenState extends State<ApplyScreen> {
         ? widget.askingRent!
         : 35000.0;
     _customRentCtrl.text = _effectiveRent.toStringAsFixed(0);
+
+    // Initialize with passed contract template if available, or fetch from API
+    if (widget.contractTemplate != null && widget.contractTemplate!['clauses'] is List) {
+      final tpl = widget.contractTemplate!;
+      final clauses = tpl['clauses'] as List<dynamic>;
+      final name = tpl['name'] as String? ?? 'Contract Checklist';
+      final isCustom = tpl['is_custom'] == true;
+      _setClauses(clauses, templateName: name, isCustom: isCustom);
+    } else {
+      _setClauses(_defaultClauses());
+      _fetchContractFromApi();
+    }
+
     _loadDraft();
   }
 
@@ -299,19 +420,8 @@ class _ApplyScreenState extends State<ApplyScreen> {
 
       final checklistMap = draft['checklist'] as Map<String, dynamic>?;
       if (checklistMap != null) {
-        for (final clause in _checklistClauses) {
-          final key = clause['key'] as String;
-          if (checklistMap.containsKey(key)) {
-            final item = checklistMap[key] as Map<String, dynamic>;
-            final isMandatory = clause['isMandatory'] == true;
-            if (!isMandatory && item['agreed'] != null) {
-              clause['agreed'] = item['agreed'] as bool;
-            }
-            if (item['note'] != null && (item['note'] as String).isNotEmpty) {
-              (clause['controller'] as TextEditingController).text = item['note'] as String;
-            }
-          }
-        }
+        _savedDraftChecklist = checklistMap;
+        _applyChecklistDraft(checklistMap);
       }
 
       if (mounted) {
@@ -547,6 +657,20 @@ class _ApplyScreenState extends State<ApplyScreen> {
     try {
       // Build structured checklist negotiation payload
       final Map<String, dynamic> negotiationPayload = {};
+
+      // 1. Include built-in platform rules (agreed)
+      for (final rule in _platformRules) {
+        final key = (rule['key'] ?? '').toString();
+        if (key.isNotEmpty) {
+          negotiationPayload[key] = {
+            'agreed': true,
+            'rebuttal_note': null,
+            'is_platform_rule': true,
+          };
+        }
+      }
+
+      // 2. Include building commercial clauses with tenant counter-offers
       for (final clause in _checklistClauses) {
         final key = clause['key'] as String;
         final agreed = clause['agreed'] as bool;
@@ -1681,20 +1805,62 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      'Interactive Contract Negotiation',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w800,
-                        color: isDark ? Colors.white : AppColors.ink900,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Interactive Contract Negotiation',
+                          style: TextStyle(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : AppColors.ink900,
+                          ),
+                        ),
+                        if (_templateName.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  _templateName,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark ? const Color(0xFF93C5FD) : AppColors.primary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (_isCustomTemplate) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF10B981).withValues(alpha: 0.2) : const Color(0xFFD1FAE5),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'BUILDING CONTRACT',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                      color: isDark ? const Color(0xFF34D399) : const Color(0xFF065F46),
+                                      letterSpacing: 0.3,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                'Check each clause to accept standard commercial lease terms. If you disagree with any item, uncheck it and input your counter-offer note directly.',
+                'Check each clause to accept proposed lease terms. If you disagree with any item, uncheck it and input your counter-offer note directly.',
                 style: TextStyle(
                   fontSize: 12,
                   color: isDark ? AppColors.ink400 : AppColors.ink500,
@@ -1711,7 +1877,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      '$agreedCount Standard Agreed',
+                      '$agreedCount Agreed',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w800,
@@ -1732,6 +1898,14 @@ class _ApplyScreenState extends State<ApplyScreen> {
                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.white),
                       ),
                     ),
+                  if (_contractLoading) ...[
+                    const Spacer(),
+                    const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ],
                 ],
               ),
             ],
@@ -1743,6 +1917,151 @@ class _ApplyScreenState extends State<ApplyScreen> {
           _buildErrorBox(_error!),
           const SizedBox(height: 18),
         ],
+
+        // --- SECTION 1: BUILT-IN RULES (AT THE TOP, UNCHECKABLE) ---
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(
+            'Built-in Rules (Platform Standard)',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.ink400 : AppColors.ink500,
+            ),
+          ),
+        ),
+
+        ..._platformRules.map((rule) {
+          final label = rule['label'] as String? ?? 'Built-in Rule';
+          final standard = rule['standard'] as String? ?? '';
+          final ref = rule['ref'] as String? ?? '';
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.navyCard : AppColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: isDark ? AppColors.navyBorder : AppColors.border,
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark ? Colors.black.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    InkWell(
+                      borderRadius: BorderRadius.circular(8),
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Built-in platform standard rule (non-negotiable).'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.electricBlue : AppColors.primary,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isDark ? AppColors.electricBlue : AppColors.primary,
+                            width: 1.8,
+                          ),
+                        ),
+                        child: const Icon(Icons.check, color: Colors.white, size: 17),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  label,
+                                  style: TextStyle(
+                                    fontSize: 13.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: isDark ? Colors.white : AppColors.ink900,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.4) : AppColors.accentSoft,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'Built-in Rule',
+                                  style: TextStyle(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (ref.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              ref,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? const Color(0xFF93C5FD) : AppColors.primary,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 6),
+                          Text(
+                            standard,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? AppColors.ink300 : AppColors.ink500,
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }),
+
+        // --- SECTION 2: LESSOR CONTRACT RULES (CHECKABLE) ---
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(
+            'Building Contract Rules (${_checklistClauses.length})',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: isDark ? AppColors.ink400 : AppColors.ink500,
+            ),
+          ),
+        ),
 
         // List of Interactive Clauses
         ...List.generate(_checklistClauses.length, (index) {
@@ -1856,6 +2175,17 @@ class _ApplyScreenState extends State<ApplyScreen> {
                               ),
                             ],
                           ),
+                          if (clause['ref'] != null && (clause['ref'] as String).isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              clause['ref'] as String,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? const Color(0xFF93C5FD) : AppColors.primary,
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: 6),
                           Text(
                             clause['standard'] as String,

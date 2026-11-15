@@ -18,18 +18,23 @@ class ViolationNoticeSheet extends StatefulWidget {
     required Map<String, dynamic> violation,
     bool isGated = true,
   }) {
+    final ack = violation['acknowledged'];
+    final isAck = ack == true || ack == 1 || ack == '1';
+    final disp = violation['disputed'];
+    final isDisp = disp == true || disp == 1 || disp == '1';
+    final rev = violation['is_revoked'];
+    final isRev = rev == true || rev == 1 || rev == '1';
+    final effectiveGated = isGated && !isAck && !isDisp && !isRev;
+
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      isDismissible: !isGated,
-      enableDrag: !isGated,
+      isDismissible: true,
+      enableDrag: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => PopScope(
-        canPop: !isGated,
-        child: ViolationNoticeSheet(
-          violation: violation,
-          isGated: isGated,
-        ),
+      builder: (_) => ViolationNoticeSheet(
+        violation: violation,
+        isGated: effectiveGated,
       ),
     );
   }
@@ -45,9 +50,18 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
       ? widget.violation['strike'] as int
       : int.tryParse(widget.violation['strike']?.toString() ?? '1') ?? 1;
 
-  double get _penalty => widget.violation['penalty_amount'] is num
-      ? (widget.violation['penalty_amount'] as num).toDouble()
-      : (_strike == 2 ? 500.0 : (_strike >= 3 ? 1500.0 : 0.0));
+  bool get _isLateRent =>
+      _category.toLowerCase().contains('past_due') ||
+      _category.toLowerCase().contains('late') ||
+      _category.toLowerCase().contains('overdue');
+
+  double get _penalty {
+    final serverAmt = (widget.violation['fine_amount'] ?? widget.violation['penalty_amount']) as num?;
+    if (serverAmt != null) return serverAmt.toDouble();
+    if (_strike >= 3) return 1000.0;
+    if (_strike == 2 && _isLateRent) return 500.0;
+    return 0.0;
+  }
 
   String get _category => widget.violation['category']?.toString() ?? 'Lease Violation';
   String get _contractRef => (widget.violation['contract_ref'] ?? '').toString();
@@ -123,16 +137,42 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag handle
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 44,
-              height: 5,
-              decoration: BoxDecoration(
-                color: AppColors.ink300,
-                borderRadius: BorderRadius.circular(10),
-              ),
+          // Top bar with Drag handle & Close (✕) button
+          Padding(
+            padding: const EdgeInsets.only(top: 10, left: 16, right: 16, bottom: 4),
+            child: Row(
+              children: [
+                const SizedBox(width: 32),
+                Expanded(
+                  child: Center(
+                    child: Container(
+                      width: 44,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: AppColors.ink300,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+                InkWell(
+                  onTap: () => Navigator.of(context).pop(false),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      color: AppColors.borderLight,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: AppColors.ink500,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
 
@@ -224,7 +264,7 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
                 child: Icon(
                   _strike >= 3
                       ? Icons.gavel_rounded
-                      : (_strike == 2 ? Icons.warning_amber_rounded : Icons.info_outline_rounded),
+                      : (_strike == 2 ? Icons.warning_rounded : Icons.info_outline_rounded),
                   color: _strikeColor,
                   size: 26,
                 ),
@@ -235,12 +275,16 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'FORMAL LEASE CITATION',
+                      _isRevoked
+                          ? 'REVOKED CITATION'
+                          : (_isDisputed ? 'CITATION UNDER DISPUTE' : 'FORMAL LEASE CITATION'),
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.2,
-                        color: _strikeColor,
+                        color: _isRevoked
+                            ? const Color(0xFF94A3B8)
+                            : (_isDisputed ? AppColors.electricBlue : _strikeColor),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -609,7 +653,132 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
     return ack == true || ack == 1 || ack == '1';
   }
 
+  bool? _localDisputed;
+  bool get _isDisputed {
+    if (_localDisputed != null) return _localDisputed!;
+    final disp = widget.violation['disputed'];
+    return disp == true || disp == 1 || disp == '1';
+  }
+
+  String get _disputeStatus => (widget.violation['dispute_status'] ?? '').toString().toLowerCase();
+  String? get _rejectionNote => widget.violation['dispute_resolution_note']?.toString();
+  bool get _isDisputeRejected => _disputeStatus == 'rejected';
+
+  bool get _isRevoked {
+    final rev = widget.violation['is_revoked'];
+    return rev == true || rev == 1 || rev == '1';
+  }
+
   Widget _buildActionButtons() {
+    if (_isRevoked) {
+      return Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.check_circle_outline_rounded, color: AppColors.ink500, size: 22),
+                SizedBox(width: 10),
+                Text(
+                  'Citation Revoked by Lessor',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.ink700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('Close', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (_isDisputed && !_isDisputeRejected) {
+      return Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            decoration: BoxDecoration(
+              color: AppColors.accentSoft,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFBFDBFE), width: 1.2),
+            ),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: const [
+                    Icon(Icons.pending_actions_rounded, color: AppColors.electricBlue, size: 22),
+                    SizedBox(width: 8),
+                    Text(
+                      'Dispute Under Review',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.midnightNavy,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Your explanation was forwarded to the lessor. Discussion is open in your in-app chat thread. Strike is on hold pending lessor decision.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.ink500,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text(
+                'Close Notice',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     if (_isAcknowledged) {
       return Column(
         children: [
@@ -690,6 +859,26 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
               ),
             ),
           ),
+          if (!_isLateRent) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: _isSubmitting ? null : _showDisputeDialog,
+                icon: const Icon(Icons.help_outline_rounded, size: 18, color: AppColors.electricBlue),
+                label: const Text(
+                  'Dispute Citation (Lessor Review)',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.electricBlue),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFFBFDBFE)),
+                  backgroundColor: AppColors.accentSoft,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
@@ -709,38 +898,312 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
               ),
             ),
           ),
+          const SizedBox(height: 6),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'Close Notice',
+                style: TextStyle(fontSize: 13, color: AppColors.ink500, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
         ],
       );
     }
 
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton(
-        onPressed: _isSubmitting ? null : _handleAcknowledge,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        ),
-        child: _isSubmitting
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.check_circle_outline_rounded, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Acknowledge Receipt & Compliance',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+    return Column(
+      children: [
+        if (_isDisputeRejected) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+            margin: const EdgeInsets.only(bottom: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF2F2),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFFECACA), width: 1.2),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.report_problem_rounded, color: AppColors.error, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Dispute Rejected (Violation Upheld)',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF991B1B),
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        _rejectionNote ?? 'Lessor reviewed your explanation and upheld this citation. Strike $_strike is active on your compliance record.',
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: Color(0xFF7F1D1D),
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
+              ],
+            ),
+          ),
+        ],
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: _isSubmitting ? null : _handleAcknowledge,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            ),
+            child: _isSubmitting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Icon(Icons.check_circle_outline_rounded, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Acknowledge Receipt & Compliance',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+        if (!_isLateRent && !_isDisputeRejected) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: OutlinedButton.icon(
+              onPressed: _isSubmitting ? null : _showDisputeDialog,
+              icon: const Icon(Icons.help_outline_rounded, size: 18, color: AppColors.electricBlue),
+              label: const Text(
+                'Dispute Citation (Lessor Review)',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.electricBlue),
               ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFFBFDBFE)),
+                backgroundColor: AppColors.accentSoft,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 8),
+        SizedBox(
+          width: double.infinity,
+          child: TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text(
+              'Close Notice',
+              style: TextStyle(fontSize: 13, color: AppColors.ink500, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showDisputeDialog() {
+    final textController = TextEditingController();
+    bool isSubmittingDispute = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) {
+          final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+          return Container(
+            padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + bottomInset),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: AppColors.ink300,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+                Row(
+                  children: const [
+                    Icon(Icons.gavel_rounded, color: AppColors.electricBlue, size: 22),
+                    SizedBox(width: 8),
+                    Text(
+                      'Dispute Lease Citation',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink900,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'State your defense or explanation regarding the citation for "$_category". This will place the citation under review and immediately notify the lessor in your chat thread.',
+                  style: const TextStyle(fontSize: 13, color: AppColors.ink500, height: 1.4),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: textController,
+                  maxLines: 4,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: 'Enter your explanation or factual clarification...',
+                    hintStyle: const TextStyle(fontSize: 13, color: AppColors.ink400),
+                    filled: true,
+                    fillColor: AppColors.bg,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: isSubmittingDispute ? null : () => Navigator.of(sheetContext).pop(),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(0, 48),
+                          side: const BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text('Cancel', style: TextStyle(color: AppColors.ink700, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: ElevatedButton(
+                        onPressed: isSubmittingDispute
+                            ? null
+                            : () async {
+                                final text = textController.text.trim();
+                                if (text.isEmpty) {
+                                  ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Please write an explanation for the dispute.'),
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                final messenger = ScaffoldMessenger.of(context);
+                                final nav = Navigator.of(sheetContext);
+                                setSheetState(() => isSubmittingDispute = true);
+
+                                final id = widget.violation['id'] is int
+                                    ? widget.violation['id'] as int
+                                    : int.tryParse(widget.violation['id']?.toString() ?? '0') ?? 0;
+                                final tid = widget.violation['tenant_id'] is int
+                                    ? widget.violation['tenant_id'] as int
+                                    : (widget.violation['tenant_id'] != null
+                                        ? int.tryParse(widget.violation['tenant_id'].toString())
+                                        : null);
+
+                                final res = await ApiService.disputeViolation(
+                                  violationId: id,
+                                  reason: text,
+                                  tenantId: tid,
+                                );
+
+                                nav.pop();
+                                if (!mounted) return;
+
+                                if (res['ok'] == true) {
+                                  setState(() => _localDisputed = true);
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: const Color(0xFF1E293B),
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      content: Row(
+                                        children: const [
+                                          Icon(Icons.send_rounded, color: Color(0xFF38BDF8), size: 18),
+                                          SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              'Dispute filed. Message forwarded to lessor chat thread.',
+                                              style: TextStyle(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w500),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text(res['message']?.toString() ?? 'Failed to file dispute.'),
+                                      backgroundColor: AppColors.error,
+                                      behavior: SnackBarBehavior.floating,
+                                    ),
+                                  );
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          minimumSize: const Size(0, 48),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: isSubmittingDispute
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text(
+                                'Submit Dispute',
+                                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+                              ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

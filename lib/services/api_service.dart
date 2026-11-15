@@ -325,6 +325,40 @@ class ApiService {
     await saveSession(data['token'], data['user']);
   }
 
+  static Future<void> sendForgotPasswordOtp({
+    required String phone,
+  }) async {
+    await _postJson('auth_forgot_password.php', {
+      'action': 'send_otp',
+      'phone': phone,
+    });
+  }
+
+  static Future<void> verifyForgotPasswordOtp({
+    required String phone,
+    required String otp,
+  }) async {
+    await _postJson('auth_forgot_password.php', {
+      'action': 'verify_otp',
+      'phone': phone,
+      'otp': otp,
+    });
+  }
+
+  static Future<String> resetPasswordWithOtp({
+    required String phone,
+    required String otp,
+    required String newPassword,
+  }) async {
+    final data = await _postJson('auth_forgot_password.php', {
+      'action': 'reset_password',
+      'phone': phone,
+      'otp': otp,
+      'new_password': newPassword,
+    });
+    return (data['message'] ?? 'Password reset successfully.').toString();
+  }
+
   static Future<void> login({
     required String email,
     required String password,
@@ -338,14 +372,114 @@ class ApiService {
 
   // ---------------- Properties ----------------
 
+  static const String _kSavedPropertyIdsKey = 'saved_property_ids';
+
+  static Future<Set<int>> getSavedPropertyIds() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_kSavedPropertyIdsKey) ?? [];
+      return list
+          .map((e) => int.tryParse(e))
+          .where((e) => e != null)
+          .cast<int>()
+          .toSet();
+    } catch (_) {
+      return <int>{};
+    }
+  }
+
+  static Future<void> _persistSavedPropertyIds(Set<int> ids) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _kSavedPropertyIdsKey,
+        ids.map((e) => e.toString()).toList(),
+      );
+    } catch (_) {}
+  }
+
+  static Future<bool> isPropertySaved(int propertyId) async {
+    final ids = await getSavedPropertyIds();
+    return ids.contains(propertyId);
+  }
+
+  /// Toggles saved state locally and syncs with server if logged in.
+  static Future<bool> toggleSaveProperty(
+    int propertyId, {
+    bool? optimisticState,
+  }) async {
+    final localIds = await getSavedPropertyIds();
+    final bool newState = optimisticState ?? !localIds.contains(propertyId);
+
+    if (newState) {
+      localIds.add(propertyId);
+    } else {
+      localIds.remove(propertyId);
+    }
+    await _persistSavedPropertyIds(localIds);
+
+    try {
+      final token = await getToken();
+      if (token != null && token.isNotEmpty) {
+        final res = await _postJson(
+          'properties_toggle_save.php',
+          {'property_id': propertyId},
+          auth: true,
+        );
+        if (res['ok'] == true && res['saved'] is bool) {
+          final serverState = res['saved'] as bool;
+          if (serverState != newState) {
+            if (serverState) {
+              localIds.add(propertyId);
+            } else {
+              localIds.remove(propertyId);
+            }
+            await _persistSavedPropertyIds(localIds);
+          }
+          return serverState;
+        }
+      }
+    } catch (_) {
+      // Offline fallback: local state already updated
+    }
+    return newState;
+  }
+
   static Future<List<dynamic>> fetchProperties() async {
-    final data = await _getJson('properties_list.php');
-    return data['properties'] as List<dynamic>;
+    final data = await _getJson('properties_list.php', auth: true);
+    final list = (data['properties'] as List<dynamic>?) ?? [];
+    try {
+      final localIds = await getSavedPropertyIds();
+      for (final item in list) {
+        if (item is Map) {
+          final id = item['id'] as int?;
+          if (id != null) {
+            if (item['saved'] == true) {
+              localIds.add(id);
+            } else if (localIds.contains(id)) {
+              item['saved'] = true;
+            }
+          }
+        }
+      }
+      await _persistSavedPropertyIds(localIds);
+    } catch (_) {}
+    return list;
   }
 
   static Future<Map<String, dynamic>> fetchPropertyDetail(int id) async {
-    final data = await _getJson('properties_show.php?id=$id');
-    return data['property'] as Map<String, dynamic>;
+    final data = await _getJson('properties_show.php?id=$id', auth: true);
+    final prop = Map<String, dynamic>.from(data['property'] as Map);
+    try {
+      final localIds = await getSavedPropertyIds();
+      if (prop['saved'] == true) {
+        localIds.add(id);
+        await _persistSavedPropertyIds(localIds);
+      } else if (localIds.contains(id)) {
+        prop['saved'] = true;
+      }
+    } catch (_) {}
+    return prop;
   }
 
   // ---------------- Applications & Checklist ----------------
@@ -417,9 +551,19 @@ class ApiService {
     return data['ok'] == true;
   }
 
-  static Future<List<Map<String, dynamic>>> fetchChecklistItems() async {
+  static Future<Map<String, dynamic>> fetchChecklistForProperty(int propertyId) async {
     try {
-      final data = await _getJson('checklist_items.php');
+      final data = await _getJson('checklist_items.php?property_id=$propertyId');
+      return data;
+    } catch (_) {
+      return {'ok': false, 'items': []};
+    }
+  }
+
+  static Future<List<Map<String, dynamic>>> fetchChecklistItems({int? propertyId}) async {
+    try {
+      final query = (propertyId != null && propertyId > 0) ? '?property_id=$propertyId' : '';
+      final data = await _getJson('checklist_items.php$query');
       final raw = (data['items'] as List<dynamic>?) ?? [];
       return raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     } catch (_) {
@@ -987,7 +1131,7 @@ class ApiService {
         'description': isPastDue
             ? 'Account reached the 3rd payment default threshold with accumulated arrears. Formal Notice of Eviction initiated under governing commercial lease code.'
             : 'Heavy electrical wiring installation performed without management authorization and safety inspection permit. Chronic breach threshold reached.',
-        'penalty_amount': 1500.0,
+        'penalty_amount': 1000.0,
         'issued_at': '2027-01-07 14:30:00',
         'acknowledged': isAck ? 1 : 0,
         'image_url': isPastDue
@@ -998,7 +1142,42 @@ class ApiService {
     return list.reversed.toList();
   }
 
+  static const String _kDismissedViolationsKey = 'dismissed_violation_ids';
+
+  static Future<bool> isViolationDismissed(int violationId) async {
+    if (violationId <= 0) return false;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_kDismissedViolationsKey) ?? [];
+      return list.contains(violationId.toString());
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<void> markViolationDismissed(int violationId) async {
+    if (violationId <= 0) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_kDismissedViolationsKey) ?? [];
+      if (!list.contains(violationId.toString())) {
+        list.add(violationId.toString());
+        await prefs.setStringList(_kDismissedViolationsKey, list);
+      }
+    } catch (_) {}
+  }
+
+  static Future<void> clearDismissedViolations() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_kDismissedViolationsKey);
+    } catch (_) {}
+  }
+
   static Future<bool> acknowledgeViolation(int violationId, {int? strike, int? tenantId}) async {
+    if (violationId > 0) {
+      await markViolationDismissed(violationId);
+    }
     try {
       final res = await _postJson('violations_acknowledge.php', {
         'violation_id': violationId,
@@ -1017,5 +1196,34 @@ class ApiService {
       }
     }
     return true;
+  }
+
+  static Future<Map<String, dynamic>> disputeViolation({
+    required int violationId,
+    required String reason,
+    int? tenantId,
+  }) async {
+    if (violationId > 0) {
+      await markViolationDismissed(violationId);
+    }
+    try {
+      final res = await _postJson('violations_dispute.php', {
+        'violation_id': violationId,
+        'reason': reason,
+      }, auth: true);
+      if (res['ok'] == true) return res;
+    } catch (_) {}
+
+    // Fallback locally for demo / offline
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final disputeKey = 'demo_disputed_violation_$violationId';
+      await prefs.setString(disputeKey, reason);
+    } catch (_) {}
+
+    return {
+      'ok': true,
+      'message': 'Dispute filed successfully and forwarded to your lessor messages thread.',
+    };
   }
 }

@@ -49,6 +49,7 @@ abstract class Model
         return $stmt->rowCount();
     }
 
+
     protected function insert(string $sql, array $params = []): int
     {
         $this->run($sql, $params);

@@ -14,6 +14,29 @@ final class ApplicationRepository extends Repository
         'bir_cert'        => 'bir_cert_path',
     ];
 
+    private function ensureColumns(): void
+    {
+        static $ensured = false;
+        if ($ensured) return;
+        $ensured = true;
+
+        $cols = [
+            'checklist_negotiation' => 'LONGTEXT NULL',
+            'lessor_rebuttal'       => 'TEXT NULL',
+            'rebuttal_at'           => 'DATETIME NULL',
+            'valid_id_path'         => 'VARCHAR(255) NULL',
+            'sec_dti_path'          => 'VARCHAR(255) NULL',
+            'business_permit_path'  => 'VARCHAR(255) NULL',
+            'bir_cert_path'         => 'VARCHAR(255) NULL',
+        ];
+
+        foreach ($cols as $col => $def) {
+            try {
+                $this->pdo->exec("ALTER TABLE `applications` ADD COLUMN `$col` $def");
+            } catch (\Throwable $e) {}
+        }
+    }
+
     public function hasPending(int $propertyId, int $lesseeId): bool
     {
         return $this->fetchValue(
@@ -24,6 +47,7 @@ final class ApplicationRepository extends Repository
 
     public function create(array $data): int
     {
+        $this->ensureColumns();
         try {
             return $this->insert(
                 'INSERT INTO applications
@@ -51,6 +75,7 @@ final class ApplicationRepository extends Repository
     /** @param array $paths  field => relative path, e.g. ['valid_id' => 'uploads/...'] */
     public function setDocumentPaths(int $applicationId, array $paths): void
     {
+        $this->ensureColumns();
         $sets = [];
         $params = [];
         foreach ($paths as $field => $path) {
@@ -64,7 +89,11 @@ final class ApplicationRepository extends Repository
             return;
         }
         $params[] = $applicationId;
-        $this->execute('UPDATE applications SET ' . implode(', ', $sets) . ' WHERE id = ?', $params);
+        try {
+            $this->execute('UPDATE applications SET ' . implode(', ', $sets) . ' WHERE id = ?', $params);
+        } catch (\Throwable $e) {
+            error_log('setDocumentPaths failed: ' . $e->getMessage());
+        }
     }
 
     public function listForLessee(int $lesseeId): array

@@ -28,16 +28,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String _name = '';
   String _companyName = '';
   Map<String, dynamic>? _leaseData;
-  int _demoStrike = 0;
-
-  int? get _tenantId {
-    final lease = _leaseData ?? widget.lease;
-    if (lease == null) return null;
-    final tid = lease['tenant_id'] ?? lease['id'];
-    if (tid is int) return tid;
-    if (tid is String) return int.tryParse(tid);
-    return null;
-  }
 
   @override
   void initState() {
@@ -56,12 +46,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfile() async {
     final name = await ApiService.getUserName();
     final company = await ApiService.getCompanyName();
-    final strike = await ApiService.getDemoStrikeLevel(tenantId: _tenantId);
     if (mounted) {
       setState(() {
         if (name != null && name.isNotEmpty) _name = name;
         if (company != null && company.isNotEmpty) _companyName = company;
-        _demoStrike = strike;
       });
     }
     if (widget.lease != null) {
@@ -203,7 +191,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     borderRadius: BorderRadius.circular(18),
                     onTap: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => LeaseContractScreen(lease: _leaseData ?? widget.lease)),
+                        MaterialPageRoute(
+                          builder: (_) => LeaseContractScreen(
+                            lease: _leaseData ?? widget.lease,
+                            initialTab: 1,
+                            titleOverride: 'Lease Agreement',
+                          ),
+                        ),
                       );
                     },
                     child: Container(
@@ -279,7 +273,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               // Section 2: Documents & Compliance
               _buildSectionHeader('Documents & Compliance'),
               _buildSectionGroup([
-                _buildStandingMenuItem(),
                 _buildMenuItem(
                   icon: Icons.handshake_outlined,
                   title: 'Restructuring & Relief Policy',
@@ -295,16 +288,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: 'Lease Agreement',
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => LeaseContractScreen(lease: _leaseData ?? widget.lease)),
+                      MaterialPageRoute(
+                        builder: (_) => LeaseContractScreen(
+                          lease: _leaseData ?? widget.lease,
+                          initialTab: 1,
+                          titleOverride: 'Lease Agreement',
+                        ),
+                      ),
                     );
                   },
                 ),
                 _buildMenuItem(
-                  icon: Icons.description_outlined,
+                  icon: Icons.rule_folder_outlined,
                   title: 'Contract Guidelines',
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => LeaseContractScreen(lease: _leaseData ?? widget.lease)),
+                      MaterialPageRoute(
+                        builder: (_) => LeaseContractScreen(
+                          lease: _leaseData ?? widget.lease,
+                          initialTab: 0,
+                          titleOverride: 'Contract Guidelines & Rules',
+                        ),
+                      ),
                     );
                   },
                 ),
@@ -520,95 +525,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildStandingMenuItem() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    String badgeText = 'Good Standing';
-    Color badgeColor = AppColors.success;
-    Color badgeSoft = isDark ? AppColors.success.withValues(alpha: 0.18) : const Color(0xFFECFDF5);
-    IconData badgeIcon = Icons.check_circle_rounded;
 
-    if (_demoStrike == 1) {
-      badgeText = '1 Warning';
-      badgeColor = const Color(0xFF0284C7);
-      badgeSoft = isDark ? const Color(0xFF0284C7).withValues(alpha: 0.18) : const Color(0xFFEFF6FF);
-      badgeIcon = Icons.info_outline_rounded;
-    } else if (_demoStrike == 2) {
-      badgeText = '₱500 Fine';
-      badgeColor = const Color(0xFF1E6BFF);
-      badgeSoft = isDark ? const Color(0xFF1E6BFF).withValues(alpha: 0.18) : const Color(0xFFDBEAFE);
-      badgeIcon = Icons.receipt_long_rounded;
-    } else if (_demoStrike >= 3) {
-      badgeText = 'Critical Breach';
-      badgeColor = AppColors.error;
-      badgeSoft = isDark ? AppColors.error.withValues(alpha: 0.18) : const Color(0xFFFEE2E2);
-      badgeIcon = Icons.gavel_rounded;
-    }
-
-    return InkWell(
-      onTap: _openLeaseStanding,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: badgeSoft,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.verified_user_outlined, size: 18, color: badgeColor),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Account & Lease Standing',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : AppColors.ink900,
-                    ),
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    'Compliance records & citations',
-                    style: TextStyle(fontSize: 11.5, color: isDark ? const Color(0xFF94A3B8) : AppColors.ink500),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-              decoration: BoxDecoration(
-                color: badgeSoft,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(badgeIcon, size: 12, color: badgeColor),
-                  const SizedBox(width: 4),
-                  Text(
-                    badgeText,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: badgeColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 6),
-            Icon(Icons.chevron_right_rounded, size: 18, color: isDark ? const Color(0xFF64748B) : AppColors.ink400),
-          ],
-        ),
-      ),
-    );
-  }
 
   void _showRestructuringPolicyModal() {
     final isDark = Theme.of(context).brightness == Brightness.dark;

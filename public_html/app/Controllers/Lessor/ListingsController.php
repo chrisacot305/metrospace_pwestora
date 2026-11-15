@@ -4,7 +4,9 @@ namespace App\Controllers\Lessor;
 use App\Core\Controller;
 use App\Core\Csrf;
 use App\Core\Upload;
+use App\Models\ContractTemplateModel;
 use App\Models\PropertyModel;
+use App\Services\ContractService;
 use RuntimeException;
 
 /**
@@ -43,6 +45,7 @@ final class ListingsController extends Controller
         $error = '';
         $listingSaved = false;
         $this->properties = new PropertyModel($this->pdo);
+        $templatesModel = new ContractTemplateModel($this->pdo);
 
         $PROPERTY_TYPES = self::PROPERTY_TYPES;
         $SINGLE_DOCS = [
@@ -103,6 +106,10 @@ final class ListingsController extends Controller
                 try {
                     $this->properties->updateDetails($propertyId, $lessorId, $f);
 
+                    if (isset($_POST['contract_template_id'])) {
+                        $templatesModel->assignBuilding($propertyId, (int) $_POST['contract_template_id'], $lessorId);
+                    }
+
                     if ($this->hasNewPhotos()) {
                         $existing = $this->properties->photoCount($propertyId);
                         foreach ($this->savePhotos($propertyId, $existing) as [$path, $category, $caption]) {
@@ -145,6 +152,9 @@ final class ListingsController extends Controller
                 $this->properties->beginTransaction();
                 try {
                     $propertyId = $this->properties->create($lessorId, $f);
+
+                    $templateId = (int) ($_POST['contract_template_id'] ?? 0);
+                    $templatesModel->assignBuilding($propertyId, $templateId, $lessorId);
 
                     $docPaths = [];
                     foreach ($SINGLE_DOCS as $field => [$column, $label]) {
@@ -196,6 +206,40 @@ final class ListingsController extends Controller
             }
         }
         $justSaved = isset($_GET['saved']) && $editingProperty && $error === '';
+
+        // Contract templates for Add & Edit Property
+        $contractTemplates = $templatesModel->listForLessor($lessorId);
+        $defaultTemplate = $templatesModel->defaultForLessor($lessorId);
+        $defaultTemplateId = $defaultTemplate ? (int) $defaultTemplate['id'] : 0;
+        $defaultTemplateName = $defaultTemplate ? $defaultTemplate['name'] : ContractService::BUILTIN_TEMPLATE_NAME;
+
+        $selectedTemplateId = 0;
+        if ($editingProperty) {
+            $selectedTemplateId = $templatesModel->templateIdForProperty((int) $editingProperty['id'], $lessorId);
+        } elseif ($defaultTemplateId > 0) {
+            $selectedTemplateId = $defaultTemplateId;
+        }
+
+        $builtinClauses = ContractService::builtinClauses();
+
+        $templatesJsonData = [
+            '0' => [
+                'id'          => 0,
+                'name'        => ContractService::BUILTIN_TEMPLATE_NAME,
+                'description' => 'Standard commercial lease clauses compliant with Philippine law',
+                'is_default'  => ($defaultTemplateId === 0),
+                'clauses'     => $builtinClauses,
+            ]
+        ];
+        foreach ($contractTemplates as $t) {
+            $templatesJsonData[(string) $t['id']] = [
+                'id'          => (int) $t['id'],
+                'name'        => (string) $t['name'],
+                'description' => (string) ($t['description'] ?? ''),
+                'is_default'  => ((int) $t['is_default'] === 1),
+                'clauses'     => ContractService::decodeClauses($t['clauses']),
+            ];
+        }
 
         unset($f);
         return $this->view('lessor/listings', get_defined_vars());

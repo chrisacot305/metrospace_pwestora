@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
 import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 import 'home_shell.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -83,8 +84,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                       child: Image.asset(
-                        isDark ? 'img/invert.png' : 'img/Frame 2.png',
+                        isDark ? 'img/invert.png' : 'img/logo.png',
                         fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => const SizedBox(),
                       ),
                     ),
                   ),
@@ -178,7 +180,33 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           validator: (v) => (v == null || v.isEmpty) ? 'Please enter your password' : null,
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const ForgotPasswordScreen(),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              'Forgot Password?',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.electricBlue,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
 
                         SizedBox(
                           width: double.infinity,

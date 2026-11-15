@@ -528,6 +528,7 @@ function run_daily_rent_reminders(PDO $pdo, bool $dryRun = false): array {
              JOIN tenants t ON t.id = v.tenant_id
              LEFT JOIN users u ON u.id = t.lessee_id
              WHERE COALESCE(t.status, 'active') <> 'terminated'
+               AND (v.is_revoked = 0 OR v.is_revoked IS NULL)
                AND (v.is_paid = 0 OR v.is_paid IS NULL)
                AND (v.description IS NULL OR v.description NOT LIKE '%[DECAYED]%')
                AND v.strike > 0

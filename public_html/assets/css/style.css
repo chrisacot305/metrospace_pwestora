@@ -279,6 +279,16 @@ td strong {
   gap: 16px; 
 }
 
+/* My Properties: 4 cards per row on wide screens, stepping down on smaller ones */
+.card-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 1280px) { .card-grid-4 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 960px)  { .card-grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px)  { .card-grid-4 { grid-template-columns: 1fr; } }
+
 .two-col { 
   display: grid; 
   grid-template-columns: 1fr 1fr; 
@@ -2824,6 +2834,8 @@ a.l-btn-gold {
    6b. LANDING — LIVE LISTINGS, LISTING DETAILS, MOBILE MENU
    ============================================================= */
 .l-listings-sub { color: var(--l-muted); margin: -6px 0 22px; font-size: 15px; }
+/* Tighter spacing around the Live listings section (the sections on either side already add 72px of their own) */
+.l-section#portfolio { padding-top: 24px; padding-bottom: 24px; }
 
 .l-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
 .l-chip {
@@ -2915,11 +2927,33 @@ a.l-btn-gold {
 .l-lhead { display: flex; gap: 8px; align-items: center; }
 .l-lcontent h3 { margin: 12px 0 4px; font-size: 22px; color: var(--l-navy); }
 .l-lfacts {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; margin: 18px 0;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 18px 0; align-items: stretch;
 }
-.l-lfacts div { background: var(--l-bg); border: 1px solid var(--l-border); border-radius: 12px; padding: 12px 14px; }
-.l-lfacts span { display: block; font-size: 11px; font-weight: 700; color: var(--l-muted); text-transform: uppercase; letter-spacing: .5px; }
-.l-lfacts strong { display: block; margin-top: 4px; color: var(--l-navy); font-size: 15px; }
+.l-lfacts > div {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  background: var(--l-bg); border: 1px solid var(--l-border); border-radius: 12px; padding: 13px 18px; min-width: 0;
+}
+.l-lfacts span {
+  flex: 0 0 auto; font-size: 11px; font-weight: 700; color: var(--l-muted);
+  text-transform: uppercase; letter-spacing: .5px; white-space: nowrap;
+}
+.l-lfacts strong { display: block; margin: 0; color: var(--l-navy); font-size: 15px; text-align: right; line-height: 1.4; min-width: 0; overflow-wrap: anywhere; }
+/* Monthly rent: highlighted bar across the top */
+.l-lfacts > .l-fact-rent { grid-column: 1 / -1; background: var(--l-navy); border-color: var(--l-navy); padding: 16px 22px; }
+.l-lfacts > .l-fact-rent span { color: rgba(255,255,255,.72); font-size: 12px; }
+.l-lfacts > .l-fact-rent strong { color: #fff; font-size: 24px; font-weight: 800; }
+.l-lfacts > .l-fact-full { grid-column: 1 / -1; }
+/* Long text rows: full width, label column on the left, text on the right */
+.l-lfacts > .l-fact-wide { grid-column: 1 / -1; align-items: flex-start; justify-content: flex-start; gap: 20px; }
+.l-lfacts > .l-fact-wide span { flex: 0 0 130px; padding-top: 3px; }
+.l-lfacts > .l-fact-wide strong { flex: 1; text-align: left; font-weight: 600; }
+.l-lfacts .l-fact-tags {
+  flex: 1; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; background: none; border: 0; border-radius: 0;
+}
+.l-lfacts .l-fact-tags em {
+  font-style: normal; font-size: 13px; font-weight: 600; color: var(--l-navy);
+  background: #fff; border: 1px solid var(--l-border); border-radius: 999px; padding: 4px 11px;
+}
 .l-ldesc { color: var(--l-text); font-size: 14px; line-height: 1.65; white-space: pre-line; margin: 0 0 14px; }
 .l-lmap { display: inline-block; font-weight: 700; color: var(--l-accent-dark); font-size: 14px; margin-bottom: 18px; }
 .l-lcta { border-top: 1px solid var(--l-border); padding-top: 16px; font-size: 13.5px; color: var(--l-muted); }
@@ -2944,4 +2978,7 @@ a.l-btn-gold {
   .l-listings { grid-template-columns: 1fr; }
   .l-lgallery { height: 240px; }
   .l-lcontent { padding: 20px; }
+  .l-lfacts { grid-template-columns: 1fr; }
+  .l-lfacts > .l-fact-wide { flex-direction: column; gap: 6px; }
+  .l-lfacts > .l-fact-wide span { flex-basis: auto; padding-top: 0; }
 }

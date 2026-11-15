@@ -144,16 +144,25 @@ class _MessagesScreenState extends State<MessagesScreen> {
               ? v['strike'] as int
               : int.tryParse(v['strike']?.toString() ?? '1') ?? 1;
 
-          // Only attach to real messages in this thread
-          final idx = parsedMsgs.indexWhere((m) {
+          final vId = v['id'] is int ? v['id'] as int : int.tryParse(v['id']?.toString() ?? '0') ?? 0;
+
+          // Attach to matching notice or revocation messages in this thread
+          for (final m in parsedMsgs) {
             final b = (m['body'] ?? '').toString();
             final isNotice = m['notice_type'] == 'Infraction Notice' || m['notice_type'] == 'violation';
-            return (b.contains('OFFICIAL NOTICE OF INFRACTION') || isNotice) &&
-                (b.contains('STRIKE $strike') || b.contains('Strike $strike') || strike == 1);
-          });
-          if (idx != -1 && parsedMsgs[idx]['violation_data'] == null) {
-            parsedMsgs[idx]['violation_data'] = v;
-          } else if (idx == -1) {
+            final isRevMsg = b.contains('CITATION REVOKED') || b.contains('Citation Revoked') || b.contains('revoked Citation');
+            if (m['violation_data'] == null) {
+              if (isRevMsg && (vId > 0 && b.contains('#$vId') || b.contains('Strike $strike'))) {
+                m['violation_data'] = v;
+              } else if ((b.contains('OFFICIAL NOTICE OF INFRACTION') || isNotice) &&
+                  (b.contains('STRIKE $strike') || b.contains('Strike $strike') || strike == 1)) {
+                m['violation_data'] = v;
+              }
+            }
+          }
+
+          final idx = parsedMsgs.indexWhere((m) => m['violation_data'] == v);
+          if (idx == -1) {
             // Fallback: If no chat message exists in the database thread for this violation,
             // synthesize an official citation card entry in parsedMsgs so it appears in the chat feed!
             final strikeBadge = 'STRIKE $strike OF 3';
@@ -286,9 +295,23 @@ class _MessagesScreenState extends State<MessagesScreen> {
   }
 
   bool _isViolationMessage(String body, String? noticeType) {
-    if (noticeType == 'Infraction Notice' || noticeType == 'violation') return true;
+    if (noticeType == 'Infraction Notice' ||
+        noticeType == 'violation' ||
+        noticeType == 'Citation Revocation' ||
+        (noticeType == 'Dispute Resolution' &&
+            (body.contains('CITATION REVOKED') ||
+                body.contains('DISPUTE REJECTED') ||
+                body.contains('Citation') ||
+                body.contains('revoked')))) {
+      return true;
+    }
     return body.contains('OFFICIAL NOTICE OF INFRACTION') ||
         body.contains('Infraction Notice') ||
+        body.contains('CITATION REVOKED') ||
+        body.contains('Citation Revoked') ||
+        body.contains('revoked Citation') ||
+        body.contains('DISPUTE REJECTED') ||
+        body.contains('Dispute Under Review') ||
         (body.contains('⚠️') && body.contains('Strike'));
   }
 
@@ -816,6 +839,30 @@ class _MessagesScreenState extends State<MessagesScreen> {
   // ================= SPECIAL INTERACTIVE CITATION / VIOLATION BUBBLE =================
   Widget _buildSpecialViolationBubble(Map<String, dynamic> msg, String body) {
     final vData = msg['violation_data'] as Map<String, dynamic>?;
+
+    final bool isRevoked = (vData != null &&
+            (vData['is_revoked'] == true ||
+                vData['is_revoked'] == 1 ||
+                vData['is_revoked'] == '1' ||
+                vData['dispute_status'] == 'approved')) ||
+        body.contains('CITATION REVOKED') ||
+        body.contains('Citation Revoked') ||
+        body.contains('revoked Citation');
+
+    final bool isDisputeRejected = !isRevoked &&
+        ((vData != null && vData['dispute_status'] == 'rejected') ||
+            body.contains('DISPUTE REJECTED'));
+
+    final bool isDisputePending = !isRevoked &&
+        !isDisputeRejected &&
+        ((vData != null &&
+                (vData['disputed'] == true ||
+                    vData['disputed'] == 1 ||
+                    vData['disputed'] == '1') &&
+                vData['dispute_status'] != 'rejected') ||
+            body.contains('DISPUTE SUBMITTED') ||
+            body.contains('Dispute Under Review'));
+
     int strike = 1;
     if (vData != null && vData['strike'] != null) {
       strike = vData['strike'] is int
@@ -825,43 +872,139 @@ class _MessagesScreenState extends State<MessagesScreen> {
       strike = 3;
     } else if (body.contains('STRIKE 2') || body.contains('Strike 2')) {
       strike = 2;
+    } else if (body.contains('STRIKE 1') || body.contains('Strike 1')) {
+      strike = 1;
     }
 
     String category = 'Lease Violation';
-    if (vData != null && vData['category'] != null) {
+    if (vData != null && vData['category'] != null && vData['category'].toString().isNotEmpty) {
       category = vData['category'].toString();
     } else if (body.contains('Category:')) {
       final catPart = body.split('Category:').last.split('\n').first.trim();
       if (catPart.isNotEmpty) category = catPart;
+    } else if (body.contains('·') && body.contains(')')) {
+      final middle = body.split('·').last.split(')').first.trim();
+      if (middle.isNotEmpty) category = middle;
     }
 
-    final isEviction = strike >= 3;
-    final isSecond = strike == 2;
+    int vId = 0;
+    if (vData != null && vData['id'] != null) {
+      vId = vData['id'] is int ? vData['id'] as int : int.tryParse(vData['id'].toString()) ?? 0;
+    } else if (body.contains('Citation #')) {
+      final raw = body.split('Citation #').last.split(' ').first.replaceAll(RegExp(r'[^0-9]'), '');
+      vId = int.tryParse(raw) ?? 0;
+    }
 
-    final primaryColor = isEviction
-        ? const Color(0xFFDC2626) // Deep Red
-        : (isSecond ? const Color(0xFFD97706) : const Color(0xFF1E6BFF)); // Amber vs Electric Blue
+    final isEviction = strike >= 3 && !isRevoked;
+    final isSecond = strike == 2 && !isRevoked;
 
-    final headerBgColor = isEviction
-        ? const Color(0xFFFEF2F2)
-        : (isSecond ? const Color(0xFFFFFBEB) : const Color(0xFFEFF6FF));
+    // Strict brand color palette: Midnight Navy & Electric Blue, with Emerald Green for Revoked/Cleared (NO yellow/amber)
+    final Color primaryColor = isRevoked
+        ? const Color(0xFF10B981) // Emerald Green for Revoked/Cleared
+        : (isEviction
+            ? const Color(0xFFDC2626) // Deep Red for Eviction
+            : (isDisputeRejected
+                ? const Color(0xFFDC2626) // Red for Rejected Dispute
+                : AppColors.electricBlue)); // Electric Blue for Strike 1, 2, or Pending
 
-    final borderColor = isEviction
-        ? const Color(0xFFFCA5A5)
-        : (isSecond ? const Color(0xFFFCD34D) : const Color(0xFFBFDBFE));
+    final Color headerBgColor = isRevoked
+        ? const Color(0xFFECFDF5) // Soft Emerald Mint
+        : (isEviction || isDisputeRejected
+            ? const Color(0xFFFEF2F2)
+            : const Color(0xFFEFF6FF)); // Soft Ice Blue
 
-    final badgeBg = isEviction
-        ? const Color(0xFFEF4444)
-        : (isSecond ? const Color(0xFFF59E0B) : const Color(0xFF2563EB));
+    final Color borderColor = isRevoked
+        ? const Color(0xFFA7F3D0) // Mint Border
+        : (isEviction || isDisputeRejected
+            ? const Color(0xFFFCA5A5)
+            : (isSecond ? const Color(0xFF93C5FD) : const Color(0xFFBFDBFE)));
 
-    final headerTitle = isEviction
-        ? 'Final Notice • Eviction Proceeding'
-        : (isSecond
-            ? '2nd Notice • ₱500 Penalty Injected'
-            : 'Official Notice • Formal Warning');
+    final Color badgeBg = isRevoked
+        ? const Color(0xFF059669) // Emerald Badge
+        : (isEviction || isDisputeRejected
+            ? const Color(0xFFEF4444)
+            : (isSecond ? AppColors.midnightNavy : const Color(0xFF2563EB)));
 
-    final penaltyAmount =
-        isEviction ? '₱1,500.00' : (isSecond ? '₱500.00' : '₱0.00');
+    final IconData headerIcon = isRevoked
+        ? Icons.verified_rounded
+        : (isDisputePending
+            ? Icons.hourglass_top_rounded
+            : (isEviction || isDisputeRejected
+                ? Icons.gavel_rounded
+                : (isSecond ? Icons.warning_amber_rounded : Icons.shield_outlined)));
+
+    final String headerTitle = isRevoked
+        ? 'Citation Dismissed • Revoked by Lessor'
+        : (isDisputePending
+            ? 'Dispute Under Review • Strike Paused'
+            : (isDisputeRejected
+                ? 'Dispute Rejected • Strike Upheld'
+                : (isEviction
+                    ? 'Final Notice • Eviction Proceeding'
+                    : (isSecond
+                        ? '2nd Notice • ₱500 Penalty Injected'
+                        : 'Official Notice • Formal Warning'))));
+
+    final String badgeText = isRevoked
+        ? 'Strike Revoked · 0 Active'
+        : (isDisputePending
+            ? 'Dispute Pending'
+            : (isDisputeRejected
+                ? 'Strike $strike Upheld'
+                : 'Strike $strike of 3'));
+
+    final penaltyAmount = isRevoked
+        ? '₱0.00 (Cleared)'
+        : (isDisputePending
+            ? 'Paused'
+            : (isEviction ? '₱1,000.00' : (isSecond ? '₱500.00' : '₱0.00')));
+
+    final String impactTitle = isRevoked
+        ? 'Contractual Disciplinary Status'
+        : (isDisputePending
+            ? 'Dispute Review Status'
+            : (isDisputeRejected
+                ? 'Dispute Determination'
+                : 'Contractual Disciplinary Impact'));
+
+    String impactDescription;
+    if (isRevoked) {
+      String? note;
+      if (vData != null &&
+          vData['revocation_reason'] != null &&
+          vData['revocation_reason'].toString().trim().isNotEmpty) {
+        note = vData['revocation_reason'].toString().trim();
+      } else if (body.contains('Explanation / Note:')) {
+        note = body.split('Explanation / Note:').last.split('\n\n').first.trim();
+      }
+      impactDescription = (note != null && note.isNotEmpty)
+          ? 'Lessor Review Note: $note. This citation has been formally revoked and permanently cleared from your active compliance record.'
+          : 'This citation has been officially reviewed and revoked by the lessor. All strikes and financial penalties have been permanently cleared from your account.';
+    } else if (isDisputePending) {
+      impactDescription =
+          'Formal dispute explanation submitted by tenant. Citation strikes and associated penalty billing are paused pending lessor review.';
+    } else if (isDisputeRejected) {
+      String? reason;
+      if (body.contains('Decision / Reason:')) {
+        reason = body.split('Decision / Reason:').last.split('\n\n').first.trim();
+      }
+      impactDescription = (reason != null && reason.isNotEmpty)
+          ? 'Lessor decision: $reason. The violation citation has been upheld and Strike $strike is confirmed active on your lease record.'
+          : 'Lessor reviewed your dispute and upheld the citation. Strike $strike is now confirmed active on your lease compliance record.';
+    } else if (isEviction) {
+      impactDescription =
+          'Three cumulative strikes recorded. Commercial premises possession is revoked subject to immediate formal eviction under lease default terms.';
+    } else if (isSecond) {
+      impactDescription =
+          'Second infraction recorded against this lease. An automated ₱500 penalty surcharge has been billed to your statement of account.';
+    } else {
+      impactDescription =
+          'First formal warning citation. Acknowledgment receipt is required to verify notice delivery. Further violations escalate penalties.';
+    }
+
+    final String actionButtonText = isRevoked
+        ? 'View Citation'
+        : (isDisputePending ? 'View Dispute' : 'View Citation');
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
@@ -906,11 +1049,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        isEviction
-                            ? Icons.gavel_rounded
-                            : (isSecond
-                                ? Icons.warning_amber_rounded
-                                : Icons.shield_outlined),
+                        headerIcon,
                         color: Colors.white,
                         size: 14,
                       ),
@@ -937,7 +1076,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        'Strike $strike of 3',
+                        badgeText,
                         style: const TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w800,
@@ -964,10 +1103,12 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Icon(
-                            category.toLowerCase().contains('rent') ||
-                                    category.toLowerCase().contains('payment')
-                                ? Icons.receipt_long_rounded
-                                : Icons.warning_rounded,
+                            isRevoked
+                                ? Icons.verified_outlined
+                                : (category.toLowerCase().contains('rent') ||
+                                        category.toLowerCase().contains('payment')
+                                    ? Icons.receipt_long_rounded
+                                    : Icons.warning_rounded),
                             size: 18,
                             color: primaryColor,
                           ),
@@ -1014,15 +1155,15 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                'Contractual Disciplinary Impact',
-                                style: TextStyle(
+                              Text(
+                                impactTitle,
+                                style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700,
                                   color: Color(0xFF334155),
                                 ),
                               ),
-                              if (strike > 1)
+                              if (strike > 1 || isRevoked || isDisputePending)
                                 Text(
                                   penaltyAmount,
                                   style: TextStyle(
@@ -1035,11 +1176,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            isEviction
-                                ? 'Three cumulative strikes recorded. Commercial premises possession is revoked subject to immediate formal eviction under lease default terms.'
-                                : (isSecond
-                                    ? 'Second infraction recorded against this lease. An automated ₱500 penalty surcharge has been billed to your statement of account.'
-                                    : 'First formal warning citation. Acknowledgment receipt is required to verify notice delivery. Further violations escalate penalties.'),
+                            impactDescription,
                             style: const TextStyle(
                               fontSize: 11.5,
                               color: Color(0xFF64748B),
@@ -1089,12 +1226,23 @@ class _MessagesScreenState extends State<MessagesScreen> {
                         InkWell(
                           onTap: () async {
                             final violationMap = vData ?? {
-                              'id': 100 + strike,
+                              'id': vId > 0 ? vId : 100 + strike,
                               'category': category,
                               'strike': strike,
-                              'penalty_amount': strike == 2
-                                  ? 500.0
-                                  : (strike >= 3 ? 1500.0 : 0.0),
+                              'is_revoked': isRevoked ? 1 : 0,
+                              'disputed': isDisputePending ? 1 : 0,
+                              'dispute_status': isRevoked
+                                  ? 'approved'
+                                  : (isDisputeRejected
+                                      ? 'rejected'
+                                      : (isDisputePending ? 'pending' : null)),
+                              'fine_amount': isRevoked
+                                  ? 0.0
+                                  : ((category.toLowerCase().contains('past_due') ||
+                                          category.toLowerCase().contains('late') ||
+                                          category.toLowerCase().contains('overdue'))
+                                      ? (strike == 2 ? 500.0 : (strike >= 3 ? 1000.0 : 0.0))
+                                      : (strike >= 3 ? 1000.0 : 0.0)),
                               'issued_at': msg['sent_at'] ?? 'Recently',
                               'acknowledged': 1,
                             };
@@ -1115,17 +1263,17 @@ class _MessagesScreenState extends State<MessagesScreen> {
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Row(
-                              children: const [
+                              children: [
                                 Text(
-                                  'View Citation',
-                                  style: TextStyle(
+                                  actionButtonText,
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w800,
                                     color: Colors.white,
                                   ),
                                 ),
-                                SizedBox(width: 4),
-                                Icon(
+                                const SizedBox(width: 4),
+                                const Icon(
                                   Icons.arrow_forward_rounded,
                                   size: 13,
                                   color: Colors.white,
@@ -1291,25 +1439,25 @@ class _MessagesScreenState extends State<MessagesScreen> {
         ? const Color(0xFF10B981) // Emerald Green
         : (isApproved
             ? const Color(0xFF1E6BFF) // Electric Blue
-            : const Color(0xFFD97706)); // Amber / Warm Orange
+            : AppColors.midnightNavy); // Midnight Navy brand color
 
     final headerBgColor = isCompleted
         ? const Color(0xFFECFDF5)
         : (isApproved
             ? const Color(0xFFEFF6FF)
-            : const Color(0xFFFFFBEB));
+            : const Color(0xFFF1F5F9));
 
     final borderColor = isCompleted
         ? const Color(0xFFA7F3D0)
         : (isApproved
             ? const Color(0xFFBFDBFE)
-            : const Color(0xFFFCD34D));
+            : const Color(0xFFCBD5E1));
 
     final badgeBg = isCompleted
         ? const Color(0xFF10B981)
         : (isApproved
             ? const Color(0xFF2563EB)
-            : const Color(0xFFF59E0B));
+            : AppColors.midnightNavy);
 
     final headerTitle = isCompleted
         ? 'Maintenance Resolved • Work Signed Off'

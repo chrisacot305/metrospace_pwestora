@@ -12,6 +12,14 @@
       <div class="success-msg" style="margin:0; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:8px; display:flex; align-items:center; gap:8px;">
                 <span><strong>Violation Issued!</strong> The tenant has been notified and the strike recorded.</span>
       </div>
+    <?php elseif ($msg === 'revoked'): ?>
+      <div class="success-msg" style="margin:0; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:8px; display:flex; align-items:center; gap:8px; background:#f0fdf4; border:1px solid #bbf7d0; color:#15803d;">
+        <span><strong>Citation Revoked!</strong> The strike has been dismissed from the tenant's record and a confirmation message posted to chat.</span>
+      </div>
+    <?php elseif ($msg === 'dispute_rejected'): ?>
+      <div class="success-msg" style="margin:0; box-shadow:0 4px 12px rgba(0,0,0,0.1); border-radius:8px; display:flex; align-items:center; gap:8px; background:#fef2f2; border:1px solid #fecaca; color:#991b1b;">
+        <span><strong>Dispute Rejected:</strong> The tenant's explanation was rejected and the violation strike is now active on their record.</span>
+      </div>
     <?php endif; ?>
 
     <?php if ($error && !$issuing): ?>
@@ -108,14 +116,48 @@
                   <?= htmlspecialchars($v['contract_ref']) ?>
                 </div>
               <?php endif; ?>
+              <?php if (!empty($v['fine_amount']) && (float)$v['fine_amount'] > 0): ?>
+                <div style="font-size:11.5px; color:#92400e; font-weight:700; margin-top:3px;">
+                  ₱<?= number_format((float)$v['fine_amount'], 2) ?> Penalty
+                </div>
+              <?php endif; ?>
+              <?php if (!empty($v['disputed']) && !empty($v['dispute_reason'])): ?>
+                <div style="font-size:11.5px; color:#b45309; background:#fffbeb; padding:5px 8px; border-radius:6px; margin-top:5px; border:1px solid #fde68a;">
+                  <strong>Tenant Dispute Note:</strong> <?= htmlspecialchars($v['dispute_reason']) ?>
+                </div>
+              <?php endif; ?>
+              <?php if (!empty($v['dispute_resolution_note'])): ?>
+                <div style="font-size:11.5px; color:#991b1b; background:#fef2f2; padding:4px 8px; border-radius:6px; margin-top:5px; border:1px solid #fecaca;">
+                  <strong>Dispute Rejected:</strong> <?= htmlspecialchars($v['dispute_resolution_note']) ?>
+                </div>
+              <?php endif; ?>
+              <?php if (!empty($v['is_revoked']) && !empty($v['revocation_reason'])): ?>
+                <div style="font-size:11.5px; color:#475569; background:#f8fafc; padding:4px 8px; border-radius:6px; margin-top:5px; border:1px solid #e2e8f0;">
+                  <strong>Revocation Note:</strong> <?= htmlspecialchars($v['revocation_reason']) ?>
+                </div>
+              <?php endif; ?>
             </td>
             
             <td>
               <?php
-                $strikeClass = $v['strike'] >= 3 ? 'badge-rejected' : ($v['strike'] == 2 ? 'badge-pending' : '');
-                $strikeStyle = $v['strike'] == 1 ? 'background:var(--accent-soft); color:var(--primary);' : '';
+                $isRevoked = !empty($v['is_revoked']);
+                $isDisputed = !empty($v['disputed']);
+                if ($isRevoked) {
+                    $strikeClass = '';
+                    $strikeStyle = 'background:#f1f5f9; color:#94a3b8; text-decoration:line-through;';
+                } elseif ($isDisputed) {
+                    $strikeClass = '';
+                    $strikeStyle = 'background:#eff6ff; color:#1e6bff; border:1px solid #bfdbfe;';
+                } else {
+                    $strikeClass = $v['strike'] >= 3 ? 'badge-rejected' : '';
+                    $strikeStyle = $v['strike'] == 1
+                        ? 'background:var(--accent-soft); color:var(--primary);'
+                        : ($v['strike'] == 2 ? 'background:#eff6ff; color:#1e6bff; border:1px solid #bfdbfe;' : '');
+                }
               ?>
-              <span class="badge <?= $strikeClass ?>" style="<?= $strikeStyle ?>">Strike <?= $v['strike'] ?></span>
+              <span class="badge <?= $strikeClass ?>" style="<?= $strikeStyle ?>">
+                Strike <?= $v['strike'] ?><?= $isRevoked ? ' (Revoked)' : ($isDisputed ? ' (Under Review)' : '') ?>
+              </span>
             </td>
             
             <td style="color:var(--ink-500); font-size:13px;">
@@ -123,7 +165,13 @@
             </td>
             
             <td>
-              <?php if ($v['acknowledged']): ?>
+              <?php if (!empty($v['is_revoked'])): ?>
+                <span class="badge" style="background:#f1f5f9; color:#64748b; font-size:11px;">Revoked / Dismissed</span>
+              <?php elseif (!empty($v['disputed'])): ?>
+                <span class="badge" style="background:#eff6ff; color:#1e6bff; border:1px solid #bfdbfe; font-size:11px; font-weight:700;">⚠️ Disputed (Under Review)</span>
+              <?php elseif (!empty($v['dispute_status']) && $v['dispute_status'] === 'rejected'): ?>
+                <span class="badge badge-rejected" style="font-size:11px;">Dispute Rejected (Upheld)</span>
+              <?php elseif ($v['acknowledged']): ?>
                 <span class="badge badge-approved" style="font-size:11px;">
                   Read
                 </span>
@@ -133,14 +181,39 @@
             </td>
             
             <td style="text-align:right;">
-              <?php if ($v['strike'] >= 3): ?>
-                <a href="/eviction_notice.php?id=<?= $v['id'] ?>" target="_blank"
-                   class="btn" style="background:var(--error); color:#fff; padding:6px 12px; font-size:12px; display:inline-flex; border-radius:6px; font-weight:600;">
-                  Eviction Notice
-                </a>
-              <?php else: ?>
-                <span style="font-size:12px; color:var(--ink-300);">—</span>
-              <?php endif; ?>
+              <div style="display:inline-flex; align-items:center; gap:6px; justify-content:flex-end;">
+                <?php if (empty($v['is_revoked']) && !empty($v['disputed'])): ?>
+                  <form method="post" action="/dashboard.php?page=violations" style="display:inline; margin:0;" onsubmit="return confirm('Accept dispute and revoke Citation #<?= (int) $v['id'] ?>? The strike will be cleared permanently from the tenant\'s record.');">
+                    <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                    <input type="hidden" name="revoke_violation" value="1">
+                    <input type="hidden" name="violation_id" value="<?= (int) $v['id'] ?>">
+                    <input type="hidden" name="revocation_reason" value="Dispute reviewed and approved by lessor. Strike cleared.">
+                    <button type="submit" class="btn" style="background:#10b981; color:#fff; padding:6px 10px; font-size:11.5px; border-radius:6px; font-weight:600; border:none; cursor:pointer;" title="Accept dispute and clear this strike">
+                      Revoke Strike
+                    </button>
+                  </form>
+                  <form method="post" action="/dashboard.php?page=violations" style="display:inline; margin:0;" onsubmit="return confirm('Reject tenant dispute for Citation #<?= (int) $v['id'] ?>? This will uphold the violation and activate Strike <?= (int)$v['strike'] ?> on their compliance record.');">
+                    <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                    <input type="hidden" name="reject_dispute" value="1">
+                    <input type="hidden" name="violation_id" value="<?= (int) $v['id'] ?>">
+                    <input type="hidden" name="rejection_reason" value="Dispute explanation reviewed and rejected by lessor. Violation upheld.">
+                    <button type="submit" class="btn" style="background:#ef4444; color:#fff; padding:6px 10px; font-size:11.5px; border-radius:6px; font-weight:600; border:none; cursor:pointer;" title="Reject dispute and uphold this strike">
+                      Reject Dispute
+                    </button>
+                  </form>
+                <?php endif; ?>
+
+                <?php if ($v['strike'] >= 3 && empty($v['is_revoked']) && empty($v['disputed'])): ?>
+                  <a href="/eviction_notice.php?id=<?= $v['id'] ?>" target="_blank"
+                     class="btn" style="background:var(--error); color:#fff; padding:6px 12px; font-size:12px; display:inline-flex; border-radius:6px; font-weight:600;">
+                    Eviction Notice
+                  </a>
+                <?php elseif (empty($v['disputed']) || !empty($v['is_revoked'])): ?>
+                  <?php if ($v['strike'] < 3 || !empty($v['is_revoked'])): ?>
+                    <span style="font-size:12px; color:var(--ink-300);">—</span>
+                  <?php endif; ?>
+                <?php endif; ?>
+              </div>
             </td>
             
           </tr>

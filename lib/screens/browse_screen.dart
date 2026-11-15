@@ -18,9 +18,11 @@ class _BrowseScreenState extends State<BrowseScreen> {
   String _query = '';
   String _selectedCategory = 'All';
   final _searchCtrl = TextEditingController();
+  Set<int> _savedPropertyIds = {};
 
   final _categories = const [
     ('All', Icons.grid_view_rounded),
+    ('Saved', Icons.bookmark_rounded),
     ('Retail', Icons.storefront_rounded),
     ('Office', Icons.business_rounded),
     ('Food & Dining', Icons.restaurant_rounded),
@@ -33,6 +35,38 @@ class _BrowseScreenState extends State<BrowseScreen> {
     super.initState();
     _propertiesFuture = ApiService.fetchProperties();
     _recentFuture = ApiService.getRecentlyViewed();
+    _loadSavedIds();
+  }
+
+  Future<void> _loadSavedIds() async {
+    try {
+      final ids = await ApiService.getSavedPropertyIds();
+      if (mounted) setState(() => _savedPropertyIds = ids);
+    } catch (_) {}
+  }
+
+  Future<void> _toggleSaveProperty(int propertyId) async {
+    final bool next = !_savedPropertyIds.contains(propertyId);
+    setState(() {
+      if (next) {
+        _savedPropertyIds.add(propertyId);
+      } else {
+        _savedPropertyIds.remove(propertyId);
+      }
+    });
+    final result = await ApiService.toggleSaveProperty(
+      propertyId,
+      optimisticState: next,
+    );
+    if (mounted && result != next) {
+      setState(() {
+        if (result) {
+          _savedPropertyIds.add(propertyId);
+        } else {
+          _savedPropertyIds.remove(propertyId);
+        }
+      });
+    }
   }
 
   Future<void> _refresh() async {
@@ -40,7 +74,7 @@ class _BrowseScreenState extends State<BrowseScreen> {
       _propertiesFuture = ApiService.fetchProperties();
       _recentFuture = ApiService.getRecentlyViewed();
     });
-    await _propertiesFuture;
+    await Future.wait([_propertiesFuture, _loadSavedIds()]);
     if (widget.onLeaseMayHaveChanged != null) {
       await widget.onLeaseMayHaveChanged!();
     }
@@ -130,8 +164,9 @@ class _BrowseScreenState extends State<BrowseScreen> {
                           ],
                         ),
                         child: Image.asset(
-                          isDark ? 'img/invert.png' : 'img/Frame 2.png',
+                          isDark ? 'img/invert.png' : 'img/logo.png',
                           fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => const SizedBox(),
                         ),
                       ),
                     ],
@@ -302,7 +337,12 @@ class _BrowseScreenState extends State<BrowseScreen> {
                     itemCount: _categories.length,
                     itemBuilder: (context, i) {
                       final (name, icon) = _categories[i];
+                      final isSavedPill = name == 'Saved';
                       final active = _selectedCategory == name;
+                      final String labelText = (isSavedPill && _savedPropertyIds.isNotEmpty)
+                          ? 'Saved (${_savedPropertyIds.length})'
+                          : name;
+
                       final pillBg = active
                           ? (isDark ? AppColors.electricBlue : AppColors.primary)
                           : (isDark ? const Color(0xFF1E293B) : surfaceColor);
@@ -350,13 +390,17 @@ class _BrowseScreenState extends State<BrowseScreen> {
                             child: Row(
                               children: [
                                 Icon(
-                                  icon,
+                                  isSavedPill
+                                      ? (active
+                                          ? Icons.bookmark_rounded
+                                          : Icons.bookmark_border_rounded)
+                                      : icon,
                                   size: 15,
                                   color: pillIconColor,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  name,
+                                  labelText,
                                   style: TextStyle(
                                     fontSize: 12.5,
                                     fontWeight: active
@@ -504,7 +548,11 @@ class _BrowseScreenState extends State<BrowseScreen> {
                       Text(
                         _selectedCategory == 'All'
                             ? 'Popular Spaces'
-                            : '$_selectedCategory Spaces',
+                            : (_selectedCategory == 'Saved'
+                                ? (_savedPropertyIds.isNotEmpty
+                                    ? 'Saved Spaces (${_savedPropertyIds.length})'
+                                    : 'Saved Spaces')
+                                : '$_selectedCategory Spaces'),
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w900,
@@ -512,14 +560,27 @@ class _BrowseScreenState extends State<BrowseScreen> {
                           letterSpacing: -0.3,
                         ),
                       ),
-                      const Text(
-                        'View all',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.electricBlue,
+                      if (_selectedCategory == 'Saved')
+                        InkWell(
+                          onTap: () => setState(() => _selectedCategory = 'All'),
+                          child: const Text(
+                            'Show all',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.electricBlue,
+                            ),
+                          ),
+                        )
+                      else
+                        const Text(
+                          'View all',
+                          style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.electricBlue,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -552,7 +613,20 @@ class _BrowseScreenState extends State<BrowseScreen> {
 
                   var properties = snapshot.data ?? [];
 
-                  if (_selectedCategory != 'All') {
+                  // Sync local set with any properties marked saved by backend
+                  for (final p in properties) {
+                    if (p is Map && p['saved'] == true) {
+                      final id = p['id'] as int?;
+                      if (id != null) _savedPropertyIds.add(id);
+                    }
+                  }
+
+                  if (_selectedCategory == 'Saved') {
+                    properties = properties.where((p) {
+                      final id = p['id'] as int?;
+                      return id != null && (_savedPropertyIds.contains(id) || p['saved'] == true);
+                    }).toList();
+                  } else if (_selectedCategory != 'All') {
                     properties = properties.where((p) {
                       final type = (p['type'] ?? '').toString().toLowerCase();
                       final filter = _selectedCategory.toLowerCase();
@@ -574,6 +648,8 @@ class _BrowseScreenState extends State<BrowseScreen> {
                   }
 
                   if (properties.isEmpty) {
+                    final bool isSavedEmpty = _selectedCategory == 'Saved';
+
                     return SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(24, 50, 24, 120),
@@ -588,17 +664,23 @@ class _BrowseScreenState extends State<BrowseScreen> {
                                     : AppColors.accentSoft,
                                 borderRadius: BorderRadius.circular(16),
                               ),
-                              child: const Icon(
-                                Icons.search_off,
+                              child: Icon(
+                                isSavedEmpty
+                                    ? Icons.bookmark_border_rounded
+                                    : Icons.search_off,
                                 size: 32,
-                                color: AppColors.electricBlue,
+                                color: isDark
+                                    ? AppColors.electricBlue
+                                    : AppColors.primary,
                               ),
                             ),
                             const SizedBox(height: 14),
                             Text(
-                              _query.isNotEmpty
-                                  ? 'No spaces found for "$_query"'
-                                  : 'No available spaces in "$_selectedCategory"',
+                              isSavedEmpty
+                                  ? 'No Saved Spaces Yet'
+                                  : (_query.isNotEmpty
+                                      ? 'No spaces found for "$_query"'
+                                      : 'No available spaces in "$_selectedCategory"'),
                               style: TextStyle(
                                 fontWeight: FontWeight.w800,
                                 fontSize: 15,
@@ -607,13 +689,31 @@ class _BrowseScreenState extends State<BrowseScreen> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Try selecting another category or clearing your search.',
+                              isSavedEmpty
+                                  ? 'Tap the bookmark icon on any stall card to save your favorite commercial spaces.'
+                                  : 'Try selecting another category or clearing your search.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: subtextColor,
                                 fontSize: 13,
                               ),
                             ),
+                            if (isSavedEmpty) ...[
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: () => setState(() => _selectedCategory = 'All'),
+                                icon: const Icon(Icons.explore_rounded, size: 16),
+                                label: const Text('Browse All Spaces'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: isDark ? AppColors.electricBlue : AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -632,9 +732,22 @@ class _BrowseScreenState extends State<BrowseScreen> {
                           ),
                       delegate: SliverChildBuilderDelegate((context, i) {
                         final prop = properties[i] as Map<String, dynamic>;
+                        final propId = prop['id'] as int? ?? 0;
+                        final isSaved = _savedPropertyIds.contains(propId) || prop['saved'] == true;
 
                         return _DripzyGridCard(
                           property: prop,
+                          isSaved: isSaved,
+                          onToggleSave: () => _toggleSaveProperty(propId),
+                          onPropertyTap: () async {
+                            await Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    PropertyDetailScreen(propertyId: propId),
+                              ),
+                            );
+                            _loadSavedIds();
+                          },
                         );
                       }, childCount: properties.length),
                     ),
@@ -649,12 +762,18 @@ class _BrowseScreenState extends State<BrowseScreen> {
   }
 }
 
-/// Dripzy 2-Column Grid Card Design with Theme-Aware Dark Mode
+/// Dripzy 2-Column Grid Card Design with Theme-Aware Dark Mode & Floating Bookmark Button
 class _DripzyGridCard extends StatelessWidget {
   final Map<String, dynamic> property;
+  final bool isSaved;
+  final VoidCallback? onToggleSave;
+  final VoidCallback? onPropertyTap;
 
   const _DripzyGridCard({
     required this.property,
+    this.isSaved = false,
+    this.onToggleSave,
+    this.onPropertyTap,
   });
 
   @override
@@ -691,7 +810,7 @@ class _DripzyGridCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          onTap: () {
+          onTap: onPropertyTap ?? () {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) =>
@@ -757,6 +876,61 @@ class _DripzyGridCard extends StatelessWidget {
                               fontSize: 9,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Floating Bookmark Button (Top Right)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: onToggleSave,
+                            borderRadius: BorderRadius.circular(999),
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: isSaved
+                                    ? (isDark
+                                            ? AppColors.electricBlue
+                                            : AppColors.primary)
+                                        .withValues(alpha: 0.95)
+                                    : Colors.black.withValues(alpha: 0.55),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: isSaved
+                                      ? (isDark
+                                          ? AppColors.electricBlue
+                                          : AppColors.primary)
+                                      : Colors.white.withValues(alpha: 0.35),
+                                  width: 0.9,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: isSaved
+                                        ? (isDark
+                                                ? AppColors.electricBlue
+                                                : AppColors.primary)
+                                            .withValues(alpha: 0.40)
+                                        : Colors.black.withValues(alpha: 0.30),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  isSaved
+                                      ? Icons.bookmark_rounded
+                                      : Icons.bookmark_border_rounded,
+                                  size: 16,
+                                  color: Colors.white,
+                                ),
+                              ),
                             ),
                           ),
                         ),

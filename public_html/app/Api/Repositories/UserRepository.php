@@ -45,6 +45,22 @@ final class UserRepository extends Repository
         ) !== false;
     }
 
+    public function findByPhone(string $phone, string $normalizedPhone): ?array
+    {
+        return $this->fetchOne(
+            'SELECT * FROM users WHERE phone = ? OR phone = ? LIMIT 1',
+            [$phone, $normalizedPhone]
+        );
+    }
+
+    public function updatePasswordByPhone(string $phone, string $normalizedPhone, string $passwordHash): bool
+    {
+        return $this->execute(
+            'UPDATE users SET password_hash = ? WHERE phone = ? OR phone = ?',
+            [$passwordHash, $phone, $normalizedPhone]
+        ) > 0;
+    }
+
     /** Lessees don't go through document verification like lessors do — active immediately. */
     public function createLessee(string $fullName, string $email, string $phone, string $passwordHash, ?string $tokenHash): int
     {

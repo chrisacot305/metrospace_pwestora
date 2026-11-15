@@ -51,6 +51,7 @@ android/build/
 
 # Local backup folders
 public_html1/
+public_html_1/
 public_html (*)/
 
 

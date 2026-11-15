@@ -1,6 +1,7 @@
 <?php
 namespace App\Services;
 
+use App\Models\ContractTemplateModel;
 use App\Models\LeaseContractModel;
 use App\Models\TenantModel;
 use PDO;
@@ -311,6 +312,39 @@ final class ContractService
     // ---------------------------------------------------------- effective view
 
     /**
+     * Resolves the full template info & normalized clauses for a property:
+     * building's assigned template -> lessor's default -> built-in "Pwestora Standard".
+     */
+    public static function resolveTemplateForProperty(PDO $pdo, int $propertyId, int $lessorId): array
+    {
+        $templates = new ContractTemplateModel($pdo);
+        $tplId = $propertyId > 0 ? $templates->templateIdForProperty($propertyId, $lessorId) : 0;
+        if ($tplId > 0) {
+            $t = $templates->findForLessor($tplId, $lessorId);
+            if ($t) {
+                $clauses = self::decodeClauses($t['clauses']);
+                if (!empty($clauses)) {
+                    return [
+                        'id'          => (int) $t['id'],
+                        'name'        => (string) $t['name'],
+                        'description' => (string) ($t['description'] ?? ''),
+                        'is_custom'   => true,
+                        'clauses'     => $clauses,
+                    ];
+                }
+            }
+        }
+
+        return [
+            'id'          => self::BUILTIN_TEMPLATE_ID,
+            'name'        => self::BUILTIN_TEMPLATE_NAME,
+            'description' => 'Standard commercial lease clauses compliant with Philippine law',
+            'is_custom'   => false,
+            'clauses'     => self::builtinClauses(),
+        ];
+    }
+
+    /**
      * The contract to SHOW for a tenant.
      *   $forTenant = true  → drafts are hidden; the tenant sees the last finalized version
      *                        (from history while the lessor is revising), else the standard.
@@ -334,19 +368,26 @@ final class ContractService
                 return self::fromRow($snap, 'archived');
             }
         }
-        return self::standard($lease);
+
+        $tpl = null;
+        if (!empty($lease['property_id']) && !empty($lease['lessor_id'])) {
+            $tpl = self::resolveTemplateForProperty($pdo, (int) $lease['property_id'], (int) $lease['lessor_id']);
+        }
+        return self::standard($lease, $tpl);
     }
 
-    /** Fallback: standard clauses + the terms from the application / tenant record. */
-    public static function standard(array $lease): array
+    /** Fallback: template clauses (or standard) + the terms from the application / tenant record. */
+    public static function standard(array $lease, ?array $template = null): array
     {
         $start = $lease['start_date'] ?: substr((string) $lease['created_at'], 0, 10);
         $rent = (float) ($lease['rent'] ?? 0) ?: (float) ($lease['monthly_rent'] ?? 0);
+        $tplName = !empty($template['name']) ? $template['name'] : self::BUILTIN_TEMPLATE_NAME;
+        $clauses = !empty($template['clauses']) ? $template['clauses'] : self::builtinClauses();
         return [
             'source'             => 'standard',
             'status'             => 'standard',
             'version'            => 0,
-            'template_name'      => self::BUILTIN_TEMPLATE_NAME,
+            'template_name'      => $tplName,
             'monthly_rent'       => $rent,
             'term_months'        => (int) ($lease['term_months'] ?? 0),
             'start_date'         => $start,
@@ -354,7 +395,7 @@ final class ContractService
             'security_deposit'   => 0.0,
             'advance_rent'       => 0.0,
             'due_day'            => (int) ($lease['due_day'] ?? 0),
-            'clauses'            => self::builtinClauses(),
+            'clauses'            => $clauses,
             'special_provisions' => '',
             'finalized_at'       => null,
             'accepted_at'        => null,

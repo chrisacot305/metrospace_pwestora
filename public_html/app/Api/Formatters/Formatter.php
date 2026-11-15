@@ -29,7 +29,7 @@ final class Formatter
      *                          "photo_items" for a categorized gallery; "photos" stays a plain URL list
      *                          so older app builds keep working.
      */
-    public static function propertyDetail(array $p, array $photoPaths, bool $saved, array $photoItems = []): array
+    public static function propertyDetail(array $p, array $photoPaths, bool $saved, array $photoItems = [], ?array $contractTemplate = null): array
     {
         $p['latitude']        = $p['latitude'] !== null ? (float) $p['latitude'] : null;
         $p['longitude']       = $p['longitude'] !== null ? (float) $p['longitude'] : null;
@@ -49,7 +49,8 @@ final class Formatter
         $p['amenities']       = !empty($p['amenities']) ? array_values(array_filter(array_map('trim', explode(',', (string) $p['amenities'])))) : [];
         // Never expose verification documents through the public listing API.
         unset($p['title_doc_path'], $p['tax_dec_path']);
-        $p['saved']       = $saved;
+        $p['saved']             = $saved;
+        $p['contract_template'] = $contractTemplate;
         return $p;
     }
 
@@ -108,9 +109,13 @@ final class Formatter
         $v['tenant_id']    = (int) $v['tenant_id'];
         $v['lessor_id']    = (int) $v['lessor_id'];
         $v['strike']       = (int) $v['strike'];
-        $v['fine_amount']  = (float) ($v['fine_amount'] ?? ($v['strike'] === 2 ? 500.0 : ($v['strike'] >= 3 ? 1500.0 : 0.0)));
+        $v['fine_amount']  = (float) ($v['fine_amount'] ?? 0.0);
         $v['is_paid']      = (bool) ($v['is_paid'] ?? false);
-        $v['acknowledged'] = (bool) $v['acknowledged'];
+        $v['acknowledged'] = (bool) ($v['acknowledged'] ?? false);
+        $v['disputed']     = (bool) ($v['disputed'] ?? false);
+        $v['dispute_status'] = (string) ($v['dispute_status'] ?? '');
+        $v['dispute_resolution_note'] = $v['dispute_resolution_note'] ?? null;
+        $v['is_revoked']   = (bool) ($v['is_revoked'] ?? false);
         return $v;
     }
 

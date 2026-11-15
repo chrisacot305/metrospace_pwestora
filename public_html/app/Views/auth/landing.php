@@ -8,12 +8,6 @@
 <meta name="description" content="Pwestora is the leasing management platform built for commercial property lessors documented agreements, payments, maintenance, and tenant communication in one workspace.">
 <link rel="stylesheet" href="/assets/css/style.css?v=<?= filemtime(APP_ROOT . '/assets/css/style.css') ?>">
 <link rel="icon" type="image/png" href="/assets/img/icon.png">
-<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png?v=2">
-<link rel="manifest" href="/manifest.json">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Pwestora">
 <meta name="theme-color" content="#102340">
 <link rel="stylesheet" href="/assets/css/landing-motion.css?v=<?= filemtime(APP_ROOT . '/assets/css/landing-motion.css') ?>">
 <script>
@@ -316,7 +310,7 @@ function openListing(i) {
   document.getElementById('lmType').textContent = L.type;
   var st = document.getElementById('lmStatus'); st.textContent = L.status; st.className = 'l-status l-status-' + L.tone;
   var facts = [];
-  facts.push(['Monthly rent', L.rent !== null ? '₱' + Number(L.rent).toLocaleString('en-PH') : 'On request']);
+  facts.push(['Monthly rent', L.rent !== null ? '₱' + Number(L.rent).toLocaleString('en-PH') : 'On request', 'rent']);
   if (L.floor_area) facts.push(['Floor area', /^\d+(\.\d+)?$/.test(L.floor_area) ? L.floor_area + ' sqm' : L.floor_area]);
   if (L.lease_term) facts.push(['Lease term', /^\d+$/.test(L.lease_term) ? L.lease_term + (L.lease_term === '1' ? ' month' : ' months') : L.lease_term]);
   if (L.escalation) facts.push(['Escalation', /^\d+(\.\d+)?$/.test(L.escalation) ? L.escalation + '% / year' : L.escalation]);
@@ -324,16 +318,34 @@ function openListing(i) {
   if (L.frontage) facts.push(['Frontage', L.frontage]);
   if (L.parking !== null && L.parking !== undefined) facts.push(['Parking', L.parking + (L.parking === 1 ? ' slot' : ' slots')]);
   if (L.hours) facts.push(['Hours', L.hours]);
-  if (L.deposit) facts.push(['Deposit & advance', L.deposit]);
-  if (L.landmark) facts.push(['Near', L.landmark]);
-  if (L.permitted) facts.push(['Permitted use', L.permitted]);
-  if (L.utilities) facts.push(['Utilities', L.utilities]);
-  if (L.amenities) facts.push(['Amenities', L.amenities]);
   if (L.listed) facts.push(['Listed', L.listed]);
+  if (L.deposit) facts.push(['Deposit & advance', L.deposit, 'wide']);
+  if (L.landmark) facts.push(['Near', L.landmark, 'wide']);
+  if (L.permitted) facts.push(['Permitted use', L.permitted, 'wide']);
+  if (L.utilities) facts.push(['Utilities', L.utilities, 'wide']);
+  if (L.amenities) facts.push(['Amenities', L.amenities, 'chips']);
   var box = document.getElementById('lmFacts'); box.innerHTML = '';
+  var shortTotal = facts.filter(function (f) { return !f[2]; }).length, shortSeen = 0;
   facts.forEach(function (f) {
-    var d = document.createElement('div'); var k = document.createElement('span'); var v = document.createElement('strong');
-    k.textContent = f[0]; v.textContent = f[1]; d.appendChild(k); d.appendChild(v); box.appendChild(d);
+    var d = document.createElement('div'); var k = document.createElement('span');
+    k.textContent = f[0]; d.appendChild(k);
+    if (f[2] === 'chips') {
+      // Comma-separated list (e.g. amenities) -> full-width row of small tags
+      d.className = 'l-fact-wide';
+      var wrap = document.createElement('div'); wrap.className = 'l-fact-tags';
+      f[1].split(',').forEach(function (item) {
+        item = item.trim(); if (!item) return;
+        var c = document.createElement('em'); c.textContent = item; wrap.appendChild(c);
+      });
+      d.appendChild(wrap);
+    } else {
+      var v = document.createElement('strong'); v.textContent = f[1];
+      if (f[2] === 'wide') d.className = 'l-fact-wide';
+      if (f[2] === 'rent') d.className = 'l-fact-rent';
+      if (!f[2] && ++shortSeen === shortTotal && shortTotal % 2 === 1) d.className = 'l-fact-full';
+      d.appendChild(v);
+    }
+    box.appendChild(d);
   });
   var desc = document.getElementById('lmDesc'); desc.textContent = L.description || ''; desc.style.display = L.description ? '' : 'none';
   var map = document.getElementById('lmMap'); map.style.display = L.map ? '' : 'none'; if (L.map) map.href = L.map;
@@ -474,7 +486,6 @@ document.querySelectorAll('.l-upload-box input[type="file"]').forEach(function (
 
 </script>
 <script src="/assets/js/landing-motion.js?v=<?= filemtime(APP_ROOT . '/assets/js/landing-motion.js') ?>" defer></script>
-<script src="/assets/js/pwa.js" defer></script>
 
 </body>
 </html>

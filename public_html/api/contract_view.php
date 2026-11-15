@@ -52,6 +52,29 @@ foreach ($c['clauses'] as $item) {
     ];
 }
 
+$leaseStatus = strtolower((string) ($lease['status'] ?? ''));
+$isPendingOnboarding = in_array($leaseStatus, ['pending', 'approved', 'draft', 'pending_approval'], true);
+$contractVersion = (int) ($c['version'] ?? 1);
+$isNewRevision = $contractVersion > 1;
+
+// Only allow accept/reject if custom contract is finalized AND
+// either it's a genuine new revision proposed by lessor (version > 1)
+// OR it's a pending lease undergoing initial onboarding agreement.
+$canAcceptReject = ($c['source'] === 'custom' &&
+    $c['status'] === ContractService::STATUS_FINALIZED &&
+    ($isNewRevision || $isPendingOnboarding));
+
+// If the lease is already active/established and contract was finalized at version 1 (or baseline),
+// auto-heal the status to 'accepted' so the active lease reflects agreement.
+if ($c['source'] === 'custom' && $c['status'] === ContractService::STATUS_FINALIZED && !$isNewRevision && !$isPendingOnboarding) {
+    try {
+        $contracts = new \App\Models\LeaseContractModel($pdo);
+        $contracts->accept((int) $lease['id'], $contractVersion);
+        $c['status'] = 'accepted';
+        $c['accepted_at'] = date('Y-m-d H:i:s');
+    } catch (\Throwable $e) {}
+}
+
 json_ok([
     'has_lease' => true,
     'contract'  => [
@@ -69,8 +92,8 @@ json_ok([
         'is_custom'          => $c['source'] !== 'standard',
         'status'             => $c['status'],
         'version'            => $c['version'],
-        'can_accept'         => $c['source'] === 'custom' && $c['status'] === ContractService::STATUS_FINALIZED,
-        'can_reject'         => $c['source'] === 'custom' && $c['status'] === ContractService::STATUS_FINALIZED,
+        'can_accept'         => $canAcceptReject,
+        'can_reject'         => $canAcceptReject,
         'start_date'         => $c['start_date'],
         'end_date'           => ContractService::computedEndDate($c['start_date'], $c['term_months'], $c['end_date']),
         'security_deposit'   => $c['security_deposit'],

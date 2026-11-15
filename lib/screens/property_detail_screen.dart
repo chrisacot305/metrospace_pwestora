@@ -20,6 +20,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   late final PageController _pageController = PageController();
   int _photoIndex = 0;
   bool _descExpanded = false;
+  bool _isSaved = false;
 
   @override
   void dispose() {
@@ -30,9 +31,15 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   @override
   void initState() {
     super.initState();
+    ApiService.isPropertySaved(widget.propertyId).then((saved) {
+      if (mounted) setState(() => _isSaved = saved);
+    });
     _future = ApiService.fetchPropertyDetail(widget.propertyId);
     _future
         .then((p) {
+          if (mounted && p['saved'] == true) {
+            setState(() => _isSaved = true);
+          }
           final photos = (p['photos'] as List<dynamic>? ?? []).cast<String>();
           ApiService.addRecentlyViewed({
             'id': p['id'],
@@ -44,6 +51,18 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         .catchError((_) {
           // Detail failed to load — handled by FutureBuilder
         });
+  }
+
+  Future<void> _toggleSave() async {
+    final next = !_isSaved;
+    setState(() => _isSaved = next);
+    final result = await ApiService.toggleSaveProperty(
+      widget.propertyId,
+      optimisticState: next,
+    );
+    if (mounted && result != next) {
+      setState(() => _isSaved = result);
+    }
   }
 
   LatLng _getPropertyLatLng(Map<String, dynamic> p) {
@@ -172,6 +191,63 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         : AppColors.primary,
                     foregroundColor: Colors.white,
                     leading: const AppBackButton(isDark: true),
+                    actions: [
+                      Padding(
+                        padding: const EdgeInsets.only(right: 14),
+                        child: Center(
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _toggleSave,
+                              borderRadius: BorderRadius.circular(999),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: _isSaved
+                                      ? (isDark
+                                              ? AppColors.electricBlue
+                                              : AppColors.primary)
+                                          .withValues(alpha: 0.95)
+                                      : Colors.black.withValues(alpha: 0.55),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: _isSaved
+                                        ? (isDark
+                                            ? AppColors.electricBlue
+                                            : AppColors.primary)
+                                        : Colors.white.withValues(alpha: 0.35),
+                                    width: 0.9,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: _isSaved
+                                          ? (isDark
+                                                  ? AppColors.electricBlue
+                                                  : AppColors.primary)
+                                              .withValues(alpha: 0.40)
+                                          : Colors.black.withValues(alpha: 0.30),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Icon(
+                                    _isSaved
+                                        ? Icons.bookmark_rounded
+                                        : Icons.bookmark_border_rounded,
+                                    size: 19,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                     flexibleSpace: FlexibleSpaceBar(
                       background: photos.isNotEmpty
                           ? Stack(
@@ -991,6 +1067,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   propertyId: p['id'] as int,
                                   propertyName: p['name'] ?? '',
                                   askingRent: askingRent,
+                                  contractTemplate: p['contract_template'] as Map<String, dynamic>?,
                                 ),
                               ),
                             );

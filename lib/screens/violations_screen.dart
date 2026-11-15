@@ -57,12 +57,27 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
   int get _highestStrike {
     int max = 0;
     for (final v in _violations) {
+      final isRevoked = v['is_revoked'] == true || v['is_revoked'] == 1 || v['is_revoked'] == '1';
+      final isDisputed = v['disputed'] == true || v['disputed'] == 1 || v['disputed'] == '1';
+      final disputeStatus = (v['dispute_status'] ?? '').toString().toLowerCase();
+      // Revoked citations and citations currently under dispute review do NOT count as active strikes
+      if (isRevoked || (isDisputed && disputeStatus != 'rejected')) continue;
+
       final s = v['strike'] is int
           ? v['strike'] as int
           : int.tryParse(v['strike']?.toString() ?? '0') ?? 0;
       if (s > max) max = s;
     }
     return max;
+  }
+
+  bool get _hasPendingDisputes {
+    return _violations.any((v) {
+      final isRevoked = v['is_revoked'] == true || v['is_revoked'] == 1 || v['is_revoked'] == '1';
+      final isDisputed = v['disputed'] == true || v['disputed'] == 1 || v['disputed'] == '1';
+      final disputeStatus = (v['dispute_status'] ?? '').toString().toLowerCase();
+      return !isRevoked && isDisputed && disputeStatus != 'rejected';
+    });
   }
 
   String _formatDate(dynamic dateVal) {
@@ -202,17 +217,23 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
       statusDesc = 'Threshold for formal lease cancellation & notice to vacate.';
       statusIcon = Icons.gavel_rounded;
     } else if (strike == 2) {
-      badgeBg = const Color(0xFFFEF3C7);
-      badgeColor = const Color(0xFFD97706);
+      badgeBg = const Color(0xFFEFF6FF);
+      badgeColor = AppColors.electricBlue;
       statusTitle = 'Strike 2: Notice of Default';
       statusDesc = '₱500.00 penalty billed. Action required to prevent Strike 3.';
-      statusIcon = Icons.warning_amber_rounded;
+      statusIcon = Icons.warning_rounded;
     } else if (strike == 1) {
       badgeBg = const Color(0xFFEFF6FF);
       badgeColor = const Color(0xFF0284C7);
       statusTitle = 'Strike 1: Written Notice';
       statusDesc = 'Formal warning on record with 5–7 calendar days cure period.';
       statusIcon = Icons.info_outline_rounded;
+    } else if (_hasPendingDisputes) {
+      badgeBg = const Color(0xFFEFF6FF);
+      badgeColor = AppColors.electricBlue;
+      statusTitle = 'Dispute Under Review · 0 Active Strikes';
+      statusDesc = 'Your explanation has been submitted. Strike is paused pending lessor review.';
+      statusIcon = Icons.pending_actions_rounded;
     } else {
       badgeBg = const Color(0xFFF0FDF4);
       badgeColor = const Color(0xFF16A34A);
@@ -304,8 +325,8 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
       circleColor = const Color(0xFFDC2626);
       textColor = const Color(0xFFDC2626);
     } else if (stepNum == 2 && active) {
-      circleColor = const Color(0xFFD97706);
-      textColor = const Color(0xFFD97706);
+      circleColor = AppColors.electricBlue;
+      textColor = AppColors.electricBlue;
     } else if (stepNum == 1 && active) {
       circleColor = const Color(0xFF0284C7);
       textColor = const Color(0xFF0284C7);
@@ -541,17 +562,29 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
             : int.tryParse(v['strike']?.toString() ?? '1') ?? 1;
         final ack = v['acknowledged'];
         final isAck = ack == true || ack == 1 || ack == '1';
+        final isRevoked = v['is_revoked'] == true || v['is_revoked'] == 1 || v['is_revoked'] == '1';
+        final isDisputed = v['disputed'] == true || v['disputed'] == 1 || v['disputed'] == '1';
+        final disputeStatus = (v['dispute_status'] ?? '').toString().toLowerCase();
+        final isDisputePending = isDisputed && disputeStatus != 'rejected';
+        final isDisputeRejected = disputeStatus == 'rejected';
         final category = v['category']?.toString() ?? 'Lease Violation';
+        final isLateRent = category.toLowerCase().contains('past_due') ||
+            category.toLowerCase().contains('late') ||
+            category.toLowerCase().contains('overdue');
         final issuedAtStr = _formatDate(v['issued_at'] ?? v['created_at']);
         final fine = (v['fine_amount'] as num?)?.toDouble() ??
-            (strike == 2 ? 500.0 : (strike >= 3 ? 1500.0 : 0.0));
+            (strike >= 3 ? 1000.0 : ((strike == 2 && isLateRent) ? 500.0 : 0.0));
         final icon = _getCategoryIcon(category);
 
         Color strikeColor;
-        if (strike >= 3) {
+        if (isRevoked) {
+          strikeColor = const Color(0xFF94A3B8);
+        } else if (isDisputePending) {
+          strikeColor = AppColors.electricBlue;
+        } else if (strike >= 3) {
           strikeColor = const Color(0xFFDC2626);
         } else if (strike == 2) {
-          strikeColor = const Color(0xFFD97706);
+          strikeColor = AppColors.electricBlue;
         } else {
           strikeColor = const Color(0xFF0284C7);
         }
@@ -642,36 +675,41 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            'Strike $strike',
+                            isRevoked
+                                ? 'Strike $strike (Revoked)'
+                                : (isDisputePending
+                                    ? 'Strike $strike (Pending Review)'
+                                    : (isDisputeRejected ? 'Strike $strike (Upheld)' : 'Strike $strike')),
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
                               color: strikeColor,
+                              decoration: isRevoked ? TextDecoration.lineThrough : null,
                             ),
                           ),
                         ),
                       ],
                     ),
 
-                    if (fine > 0) ...[
+                    if (fine > 0 && !isDisputePending) ...[
                       const SizedBox(height: 10),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF3C7),
+                          color: const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.monetization_on_outlined, size: 14, color: Color(0xFFD97706)),
+                            const Icon(Icons.monetization_on_outlined, size: 14, color: AppColors.electricBlue),
                             const SizedBox(width: 6),
                             Text(
                               '₱${fine.toStringAsFixed(0)} Penalty Billed',
                               style: const TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF92400E),
+                                color: Color(0xFF1E40AF),
                               ),
                             ),
                           ],
@@ -690,44 +728,102 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Acknowledged Badge
-                        isAck
-                            ? Row(
-                                children: const [
-                                  Icon(
-                                    Icons.check_circle_rounded,
-                                    color: Color(0xFF16A34A),
-                                    size: 16,
-                                  ),
-                                  SizedBox(width: 5),
-                                  Text(
-                                    'Citation Acknowledged',
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFF15803D),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : Row(
-                                children: const [
-                                  Icon(
-                                    Icons.access_time_filled_rounded,
-                                    color: Color(0xFFDC2626),
-                                    size: 16,
-                                  ),
-                                  SizedBox(width: 5),
-                                  Text(
-                                    'Pending Read · Tap to Review',
-                                    style: TextStyle(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: Color(0xFFDC2626),
-                                    ),
-                                  ),
-                                ],
+                        // Status Badge
+                        if (isRevoked)
+                          Row(
+                            children: const [
+                              Icon(
+                                Icons.check_circle_outline_rounded,
+                                color: Color(0xFF64748B),
+                                size: 16,
                               ),
+                              SizedBox(width: 5),
+                              Text(
+                                'Citation Revoked',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          )
+                        else if (isDisputePending)
+                          Row(
+                            children: const [
+                              Icon(
+                                Icons.pending_actions_rounded,
+                                color: Color(0xFF1E6BFF),
+                                size: 16,
+                              ),
+                              SizedBox(width: 5),
+                              Text(
+                                'Dispute Under Review',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1E6BFF),
+                                ),
+                              ),
+                            ],
+                          )
+                        else if (isDisputeRejected)
+                          Row(
+                            children: const [
+                              Icon(
+                                Icons.report_problem_rounded,
+                                color: Color(0xFFDC2626),
+                                size: 16,
+                              ),
+                              SizedBox(width: 5),
+                              Text(
+                                'Dispute Rejected (Upheld)',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFFDC2626),
+                                ),
+                              ),
+                            ],
+                          )
+                        else if (isAck)
+                          Row(
+                            children: const [
+                              Icon(
+                                Icons.check_circle_rounded,
+                                color: Color(0xFF16A34A),
+                                size: 16,
+                              ),
+                              SizedBox(width: 5),
+                              Text(
+                                'Citation Acknowledged',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF15803D),
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          Row(
+                            children: const [
+                              Icon(
+                                Icons.access_time_filled_rounded,
+                                color: Color(0xFFDC2626),
+                                size: 16,
+                              ),
+                              SizedBox(width: 5),
+                              Text(
+                                'Pending Read · Tap to Review',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFFDC2626),
+                                ),
+                              ),
+                            ],
+                          ),
 
                         // Dispute / Message Lessor Action
                         InkWell(
@@ -808,8 +904,8 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
                 number: '2',
                 title: 'Strike 2: Notice of Default & Fine',
                 desc: '₱500 citation penalty applied to next billing. Written formal demand letter logged to ledger.',
-                color: const Color(0xFFD97706),
-                bgColor: const Color(0xFFFEF3C7),
+                color: AppColors.electricBlue,
+                bgColor: const Color(0xFFEFF6FF),
               ),
               const SizedBox(height: 10),
               _buildPolicyLadderItem(

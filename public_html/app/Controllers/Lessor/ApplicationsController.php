@@ -4,8 +4,10 @@ namespace App\Controllers\Lessor;
 use App\Core\Controller;
 use App\Core\Csrf;
 use App\Models\ApplicationModel;
+use App\Models\LeaseContractModel;
 use App\Models\PropertyModel;
 use App\Models\TenantModel;
+use App\Services\ContractService;
 
 /**
  * Lessor → Applications (was modules/applications.php)
@@ -36,7 +38,7 @@ final class ApplicationsController extends Controller
                     try {
                         $apps->setStatus($appId, 'approved');
                         $moveIn = !empty($app['preferred_move_in']) ? substr((string) $app['preferred_move_in'], 0, 10) : date('Y-m-d');
-                        (new TenantModel($this->pdo))->createFromApplication(
+                        $tenantId = (new TenantModel($this->pdo))->createFromApplication(
                             $lessorId,
                             (int) $app['property_id'],
                             $appId,
@@ -47,6 +49,43 @@ final class ApplicationsController extends Controller
                             (int) date('j', strtotime($moveIn)),
                             $app['business_name'] ?? null
                         );
+
+                        // Auto-initialize contract from the building's assigned contract template
+                        try {
+                            $contracts = new LeaseContractModel($this->pdo);
+                            $contractTpl = ContractService::resolveTemplateForProperty($this->pdo, (int) $app['property_id'], $lessorId);
+                            $monthlyRent = (float) ($app['rent'] ?? 0);
+                            $termMonths = (int) ($app['term_months'] ?? 12) ?: 12;
+                            $start = $moveIn;
+                            $end = ContractService::computedEndDate($start, $termMonths, null);
+                            $dueDay = (int) date('j', strtotime($start));
+                            $deposit = round($monthlyRent * 2, 2);
+                            $advance = round($monthlyRent, 2);
+
+                            $terms = [
+                                'monthly_rent'     => $monthlyRent,
+                                'term_months'      => $termMonths,
+                                'start_date'       => $start,
+                                'end_date'         => $end,
+                                'security_deposit' => $deposit,
+                                'advance_rent'     => $advance,
+                                'due_day'          => $dueDay,
+                            ];
+
+                            $tplId = $contractTpl['id'] > 0 ? (int) $contractTpl['id'] : null;
+                            $contracts->create(
+                                $tenantId,
+                                $lessorId,
+                                $tplId,
+                                $contractTpl['name'],
+                                $terms,
+                                json_encode($contractTpl['clauses'], JSON_UNESCAPED_UNICODE),
+                                ''
+                            );
+                            $contracts->finalize($tenantId, $lessorId);
+                        } catch (\Throwable $ce) {
+                            error_log('Auto contract creation on approve skipped: ' . $ce->getMessage());
+                        }
                         audit_log($this->pdo, $lessorId, 'Approved application', $app['tenant_name']);
                         $apps->commit();
                     } catch (\Throwable $e) {

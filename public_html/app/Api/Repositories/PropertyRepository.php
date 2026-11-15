@@ -129,4 +129,31 @@ final class PropertyRepository extends Repository
             return false;
         }
     }
+
+    /**
+     * Toggles the saved status of a property for a user.
+     * Returns true if newly saved, false if removed.
+     */
+    public function toggleSave(int $userId, int $propertyId): bool
+    {
+        try {
+            $existingId = $this->fetchValue(
+                'SELECT id FROM saved_properties WHERE user_id = ? AND property_id = ?',
+                [$userId, $propertyId]
+            );
+            if ($existingId !== false) {
+                $this->execute('DELETE FROM saved_properties WHERE id = ?', [(int) $existingId]);
+                return false;
+            }
+
+            $this->execute(
+                'INSERT IGNORE INTO saved_properties (user_id, property_id, created_at) VALUES (?, ?, NOW())',
+                [$userId, $propertyId]
+            );
+            return true;
+        } catch (PDOException $e) {
+            error_log('[API] saved_properties toggle failed: ' . $e->getMessage());
+            return false;
+        }
+    }
 }

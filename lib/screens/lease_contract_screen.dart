@@ -9,6 +9,8 @@ class LeaseContractScreen extends StatefulWidget {
   final Map<String, dynamic>? applicationData;
   final bool forceInitialLock;
   final Future<void> Function()? onLeaseMayHaveChanged;
+  final int initialTab;
+  final String? titleOverride;
 
   const LeaseContractScreen({
     super.key,
@@ -16,6 +18,8 @@ class LeaseContractScreen extends StatefulWidget {
     this.applicationData,
     this.forceInitialLock = false,
     this.onLeaseMayHaveChanged,
+    this.initialTab = 0,
+    this.titleOverride,
   });
 
   @override
@@ -25,6 +29,7 @@ class LeaseContractScreen extends StatefulWidget {
 class _LeaseContractScreenState extends State<LeaseContractScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _currentTabIndex = 0;
   bool _loading = true;
   Map<String, dynamic>? _contract;
   bool _isPaymentComplete = false;
@@ -51,8 +56,11 @@ class _LeaseContractScreenState extends State<LeaseContractScreen>
   String get _contractStatus =>
       (_contract?['status'] ?? 'standard').toString().toLowerCase();
 
-  bool get _canAccept =>
-      _contract?['can_accept'] == true || (_contractStatus == 'finalized');
+  bool get _canAccept {
+    if (_isAccepted || _isRejected) return false;
+    if (_contractStatus != 'finalized') return false;
+    return _contract?['can_accept'] == true;
+  }
 
   bool get _isRevisionPending => _contract?['revision_pending'] == true;
 
@@ -121,7 +129,7 @@ class _LeaseContractScreenState extends State<LeaseContractScreen>
       'key': 'rent_grace_period',
       'label': '5-Day Grace Period & Default Rules',
       'standard':
-          "Monthly rent is due on the contract due date. A five (5) calendar-day grace period is granted with zero late penalty. If unpaid by Day 5, available Security Deposit balance is auto-deducted; any remaining unpaid balance past Day 5 carries over to the next month and initiates 3-strike escalation (Strike 1: ₱0 warning, Strike 2: ₱500 fine, Strike 3: ₱1,500 fine & Eviction Lock).",
+          "Monthly rent is due on the contract due date. A five (5) calendar-day grace period is granted with zero late penalty. If unpaid by Day 5, available Security Deposit balance is auto-deducted to cover rent; any remaining unpaid balance past Day 5 carries over to the next month and initiates 3-strike escalation (Strike 1: ₱0 warning, Strike 2: ₱500 late fee, Strike 3: ₱1,000 fee & Eviction Lock).",
       'agreed': true,
       'note': '',
     },
@@ -135,9 +143,9 @@ class _LeaseContractScreenState extends State<LeaseContractScreen>
     },
     {
       'key': 'violations_discipline_policy',
-      'label': 'Violations & 3-Strike Disciplinary Policy',
+      'label': 'Contractual Compliance & 3-Strike Disciplinary Policy',
       'standard':
-          "Unpaid rent past grace period, broken restructuring plans, or unauthorized space alterations trigger a 3-strike escalation (Strike 1: Warning, Strike 2: Notice & Fine, Strike 3: Lease Termination and Eviction).",
+          "Violations of lease terms or late rent past grace period trigger the unified 3-Strike Disciplinary Policy. Conduct infractions issued by Admin/Lessor record a strike with ₱0 fine. Automated late rent triggers contract late fees (Strike 2: ₱500, Strike 3: ₱1,000). Reaching Strike 3 under any combination triggers Eviction Standing and the ₱1,000 eviction fee. Maintaining a clean record for 2 consecutive months (60 days) with on-time payments reduces active strikes by 1.",
       'agreed': true,
       'note': '',
     },
@@ -303,7 +311,19 @@ class _LeaseContractScreenState extends State<LeaseContractScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _currentTabIndex = widget.initialTab.clamp(0, 1);
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+      initialIndex: _currentTabIndex,
+    );
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging && mounted) {
+        setState(() {
+          _currentTabIndex = _tabController.index;
+        });
+      }
+    });
     _loadContract();
   }
 
@@ -762,7 +782,10 @@ class _LeaseContractScreenState extends State<LeaseContractScreen>
       appBar: AppBar(
         leading: const AppBackButton(),
         title: Text(
-          'Lease Agreement & Terms',
+          widget.titleOverride ??
+              (_currentTabIndex == 1
+                  ? 'Lease Agreement'
+                  : 'Contract Guidelines & Rules'),
           style: TextStyle(
             color: isDark ? Colors.white : AppColors.ink900,
             fontWeight: FontWeight.w800,
@@ -785,12 +808,12 @@ class _LeaseContractScreenState extends State<LeaseContractScreen>
           ),
           tabs: const [
             Tab(
-              icon: Icon(Icons.checklist_rounded, size: 20),
-              text: 'Negotiated Checklist',
+              icon: Icon(Icons.rule_folder_outlined, size: 20),
+              text: 'Contract Guidelines',
             ),
             Tab(
-              icon: Icon(Icons.gavel_rounded, size: 20),
-              text: 'Legal Contract Document',
+              icon: Icon(Icons.description_outlined, size: 20),
+              text: 'Lease Agreement',
             ),
           ],
         ),
@@ -988,18 +1011,22 @@ class _LeaseContractScreenState extends State<LeaseContractScreen>
                         color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            Icons.handshake_outlined,
+                            _canAccept
+                                ? Icons.handshake_outlined
+                                : Icons.rule_rounded,
                             size: 14,
                             color: Colors.white,
                           ),
-                          SizedBox(width: 5),
+                          const SizedBox(width: 5),
                           Text(
-                            'INTERACTIVE NEGOTIATION',
-                            style: TextStyle(
+                            _canAccept
+                                ? 'PROPOSED AMENDMENT'
+                                : 'OPERATIONAL GUIDELINES & RULES',
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 10.5,
                               fontWeight: FontWeight.w800,
@@ -1018,16 +1045,20 @@ class _LeaseContractScreenState extends State<LeaseContractScreen>
                         color: _isRejected
                             ? AppColors.error.withValues(alpha: 0.35)
                             : (_isAccepted
-                                  ? AppColors.success.withValues(alpha: 0.35)
-                                  : AppColors.success.withValues(alpha: 0.3)),
+                                ? AppColors.success.withValues(alpha: 0.35)
+                                : (_canAccept
+                                    ? AppColors.electricBlue.withValues(alpha: 0.35)
+                                    : AppColors.success.withValues(alpha: 0.3))),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
                         _isRejected
                             ? 'Revision Requested'
                             : (_isAccepted
-                                  ? 'Terms Accepted'
-                                  : 'Terms Aligned'),
+                                ? 'Terms Accepted'
+                                : (_canAccept
+                                    ? 'Pending Review'
+                                    : 'Guidelines Active')),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 11,
@@ -1944,8 +1975,9 @@ class _LeaseContractScreenState extends State<LeaseContractScreen>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Image.asset(
-                          isDark ? 'img/invert.png' : 'img/Frame 2.png',
+                          isDark ? 'img/invert.png' : 'img/logo.png',
                           fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => const SizedBox(),
                         ),
                       ),
                       const SizedBox(height: 10),

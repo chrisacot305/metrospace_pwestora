@@ -19,7 +19,7 @@ final class RentBillingService
 {
     public const GRACE_DAYS    = 5;
     public const STRIKE_2_FINE = 500.0;
-    public const STRIKE_3_FINE = 1500.0;
+    public const STRIKE_3_FINE = 1000.0;
 
     public function __construct(private PDO $pdo) {}
 
@@ -709,16 +709,35 @@ final class RentBillingService
                 return;
             }
 
+            $this->ensureViolationColumns();
             // Escalate based on active or recent non-decayed strikes
-            $maxStmt = $this->pdo->prepare(
-                "SELECT COALESCE(MAX(strike), 0) FROM violations
-                 WHERE tenant_id = ?
-                   AND (is_paid = 0 OR is_paid IS NULL
-                        OR (issued_at >= DATE_SUB(NOW(), INTERVAL 60 DAY)
-                            AND (description IS NULL OR description NOT LIKE '%[DECAYED]%')))"
-            );
-            $maxStmt->execute([$tenantId]);
-            $currentStrike = (int) $maxStmt->fetchColumn();
+            try {
+                $maxStmt = $this->pdo->prepare(
+                    "SELECT COALESCE(MAX(strike), 0) FROM violations
+                     WHERE tenant_id = ?
+                       AND (is_revoked = 0 OR is_revoked IS NULL)
+                       AND (disputed = 0 OR disputed IS NULL OR dispute_status = 'rejected')
+                       AND (is_paid = 0 OR is_paid IS NULL
+                            OR (issued_at >= DATE_SUB(NOW(), INTERVAL 60 DAY)
+                                AND (description IS NULL OR description NOT LIKE '%[DECAYED]%')))"
+                );
+                $maxStmt->execute([$tenantId]);
+                $currentStrike = (int) $maxStmt->fetchColumn();
+            } catch (\Throwable $e) {
+                try {
+                    $maxStmt = $this->pdo->prepare(
+                        "SELECT COALESCE(MAX(strike), 0) FROM violations
+                         WHERE tenant_id = ?
+                           AND (is_paid = 0 OR is_paid IS NULL
+                                OR (issued_at >= DATE_SUB(NOW(), INTERVAL 60 DAY)
+                                    AND (description IS NULL OR description NOT LIKE '%[DECAYED]%')))"
+                    );
+                    $maxStmt->execute([$tenantId]);
+                    $currentStrike = (int) $maxStmt->fetchColumn();
+                } catch (\Throwable $e2) {
+                    $currentStrike = 0;
+                }
+            }
             $newStrike     = min(3, $currentStrike + 1);
             $fineAmount    = ($newStrike === 2) ? self::STRIKE_2_FINE : (($newStrike >= 3) ? self::STRIKE_3_FINE : 0.0);
 
@@ -735,23 +754,81 @@ final class RentBillingService
         }
     }
 
+    private function ensureViolationColumns(): void
+    {
+        static $ensured = false;
+        if ($ensured) return;
+        $ensured = true;
+
+        $cols = [
+            'clause_key'              => 'VARCHAR(80) NULL',
+            'contract_ref'            => 'VARCHAR(60) NULL',
+            'clause_text'             => 'TEXT NULL',
+            'clause_ref'              => 'VARCHAR(300) NULL',
+            'fine_amount'             => 'DECIMAL(12,2) NOT NULL DEFAULT 0.00',
+            'is_paid'                 => 'TINYINT(1) NOT NULL DEFAULT 0',
+            'disputed'                => 'TINYINT(1) NOT NULL DEFAULT 0',
+            'dispute_reason'          => 'TEXT NULL',
+            'disputed_at'             => 'DATETIME NULL',
+            'dispute_status'          => 'VARCHAR(30) NULL DEFAULT NULL',
+            'dispute_resolved_at'     => 'DATETIME NULL',
+            'dispute_resolution_note' => 'TEXT NULL',
+            'is_revoked'              => 'TINYINT(1) NOT NULL DEFAULT 0',
+            'revoked_at'              => 'DATETIME NULL',
+            'revocation_reason'       => 'TEXT NULL',
+        ];
+
+        foreach ($cols as $col => $def) {
+            try {
+                $this->pdo->exec("ALTER TABLE `violations` ADD COLUMN `$col` $def");
+            } catch (\Throwable $e) {}
+        }
+    }
+
     /** Computes unpaid fines breakdown, active strike level, and eviction lock state. */
     private function loadPenaltyState(int $tenantId, string $tenantStatus): array
     {
-        $stmt = $this->pdo->prepare(
-            "SELECT id, category, strike,
-                    CASE
-                        WHEN fine_amount > 0 THEN fine_amount
-                        WHEN strike = 2 THEN 500.00
-                        WHEN strike >= 3 THEN 1500.00
-                        ELSE 0.00
-                    END AS fine_amount
-             FROM violations
-             WHERE tenant_id = ? AND (is_paid = 0 OR is_paid IS NULL)
-             ORDER BY strike DESC, id DESC"
-        );
-        $stmt->execute([$tenantId]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $this->ensureViolationColumns();
+
+        try {
+            $stmt = $this->pdo->prepare(
+                "SELECT id, category, strike,
+                        CASE
+                            WHEN fine_amount > 0 THEN fine_amount
+                            WHEN strike = 2 THEN 500.00
+                            WHEN strike >= 3 THEN 1500.00
+                            ELSE 0.00
+                        END AS fine_amount
+                 FROM violations
+                 WHERE tenant_id = ?
+                   AND (is_revoked = 0 OR is_revoked IS NULL)
+                   AND (disputed = 0 OR disputed IS NULL OR dispute_status = 'rejected')
+                   AND (is_paid = 0 OR is_paid IS NULL)
+                 ORDER BY strike DESC, id DESC"
+            );
+            $stmt->execute([$tenantId]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            try {
+                $stmt = $this->pdo->prepare(
+                    "SELECT id, category, strike,
+                            CASE
+                                WHEN fine_amount > 0 THEN fine_amount
+                                WHEN strike = 2 THEN 500.00
+                                WHEN strike >= 3 THEN 1500.00
+                                ELSE 0.00
+                            END AS fine_amount
+                     FROM violations
+                     WHERE tenant_id = ?
+                       AND (is_paid = 0 OR is_paid IS NULL)
+                     ORDER BY strike DESC, id DESC"
+                );
+                $stmt->execute([$tenantId]);
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Throwable $e2) {
+                $rows = [];
+            }
+        }
 
         $total            = 0.0;
         $breakdown        = [];
@@ -776,15 +853,33 @@ final class RentBillingService
         }
 
         // Highest non-decayed strike (for escalation reference)
-        $escStmt = $this->pdo->prepare(
-            "SELECT COALESCE(MAX(strike), 0) FROM violations
-             WHERE tenant_id = ?
-               AND (is_paid = 0 OR is_paid IS NULL
-                    OR (issued_at >= DATE_SUB(NOW(), INTERVAL 60 DAY)
-                        AND (description IS NULL OR description NOT LIKE '%[DECAYED]%')))"
-        );
-        $escStmt->execute([$tenantId]);
-        $escalationStrike = (int) $escStmt->fetchColumn();
+        try {
+            $escStmt = $this->pdo->prepare(
+                "SELECT COALESCE(MAX(strike), 0) FROM violations
+                 WHERE tenant_id = ?
+                   AND (is_revoked = 0 OR is_revoked IS NULL)
+                   AND (disputed = 0 OR disputed IS NULL OR dispute_status = 'rejected')
+                   AND (is_paid = 0 OR is_paid IS NULL
+                        OR (issued_at >= DATE_SUB(NOW(), INTERVAL 60 DAY)
+                            AND (description IS NULL OR description NOT LIKE '%[DECAYED]%')))"
+            );
+            $escStmt->execute([$tenantId]);
+            $escalationStrike = (int) $escStmt->fetchColumn();
+        } catch (\Throwable $e) {
+            try {
+                $escStmt = $this->pdo->prepare(
+                    "SELECT COALESCE(MAX(strike), 0) FROM violations
+                     WHERE tenant_id = ?
+                       AND (is_paid = 0 OR is_paid IS NULL
+                            OR (issued_at >= DATE_SUB(NOW(), INTERVAL 60 DAY)
+                                AND (description IS NULL OR description NOT LIKE '%[DECAYED]%')))"
+                );
+                $escStmt->execute([$tenantId]);
+                $escalationStrike = (int) $escStmt->fetchColumn();
+            } catch (\Throwable $e2) {
+                $escalationStrike = 0;
+            }
+        }
 
         $isEviction = ($unresolvedStrike >= 3 || $tenantStatus === 'terminated');
 

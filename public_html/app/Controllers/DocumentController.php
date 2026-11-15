@@ -24,7 +24,7 @@ final class DocumentController extends Controller
         $user = Auth::user();
 
         $v = (new ViolationModel($this->pdo))->findNoticeForLessor((int) ($_GET['id'] ?? 0), (int) $user['id']);
-        if (!$v || $v['strike'] < 3) {
+        if (!$v || $v['strike'] < 3 || !empty($v['is_revoked'])) {
             http_response_code(404);
             die('Notice not available — this violation does not meet the 3-strike threshold.');
         }
