@@ -37,7 +37,18 @@ final class ApplicationsController extends Controller
                     $apps->beginTransaction();
                     try {
                         $apps->setStatus($appId, 'approved');
-                        $moveIn = !empty($app['preferred_move_in']) ? substr((string) $app['preferred_move_in'], 0, 10) : date('Y-m-d');
+                        // Resolve target move-in from application preferred_move_in or checklist_negotiation metadata
+                        $moveIn = !empty($app['preferred_move_in']) ? substr((string) $app['preferred_move_in'], 0, 10) : null;
+                        if (!$moveIn && !empty($app['checklist_negotiation'])) {
+                            $negotiationData = is_string($app['checklist_negotiation']) ? json_decode($app['checklist_negotiation'], true) : $app['checklist_negotiation'];
+                            if (!empty($negotiationData['_proposal_meta']['target_move_in'])) {
+                                $moveIn = substr((string) $negotiationData['_proposal_meta']['target_move_in'], 0, 10);
+                            }
+                        }
+                        if (!$moveIn) {
+                            $moveIn = date('Y-m-d');
+                        }
+
                         $tenantId = (new TenantModel($this->pdo))->createFromApplication(
                             $lessorId,
                             (int) $app['property_id'],
@@ -83,6 +94,21 @@ final class ApplicationsController extends Controller
                                 ''
                             );
                             $contracts->finalize($tenantId, $lessorId);
+
+                            // Auto-post the confirmed move-in schedule notice to the chat message thread
+                            try {
+                                $msgRepo = new \Api\Repositories\MessageRepository($this->pdo);
+                                $threadId = $msgRepo->findOrCreateThread($lessorId, $tenantId);
+                                $formattedMoveIn = date('F d, Y', strtotime($moveIn));
+                                $scheduleNotice = "📅 OFFICIAL NOTICE: TARGET MOVE-IN SCHEDULE CONFIRMED\n\n"
+                                    . "Scheduled Turnover Date: {$formattedMoveIn}\n"
+                                    . "Commercial Space: " . ($app['property_name'] ?? 'Commercial Space') . "\n"
+                                    . "Business Name: " . ($app['business_name'] ?? $app['tenant_name']) . "\n\n"
+                                    . "Space turnover and occupancy commencement scheduled for {$formattedMoveIn} under approved commercial lease terms.";
+                                $msgRepo->add($threadId, 'lessor', $scheduleNotice, 'Move-In Schedule');
+                            } catch (\Throwable $mErr) {
+                                error_log('Failed to post Move-In Schedule message: ' . $mErr->getMessage());
+                            }
                         } catch (\Throwable $ce) {
                             error_log('Auto contract creation on approve skipped: ' . $ce->getMessage());
                         }

@@ -7,6 +7,7 @@ import 'violation_notice_sheet.dart';
 import 'violations_screen.dart';
 import 'ticket_detail_screen.dart';
 import 'lease_contract_screen.dart';
+import 'schedule_screen.dart';
 
 class MessagesScreen extends StatefulWidget {
   final Map<String, dynamic>? lease;
@@ -336,6 +337,18 @@ class _MessagesScreenState extends State<MessagesScreen> {
         body.contains('Payment Ref:');
   }
 
+  bool _isMoveInScheduleMessage(String body, String? noticeType) {
+    if (noticeType == 'Move-In Schedule' ||
+        noticeType == 'Move-In Date' ||
+        noticeType == 'Turnover Schedule') {
+      return true;
+    }
+    return body.contains('TARGET MOVE-IN SCHEDULE') ||
+        body.contains('MOVE-IN SCHEDULE') ||
+        body.contains('Scheduled Turnover Date:') ||
+        body.contains('Target Move-In Date:');
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -478,6 +491,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                     _expandedMessageIndices.contains(index);
                                 final isReceipt =
                                     _isReceiptMessage(body, noticeType);
+                                final isMoveInSchedule =
+                                    _isMoveInScheduleMessage(body, noticeType);
 
                                 Widget bubbleContent;
                                 if (isReceipt) {
@@ -492,6 +507,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
                                 } else if (isRestructure) {
                                   bubbleContent =
                                       _buildSpecialRestructuringBubble(
+                                          body, isMe);
+                                } else if (isMoveInSchedule) {
+                                  bubbleContent =
+                                      _buildSpecialMoveInScheduleBubble(
                                           body, isMe);
                                 } else {
                                   bubbleContent =
@@ -2025,11 +2044,302 @@ class _MessagesScreenState extends State<MessagesScreen> {
                             ),
                           ],
                         ),
+                        // Action: View in Schedule (Restructure)
                         InkWell(
                           onTap: () {
-                            if (widget.onNavigateTab != null) {
-                              widget.onNavigateTab!(1); // Go to Schedule tab
-                            }
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ScheduleScreen(lease: widget.lease),
+                              ),
+                            );
+                            widget.onNavigateTab?.call(1);
+                          },
+                          child: Row(
+                            children: const [
+                              Text(
+                                'View in Schedule',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF1E6BFF),
+                                ),
+                              ),
+                              SizedBox(width: 3),
+                              Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 13,
+                                color: Color(0xFF1E6BFF),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  DateTime? _parseDateFlexible(dynamic input) {
+    if (input == null) return null;
+    if (input is DateTime) return input;
+    final str = input.toString().trim();
+    if (str.isEmpty) return null;
+    final iso = DateTime.tryParse(str.split('T').first);
+    if (iso != null) return iso;
+    final months = {
+      'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+      'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+    };
+    final cleaned = str.replaceAll(',', '');
+    final parts = cleaned.split(RegExp(r'\s+'));
+    if (parts.length >= 3) {
+      final mKey = parts[0].toLowerCase().substring(0, 3);
+      final m = months[mKey];
+      final d = int.tryParse(parts[1]);
+      final y = int.tryParse(parts[2]);
+      if (m != null && d != null && y != null) {
+        return DateTime(y, m, d);
+      }
+    }
+    return null;
+  }
+
+  Widget _buildSpecialMoveInScheduleBubble(String body, bool isMe) {
+    final isConfirmed = body.contains('CONFIRMED') || body.contains('APPROVED');
+    final Color primaryColor = isConfirmed ? const Color(0xFF10B981) : AppColors.electricBlue;
+    final Color headerBgColor = isConfirmed ? const Color(0xFFECFDF5) : const Color(0xFFEFF6FF);
+    final Color borderColor = isConfirmed ? const Color(0xFFA7F3D0) : const Color(0xFFBFDBFE);
+    final Color badgeBg = isConfirmed ? const Color(0xFF059669) : AppColors.electricBlue;
+    final String headerTitle = isConfirmed
+        ? 'Move-In Schedule • Turnover Confirmed'
+        : 'Target Move-In Schedule • Proposed';
+    final String statusPillText = isConfirmed ? 'Confirmed' : 'Target Date';
+    final IconData headerIcon = isConfirmed ? Icons.event_available_rounded : Icons.calendar_month_rounded;
+
+    String dateStr = 'Scheduled in Lease';
+    if (body.contains('Scheduled Turnover Date:')) {
+      dateStr = body.split('Scheduled Turnover Date:').last.split('\n').first.trim();
+    } else if (body.contains('Target Move-In Date:')) {
+      dateStr = body.split('Target Move-In Date:').last.split('\n').first.trim();
+    }
+
+    String propertyName = '';
+    if (body.contains('Commercial Space:')) {
+      propertyName = body.split('Commercial Space:').last.split('\n').first.trim();
+    }
+
+    String businessName = '';
+    if (body.contains('Business Name:')) {
+      businessName = body.split('Business Name:').last.split('\n').first.trim();
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      child: Center(
+        child: Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(maxWidth: 420),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: borderColor, width: 1.2),
+            boxShadow: [
+              BoxShadow(
+                color: primaryColor.withValues(alpha: 0.08),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Banner
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: headerBgColor,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(19),
+                    topRight: Radius.circular(19),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: badgeBg,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(headerIcon, color: Colors.white, size: 14),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        headerTitle,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: primaryColor,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: badgeBg,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        statusPillText,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Card Body
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      businessName.isNotEmpty ? businessName : 'Commercial Tenancy Turnover',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.midnightNavy,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    if (propertyName.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          const Icon(Icons.storefront_rounded, size: 13, color: AppColors.ink500),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              propertyName,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: AppColors.ink700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+
+                    // Highlight Date Box
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: headerBgColor,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: borderColor),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: borderColor),
+                            ),
+                            child: Icon(Icons.calendar_today_rounded, size: 22, color: primaryColor),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Space Turnover / Move-In Date',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.ink500,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  dateStr,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: primaryColor,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Target commercial premises handover and key turnover date. Lessor and tenant will coordinate physical unit inspection and fit-out turnover on this date.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.ink700,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // Action Footer: View in Schedule
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: const [
+                            Icon(Icons.schedule_rounded, size: 13, color: AppColors.ink500),
+                            SizedBox(width: 4),
+                            Text(
+                              'Platform Schedule Item',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.ink700,
+                              ),
+                            ),
+                          ],
+                        ),
+                        // Action: View in Schedule (Move-In)
+                        InkWell(
+                          onTap: () {
+                            final parsedDt = _parseDateFlexible(dateStr);
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => ScheduleScreen(
+                                  lease: widget.lease,
+                                  initialDate: parsedDt,
+                                ),
+                              ),
+                            );
+                            widget.onNavigateTab?.call(1);
                           },
                           child: Row(
                             children: const [

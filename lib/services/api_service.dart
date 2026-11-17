@@ -636,6 +636,13 @@ class ApiService {
       final apps = await fetchMyApplications();
       for (final item in apps) {
         if (item is Map && (item['status'] ?? '').toString().toLowerCase() == 'approved') {
+          String? moveIn = item['start_date']?.toString() ?? item['preferred_move_in']?.toString();
+          if (moveIn == null && item['checklist_negotiation'] is Map) {
+            final meta = (item['checklist_negotiation'] as Map)['_proposal_meta'];
+            if (meta is Map && meta['target_move_in'] != null) {
+              moveIn = meta['target_move_in']?.toString();
+            }
+          }
           return {
             'tenant_id': item['id'],
             'application_id': item['id'],
@@ -645,6 +652,8 @@ class ApiService {
             'business_name': item['business_name'] ?? '',
             'rent': (item['rent'] as num?)?.toDouble() ?? 12000.0,
             'term_months': (item['term_months'] as num?)?.toInt() ?? 12,
+            'start_date': moveIn,
+            'preferred_move_in': moveIn,
             'is_approved_application': true,
           };
         }
@@ -711,6 +720,13 @@ class ApiService {
       final apps = await fetchMyApplications();
       for (final app in apps) {
         if (app is Map && (app['status'] ?? '').toString().toLowerCase() == 'approved') {
+          String? moveIn = app['start_date']?.toString() ?? app['preferred_move_in']?.toString();
+          if (moveIn == null && app['checklist_negotiation'] is Map) {
+            final meta = (app['checklist_negotiation'] as Map)['_proposal_meta'];
+            if (meta is Map && meta['target_move_in'] != null) {
+              moveIn = meta['target_move_in']?.toString();
+            }
+          }
           addLease({
             'tenant_id': app['id'],
             'application_id': app['id'],
@@ -721,6 +737,8 @@ class ApiService {
             'rent': (app['rent'] as num?)?.toDouble() ?? 12000.0,
             'term_months': (app['term_months'] as num?)?.toInt() ?? 12,
             'cover_photo': app['cover_photo'] ?? '',
+            'start_date': moveIn,
+            'preferred_move_in': moveIn,
             'is_approved_application': true,
           }, isApprovedAppFallback: true);
         }

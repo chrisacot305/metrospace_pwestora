@@ -54,6 +54,7 @@ if ($applications->hasPending($propertyId, (int) $lessee['id'])) {
 // checklist_negotiation may arrive as a JSON string (form-data) or an object (JSON body).
 $negotiation = Request::input('checklist_negotiation');
 $negotiationJson = null;
+
 if ($negotiation) {
     $decoded = is_string($negotiation) ? json_decode($negotiation, true) : $negotiation;
     if (!is_array($decoded)) {

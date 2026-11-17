@@ -1068,6 +1068,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   propertyName: p['name'] ?? '',
                                   askingRent: askingRent,
                                   contractTemplate: p['contract_template'] as Map<String, dynamic>?,
+                                  leaseTerm: p['lease_term'],
+                                  termMonths: (p['term_months'] as num?)?.toInt(),
                                 ),
                               ),
                             );

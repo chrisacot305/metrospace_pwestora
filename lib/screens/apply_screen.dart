@@ -19,6 +19,8 @@ class ApplyScreen extends StatefulWidget {
   final String propertyName;
   final double? askingRent;
   final Map<String, dynamic>? contractTemplate;
+  final dynamic leaseTerm;
+  final int? termMonths;
 
   const ApplyScreen({
     super.key,
@@ -26,6 +28,8 @@ class ApplyScreen extends StatefulWidget {
     required this.propertyName,
     this.askingRent,
     this.contractTemplate,
+    this.leaseTerm,
+    this.termMonths,
   });
 
   @override
@@ -44,7 +48,6 @@ class _ApplyScreenState extends State<ApplyScreen> {
   String _selectedCategory = 'Food & Beverage';
   int _selectedTerm = 12; // months (6, 12, 24, 36)
   DateTime _targetMoveInDate = DateTime.now().add(const Duration(days: 14));
-  bool _requestFitOutGrace = true;
   bool _customRateMode = false;
   double _effectiveRent = 0.0;
 
@@ -63,7 +66,13 @@ class _ApplyScreenState extends State<ApplyScreen> {
     {'label': 'General / Other', 'icon': Icons.storefront_outlined},
   ];
 
-  final List<int> _termOptions = [6, 12, 24, 36];
+  String get _formattedLeaseDuration {
+    if (_selectedTerm >= 12 && _selectedTerm % 12 == 0) {
+      final years = _selectedTerm ~/ 12;
+      return '$years ${years == 1 ? "Year" : "Years"} ($_selectedTerm Months)';
+    }
+    return '$_selectedTerm Months';
+  }
 
   final List<Map<String, dynamic>> _docFields = [
     {
@@ -307,6 +316,27 @@ class _ApplyScreenState extends State<ApplyScreen> {
         : 35000.0;
     _customRentCtrl.text = _effectiveRent.toStringAsFixed(0);
 
+    // Resolve fixed lease duration from listing
+    int resolvedTerm = 12;
+    if (widget.termMonths != null && widget.termMonths! > 0) {
+      resolvedTerm = widget.termMonths!;
+    } else if (widget.leaseTerm != null) {
+      final str = widget.leaseTerm.toString().trim().toLowerCase();
+      final numVal = int.tryParse(str.replaceAll(RegExp(r'[^0-9]'), ''));
+      if (numVal != null && numVal > 0) {
+        if (str.contains('year')) {
+          resolvedTerm = numVal * 12;
+        } else if (str.contains('month')) {
+          resolvedTerm = numVal;
+        } else if (numVal <= 5) {
+          resolvedTerm = numVal * 12;
+        } else {
+          resolvedTerm = numVal;
+        }
+      }
+    }
+    _selectedTerm = resolvedTerm;
+
     // Initialize with passed contract template if available, or fetch from API
     if (widget.contractTemplate != null && widget.contractTemplate!['clauses'] is List) {
       final tpl = widget.contractTemplate!;
@@ -351,7 +381,6 @@ class _ApplyScreenState extends State<ApplyScreen> {
         'term': _selectedTerm,
         'effective_rent': _effectiveRent,
         'custom_rate_mode': _customRateMode,
-        'request_fitout': _requestFitOutGrace,
         'target_move_in': _targetMoveInDate.toIso8601String(),
         'docs': docMap,
         'checklist': checklistMap,
@@ -400,7 +429,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
       if (draft['category'] != null) {
         _selectedCategory = draft['category'] as String;
       }
-      if (draft['term'] != null) {
+      if (draft['term'] != null && widget.termMonths == null && widget.leaseTerm == null) {
         _selectedTerm = draft['term'] as int;
       }
       if (draft['effective_rent'] != null) {
@@ -409,9 +438,6 @@ class _ApplyScreenState extends State<ApplyScreen> {
       }
       if (draft['custom_rate_mode'] != null) {
         _customRateMode = draft['custom_rate_mode'] as bool;
-      }
-      if (draft['request_fitout'] != null) {
-        _requestFitOutGrace = draft['request_fitout'] as bool;
       }
       if (draft['target_move_in'] != null) {
         final parsedDate = DateTime.tryParse(draft['target_move_in'] as String);
@@ -685,7 +711,6 @@ class _ApplyScreenState extends State<ApplyScreen> {
       negotiationPayload['_proposal_meta'] = {
         'category': _selectedCategory,
         'target_move_in': _targetMoveInDate.toIso8601String().split('T').first,
-        'fitout_grace_requested': _requestFitOutGrace,
       };
 
       final Map<String, Map<String, dynamic>> docPayload = {};
@@ -1197,7 +1222,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Proposed Lease Duration (Term)',
+                  'Lease Duration',
                   style: TextStyle(
                     fontSize: 13.5,
                     fontWeight: FontWeight.w800,
@@ -1206,7 +1231,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Multi-year lease commitments are favored by commercial space lessors.',
+                  'Commercial occupancy commitment established in property listing.',
                   style: TextStyle(
                     fontSize: 11.5,
                     color: isDark ? AppColors.ink400 : AppColors.ink500,
@@ -1214,47 +1239,85 @@ class _ApplyScreenState extends State<ApplyScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // Term Pills
-                Row(
-                  children: _termOptions.map((term) {
-                    final isSelected = _selectedTerm == term;
-                    return Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
-                        child: InkWell(
-                          onTap: () => setState(() => _selectedTerm = term),
+                // Fixed Lease Duration Display
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.navySurface : const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isDark ? AppColors.navyBorder : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF1E3A8A).withValues(alpha: 0.3)
+                              : const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? (isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.5) : AppColors.accentSoft)
-                                  : (isDark ? AppColors.navySurface : AppColors.bg),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isSelected
-                                    ? AppColors.electricBlue
-                                    : (isDark ? AppColors.navyBorder : AppColors.border),
-                                width: isSelected ? 1.5 : 1,
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                '$term Mos',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                  color: isSelected
-                                      ? (isDark ? const Color(0xFF60A5FA) : AppColors.electricBlue)
-                                      : (isDark ? Colors.white70 : AppColors.ink700),
-                                ),
-                              ),
-                            ),
-                          ),
+                        ),
+                        child: const Icon(
+                          Icons.date_range_rounded,
+                          size: 20,
+                          color: AppColors.electricBlue,
                         ),
                       ),
-                    );
-                  }).toList(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _formattedLeaseDuration,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? Colors.white : AppColors.ink900,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Standard term specified by lessor',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: isDark ? AppColors.ink400 : AppColors.ink500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF064E3B).withValues(alpha: 0.3)
+                              : const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.lock_outline_rounded, size: 12, color: Color(0xFF10B981)),
+                            SizedBox(width: 4),
+                            Text(
+                              'Fixed by Listing',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFF10B981),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 20),
 
@@ -1315,35 +1378,6 @@ class _ApplyScreenState extends State<ApplyScreen> {
                         ),
                       ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Fit-out Grace Period Request Checkbox
-                InkWell(
-                  onTap: () => setState(() => _requestFitOutGrace = !_requestFitOutGrace),
-                  borderRadius: BorderRadius.circular(8),
-                  child: Row(
-                    children: [
-                      Icon(
-                        _requestFitOutGrace ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded,
-                        size: 20,
-                        color: _requestFitOutGrace
-                            ? AppColors.electricBlue
-                            : (isDark ? AppColors.ink400 : AppColors.ink400),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Request 15-day rent-free fit-out / setup period before opening',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark ? AppColors.ink300 : AppColors.ink700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],

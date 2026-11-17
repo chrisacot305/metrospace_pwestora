@@ -5,7 +5,8 @@ import 'tickets_list_screen.dart';
 
 class ScheduleScreen extends StatefulWidget {
   final Map<String, dynamic>? lease;
-  const ScheduleScreen({super.key, this.lease});
+  final DateTime? initialDate;
+  const ScheduleScreen({super.key, this.lease, this.initialDate});
 
   @override
   State<ScheduleScreen> createState() => _ScheduleScreenState();
@@ -25,16 +26,21 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _currentMonth = DateTime(now.year, now.month, 1);
-    _selectedDate = DateTime(now.year, now.month, now.day);
+    final initial = widget.initialDate ?? DateTime.now();
+    _currentMonth = DateTime(initial.year, initial.month, 1);
+    _selectedDate = DateTime(initial.year, initial.month, initial.day);
     _fetchScheduleData();
   }
 
   @override
   void didUpdateWidget(covariant ScheduleScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.lease != widget.lease) {
+    if (widget.initialDate != null && widget.initialDate != oldWidget.initialDate) {
+      final initial = widget.initialDate!;
+      _currentMonth = DateTime(initial.year, initial.month, 1);
+      _selectedDate = DateTime(initial.year, initial.month, initial.day);
+      _buildEventsForCurrentMonth();
+    } else if (oldWidget.lease != widget.lease) {
       _buildEventsForCurrentMonth();
       _fetchScheduleData();
     }
@@ -290,6 +296,31 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       }
     }
 
+    // 5. Target Move-In & Space Turnover Event
+    final moveInRaw = widget.lease?['start_date'] ??
+        widget.lease?['contract_start_date'] ??
+        widget.lease?['preferred_move_in'] ??
+        widget.lease?['move_in'] ??
+        widget.initialDate;
+    if (moveInRaw != null) {
+      final moveInDt = _parseDateFlexible(moveInRaw);
+      if (moveInDt != null &&
+          moveInDt.year == _currentMonth.year &&
+          moveInDt.month == _currentMonth.month) {
+        list.add({
+          'id': 'move_in_${widget.lease?['id'] ?? 'key'}',
+          'title': 'Space Turnover & Move-In',
+          'subtitle': 'Commercial Handover • ${_formatDate(moveInDt)}',
+          'day': moveInDt.day,
+          'month': _getShortMonth(moveInDt.month),
+          'category': 'lease',
+          'categoryLabel': 'Move-In',
+          'color': const Color(0xFF1E6BFF),
+          'icon': Icons.key_rounded,
+        });
+      }
+    }
+
     // Sort by day
     list.sort((a, b) => (a['day'] as int).compareTo(b['day'] as int));
     _events = list;
@@ -344,6 +375,31 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return DateTime(date.year, date.month, 1).weekday % 7;
   }
 
+  DateTime? _parseDateFlexible(dynamic input) {
+    if (input == null) return null;
+    if (input is DateTime) return input;
+    final str = input.toString().trim();
+    if (str.isEmpty) return null;
+    final iso = DateTime.tryParse(str.split('T').first);
+    if (iso != null) return iso;
+    final months = {
+      'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+      'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+    };
+    final cleaned = str.replaceAll(',', '');
+    final parts = cleaned.split(RegExp(r'\s+'));
+    if (parts.length >= 3) {
+      final mKey = parts[0].toLowerCase().substring(0, 3);
+      final m = months[mKey];
+      final d = int.tryParse(parts[1]);
+      final y = int.tryParse(parts[2]);
+      if (m != null && d != null && y != null) {
+        return DateTime(y, m, d);
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -375,6 +431,40 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (Navigator.of(context).canPop())
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: InkWell(
+                          onTap: () => Navigator.of(context).pop(),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  size: 13,
+                                  color: isDark ? Colors.white : const Color(0xFF0B1B3D),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  'Back',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark ? Colors.white : const Color(0xFF0B1B3D),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     Text(
                       'Schedule',
                       style: TextStyle(

@@ -9,6 +9,7 @@ import 'violation_notice_sheet.dart';
 import 'violations_screen.dart';
 import 'receipts_history_screen.dart';
 import 'messages_screen.dart';
+import 'schedule_screen.dart';
 import 'my_applications_screen.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../widgets/luxury_rent_card.dart';
@@ -323,14 +324,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return buffer.toString();
   }
 
+  DateTime? _parseDateFlexible(dynamic input) {
+    if (input == null) return null;
+    if (input is DateTime) return input;
+    final str = input.toString().trim();
+    if (str.isEmpty) return null;
+    final iso = DateTime.tryParse(str.split('T').first);
+    if (iso != null) return iso;
+    final months = {
+      'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,
+      'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,
+    };
+    final cleaned = str.replaceAll(',', '');
+    final parts = cleaned.split(RegExp(r'\s+'));
+    if (parts.length >= 3) {
+      final mKey = parts[0].toLowerCase().substring(0, 3);
+      final m = months[mKey];
+      final d = int.tryParse(parts[1]);
+      final y = int.tryParse(parts[2]);
+      if (m != null && d != null && y != null) {
+        return DateTime(y, m, d);
+      }
+    }
+    return null;
+  }
+
   String _formatDate(dynamic dateVal) {
     if (dateVal == null) return '';
-    DateTime? dt;
-    if (dateVal is DateTime) {
-      dt = dateVal;
-    } else {
-      dt = DateTime.tryParse(dateVal.toString());
-    }
+    final dt = _parseDateFlexible(dateVal);
     if (dt == null) return dateVal.toString();
     const months = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -1474,6 +1495,75 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       const SizedBox(height: 18),
 
+                      // 0. Space Turnover & Move-In Schedule Row
+                      Builder(builder: (context) {
+                        final moveInRaw = _activeLease['start_date'] ??
+                            _activeLease['contract_start_date'] ??
+                            _activeLease['preferred_move_in'] ??
+                            _activeLease['move_in'];
+                        if (moveInRaw == null || moveInRaw.toString().trim().isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        final moveInDt = _parseDateFlexible(moveInRaw);
+                        if (moveInDt == null) return const SizedBox.shrink();
+
+                        final now = DateTime.now();
+                        final today = DateTime(now.year, now.month, now.day);
+                        final targetDay = DateTime(moveInDt.year, moveInDt.month, moveInDt.day);
+                        final diffDays = targetDay.difference(today).inDays;
+
+                        final String statusText;
+                        final String trailingBadge;
+                        final Color badgeColor;
+                        if (diffDays > 0) {
+                          statusText = 'Turnover in $diffDays day${diffDays == 1 ? '' : 's'} • ${_formatDate(moveInDt)}';
+                          trailingBadge = 'Upcoming';
+                          badgeColor = const Color(0xFF1E6BFF);
+                        } else if (diffDays == 0) {
+                          statusText = 'Turnover Scheduled Today! • ${_formatDate(moveInDt)}';
+                          trailingBadge = 'Today';
+                          badgeColor = const Color(0xFF10B981);
+                        } else {
+                          statusText = 'Turnover Completed • ${_formatDate(moveInDt)}';
+                          trailingBadge = 'Occupied';
+                          badgeColor = const Color(0xFF64748B);
+                        }
+
+                        return Column(
+                          children: [
+                            _buildActivityRow(
+                              isDark: isDark,
+                              icon: Icons.key_rounded,
+                              iconColor: const Color(0xFF1E6BFF),
+                              iconBgColor: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : const Color(0xFFEFF6FF),
+                              title: 'Space Turnover & Move-In',
+                              subtitle: statusText,
+                              trailing: trailingBadge,
+                              trailingColor: badgeColor,
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ScheduleScreen(
+                                      lease: _activeLease,
+                                      initialDate: moveInDt,
+                                    ),
+                                  ),
+                                ).then((_) => _refresh());
+                                widget.onNavigateTab?.call(1);
+                              },
+                            ),
+                            Divider(
+                              color: isDark
+                                  ? const Color(0xFF262626)
+                                  : const Color(0xFFF3F4F6),
+                              height: 24,
+                            ),
+                          ],
+                        );
+                      }),
+
                       // 1. Dynamic Monthly Stall Rent Row
                       Builder(builder: (context) {
                         final activeRemaining =
@@ -1739,6 +1829,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required String trailing,
     VoidCallback? onTap,
     bool isDark = false,
+    Color? iconColor,
+    Color? iconBgColor,
+    Color? trailingColor,
   }) {
     return InkWell(
       onTap: onTap,
@@ -1751,9 +1844,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               width: 42,
               height: 42,
               decoration: BoxDecoration(
-                color: isDark
-                    ? const Color(0xFF1E1E1E)
-                    : const Color(0xFFF3F4F6),
+                color: iconBgColor ??
+                    (isDark
+                        ? const Color(0xFF1E1E1E)
+                        : const Color(0xFFF3F4F6)),
                 borderRadius: BorderRadius.circular(13),
                 border: isDark
                     ? Border.all(color: const Color(0xFF262626), width: 0.8)
@@ -1761,9 +1855,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               child: Icon(
                 icon,
-                color: isDark
-                    ? const Color(0xFF60A5FA)
-                    : const Color(0xFF111418),
+                color: iconColor ??
+                    (isDark
+                        ? const Color(0xFF60A5FA)
+                        : const Color(0xFF111418)),
                 size: 20,
               ),
             ),
@@ -1807,7 +1902,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 style: TextStyle(
                   fontSize: 14.5,
                   fontWeight: FontWeight.w800,
-                  color: isDark ? Colors.white : const Color(0xFF111418),
+                  color: trailingColor ??
+                      (isDark ? Colors.white : const Color(0xFF111418)),
                   letterSpacing: -0.3,
                 ),
               ),
