@@ -235,6 +235,9 @@
           <label>Password</label>
           <input type="password" name="password" required autocomplete="current-password">
         </div>
+        <div style="text-align:right; margin:-6px 0 14px; font-size:13px;">
+          <a href="/forgot_password.php" style="color:inherit; opacity:.8;">Forgot password?</a>
+        </div>
         <button class="l-modal-submit" type="submit">Log In</button>
       </form>
     </div>

@@ -691,7 +691,7 @@ final class RentBillingService
 
     /**
      * Records at most ONE 'Unpaid Rent Default (Past Due)' strike violation per unpaid past-grace period.
-     * Escalates Strike 1 (₱0) -> Strike 2 (₱500) -> Strike 3 (₱1,500 & Eviction).
+     * Escalates Strike 1 (₱0) -> Strike 2 (₱500) -> Strike 3 (₱1,000 & Eviction).
      */
     private function ensureOverdueViolationRecorded(int $tenantId, int $lessorId, string $period): void
     {
@@ -794,9 +794,9 @@ final class RentBillingService
             $stmt = $this->pdo->prepare(
                 "SELECT id, category, strike,
                         CASE
-                            WHEN fine_amount > 0 THEN fine_amount
-                            WHEN strike = 2 THEN 500.00
-                            WHEN strike >= 3 THEN 1500.00
+                            WHEN fine_amount IS NOT NULL THEN fine_amount
+                            WHEN strike >= 3 THEN 1000.00
+                            WHEN strike = 2 AND (category LIKE '%Rent%' OR category LIKE '%Due%') THEN 500.00
                             ELSE 0.00
                         END AS fine_amount
                  FROM violations
@@ -813,9 +813,9 @@ final class RentBillingService
                 $stmt = $this->pdo->prepare(
                     "SELECT id, category, strike,
                             CASE
-                                WHEN fine_amount > 0 THEN fine_amount
-                                WHEN strike = 2 THEN 500.00
-                                WHEN strike >= 3 THEN 1500.00
+                                WHEN fine_amount IS NOT NULL THEN fine_amount
+                                WHEN strike >= 3 THEN 1000.00
+                                WHEN strike = 2 AND (category LIKE '%Rent%' OR category LIKE '%Due%') THEN 500.00
                                 ELSE 0.00
                             END AS fine_amount
                      FROM violations
@@ -881,7 +881,8 @@ final class RentBillingService
             }
         }
 
-        $isEviction = ($unresolvedStrike >= 3 || $tenantStatus === 'terminated');
+        // An eviction lock only applies if there is an unresolved Strike 3 with an active penalty balance due, or if the tenant was formally terminated by the lessor.
+        $isEviction = ($unresolvedStrike >= 3 && $total > 0.009) || ($tenantStatus === 'terminated');
 
         return [
             'penalty_total'     => $total,

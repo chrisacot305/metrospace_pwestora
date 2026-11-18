@@ -71,14 +71,14 @@ function sync_chat_rent_reminder(PDO $pdo, int $tenantId, int $lessorId, int $di
                 ? "Strike 3 Eviction Lock is active (includes {$fmtPenalty} penalty). Please settle your full balance in the Rent Payment page to lift the account lock."
                 : ($strikeLevel >= 2
                     ? "Strike {$strikeLevel} is active (includes {$fmtPenalty} fine)."
-                    : "Strike {$strikeLevel} overdue warning recorded (₱0 fine; Strike 2 adds ₱500.00, Strike 3 adds ₱1,500.00 + Eviction Lock).");
+                    : "Strike {$strikeLevel} overdue warning recorded (₱0 fine; Strike 2 adds ₱500.00, Strike 3 adds ₱1,000.00 + Eviction Lock).");
             $periodNote = $monthsLabel !== '' ? " ({$monthsLabel})" : '';
             $msgBody = "🚨 OFFICIAL OVERDUE & INFRACTION NOTICE\n\nYour 5-day grace period has ended and your balance{$periodNote} remains unpaid. Total Due: {$fmtTotal}. {$strikeNote}";
         } elseif (!empty($billing['is_grace_period']) || ($diff >= -5 && $diff <= -1)) {
             $daysLeft = (int) ($billing['grace_days_remaining'] ?? max(1, min(5, 6 + $diff)));
             $fmtRem   = '₱' . number_format(max(0.0, $rentRemaining), 2);
             if ($diff === -5 || $daysLeft === 1) {
-                $msgBody = "⚠️ FINAL DAY OF GRACE PERIOD (1d Grace)\n\nThis is the last day of your 5-day grace period for $currentBillingMonth (Remaining: $fmtRem). Available Security Deposit balance is auto-applied at grace expiry. Any unpaid balance after today carries over into next month with a lease Strike recorded (Strike 1: ₱0, Strike 2: ₱500, Strike 3: ₱1,500 + Eviction Lock).";
+                $msgBody = "⚠️ FINAL DAY OF GRACE PERIOD (1d Grace)\n\nThis is the last day of your 5-day grace period for $currentBillingMonth (Remaining: $fmtRem). Available Security Deposit balance is auto-applied at grace expiry. Any unpaid balance after today carries over into next month with a lease Strike recorded (Strike 1: ₱0, Strike 2: ₱500, Strike 3: ₱1,000 + Eviction Lock).";
             } else {
                 $msgBody = "⏳ GRACE PERIOD ACTIVE ({$daysLeft}d Grace)\n\nYour monthly rent for $currentBillingMonth is past due ($fmtRem remaining). You have $daysLeft day" . ($daysLeft == 1 ? '' : 's') . " of your 5-day grace period remaining before carryover and Strike escalation.";
             }

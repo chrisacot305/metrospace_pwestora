@@ -133,7 +133,13 @@ final class AuthController extends Controller
             }
         }
 
-        View::render('auth/login', ['error' => $error]);
+        $success = '';
+        if (!$this->isPost() && isset($_SESSION['flash_success'])) {
+            $success = (string) $_SESSION['flash_success'];
+            unset($_SESSION['flash_success']);
+        }
+
+        View::render('auth/login', ['error' => $error, 'success' => $success]);
     }
 
     public function logout(): void

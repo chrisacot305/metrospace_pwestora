@@ -59,9 +59,10 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
     for (final v in _violations) {
       final isRevoked = v['is_revoked'] == true || v['is_revoked'] == 1 || v['is_revoked'] == '1';
       final isDisputed = v['disputed'] == true || v['disputed'] == 1 || v['disputed'] == '1';
+      final isPaid = v['is_paid'] == true || v['is_paid'] == 1 || v['is_paid'] == '1';
       final disputeStatus = (v['dispute_status'] ?? '').toString().toLowerCase();
-      // Revoked citations and citations currently under dispute review do NOT count as active strikes
-      if (isRevoked || (isDisputed && disputeStatus != 'rejected')) continue;
+      // Revoked citations, paid/settled citations, and citations currently under dispute review do NOT count as active strikes
+      if (isRevoked || isPaid || (isDisputed && disputeStatus != 'rejected')) continue;
 
       final s = v['strike'] is int
           ? v['strike'] as int
@@ -69,6 +70,13 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
       if (s > max) max = s;
     }
     return max;
+  }
+
+  bool get _hasPaidViolations {
+    return _violations.any((v) {
+      final isPaid = v['is_paid'] == true || v['is_paid'] == 1 || v['is_paid'] == '1';
+      return isPaid;
+    });
   }
 
   bool get _hasPendingDisputes {
@@ -220,7 +228,7 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
       badgeBg = const Color(0xFFEFF6FF);
       badgeColor = AppColors.electricBlue;
       statusTitle = 'Strike 2: Notice of Default';
-      statusDesc = '₱500.00 penalty billed. Action required to prevent Strike 3.';
+      statusDesc = 'Formal default on record. Action required to prevent Strike 3.';
       statusIcon = Icons.warning_rounded;
     } else if (strike == 1) {
       badgeBg = const Color(0xFFEFF6FF);
@@ -234,6 +242,12 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
       statusTitle = 'Dispute Under Review · 0 Active Strikes';
       statusDesc = 'Your explanation has been submitted. Strike is paused pending lessor review.';
       statusIcon = Icons.pending_actions_rounded;
+    } else if (_hasPaidViolations) {
+      badgeBg = const Color(0xFFF0FDF4);
+      badgeColor = const Color(0xFF16A34A);
+      statusTitle = 'Good Standing · Penalties Settled';
+      statusDesc = 'All previous citation penalties have been settled. Maintain compliant operations to protect your record.';
+      statusIcon = Icons.verified_user_rounded;
     } else {
       badgeBg = const Color(0xFFF0FDF4);
       badgeColor = const Color(0xFF16A34A);
@@ -308,7 +322,7 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
             children: [
               _buildStrikeStep(1, 'Notice', strike >= 1, isCurrent: strike == 1),
               _buildStepConnector(strike >= 2),
-              _buildStrikeStep(2, '₱500 Fine', strike >= 2, isCurrent: strike == 2),
+              _buildStrikeStep(2, 'Default', strike >= 2, isCurrent: strike == 2),
               _buildStepConnector(strike >= 3),
               _buildStrikeStep(3, 'Eviction', strike >= 3, isCurrent: strike >= 3),
             ],
@@ -564,6 +578,7 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
         final isAck = ack == true || ack == 1 || ack == '1';
         final isRevoked = v['is_revoked'] == true || v['is_revoked'] == 1 || v['is_revoked'] == '1';
         final isDisputed = v['disputed'] == true || v['disputed'] == 1 || v['disputed'] == '1';
+        final isPaid = v['is_paid'] == true || v['is_paid'] == 1 || v['is_paid'] == '1';
         final disputeStatus = (v['dispute_status'] ?? '').toString().toLowerCase();
         final isDisputePending = isDisputed && disputeStatus != 'rejected';
         final isDisputeRejected = disputeStatus == 'rejected';
@@ -579,6 +594,8 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
         Color strikeColor;
         if (isRevoked) {
           strikeColor = const Color(0xFF94A3B8);
+        } else if (isPaid) {
+          strikeColor = const Color(0xFF10B981);
         } else if (isDisputePending) {
           strikeColor = AppColors.electricBlue;
         } else if (strike >= 3) {
@@ -677,13 +694,15 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
                           child: Text(
                             isRevoked
                                 ? 'Strike $strike (Revoked)'
-                                : (isDisputePending
-                                    ? 'Strike $strike (Pending Review)'
-                                    : (isDisputeRejected ? 'Strike $strike (Upheld)' : 'Strike $strike')),
+                                : (isPaid
+                                    ? 'Strike $strike (Settled)'
+                                    : (isDisputePending
+                                        ? 'Strike $strike (Pending Review)'
+                                        : (isDisputeRejected ? 'Strike $strike (Upheld)' : 'Strike $strike'))),
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
-                              color: strikeColor,
+                              color: isPaid ? const Color(0xFF10B981) : strikeColor,
                               decoration: isRevoked ? TextDecoration.lineThrough : null,
                             ),
                           ),
@@ -696,20 +715,26 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
+                          color: isPaid ? const Color(0xFFECFDF5) : const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.monetization_on_outlined, size: 14, color: AppColors.electricBlue),
+                            Icon(
+                              isPaid ? Icons.check_circle_rounded : Icons.monetization_on_outlined,
+                              size: 14,
+                              color: isPaid ? const Color(0xFF10B981) : AppColors.electricBlue,
+                            ),
                             const SizedBox(width: 6),
                             Text(
-                              '₱${fine.toStringAsFixed(0)} Penalty Billed',
-                              style: const TextStyle(
+                              isPaid
+                                  ? '₱${fine.toStringAsFixed(0)} Penalty Settled'
+                                  : '₱${fine.toStringAsFixed(0)} Penalty Billed',
+                              style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF1E40AF),
+                                color: isPaid ? const Color(0xFF065F46) : const Color(0xFF1E40AF),
                               ),
                             ),
                           ],
@@ -744,6 +769,25 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w700,
                                   color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          )
+                        else if (isPaid)
+                          Row(
+                            children: const [
+                              Icon(
+                                Icons.verified_rounded,
+                                color: Color(0xFF10B981),
+                                size: 16,
+                              ),
+                              SizedBox(width: 5),
+                              Text(
+                                'Penalty Settled',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF10B981),
                                 ),
                               ),
                             ],

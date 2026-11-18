@@ -11,7 +11,7 @@
   </div>
   <a href="/dashboard.php?page=messages&compose=1<?= $selectedPropertyId ? '&property_id=' . $selectedPropertyId : '' ?><?= $activeTenantId ? '&tenant=' . $activeTenantId : '' ?>"
      class="btn btn-primary" style="width:auto; height:fit-content; display:inline-flex; align-items:center; gap:6px; padding:8px 14px; font-size:13px; white-space:nowrap; flex-shrink:0;">
-    <i class="bi bi-megaphone"></i> New Notification
+    <i class="ico ico-megaphone"></i> New Notification
   </a>
 </div>
 
@@ -30,7 +30,7 @@
     <div style="padding:12px 14px; border-bottom:1px solid var(--border); background:#fbfcfe;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
         <label for="buildingFilter" style="font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:var(--ink-500); margin:0;">
-          <i class="bi bi-building"></i> Filter Building
+          <i class="ico ico-building"></i> Filter Building
         </label>
         <span style="font-size:11px; font-weight:600; color:var(--primary); background:rgba(16,35,64,0.06); padding:1px 6px; border-radius:10px;">
           <?= count($tenants) ?> / <?= count($allTenants) ?>
@@ -52,7 +52,7 @@
     <div style="flex:1; overflow-y:auto;">
       <?php if (!$tenants): ?>
         <div style="padding:32px 16px; text-align:center; color:var(--ink-500); font-size:12.5px;">
-          <i class="bi bi-people" style="font-size:26px; display:block; margin-bottom:6px; color:var(--ink-300);"></i>
+          <i class="ico ico-people" style="font-size:26px; display:block; margin-bottom:6px; color:var(--ink-300);"></i>
           No tenants in this building yet.
         </div>
       <?php else: ?>
@@ -71,13 +71,13 @@
             
             <?php if (!empty($t['business_name'])): ?>
               <div style="font-size:11.5px; color:var(--ink-600); font-weight:500; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                <i class="bi bi-shop" style="font-size:11px; margin-right:2px; color:var(--ink-400);"></i><?= htmlspecialchars($t['business_name']) ?>
+                <i class="ico ico-shop" style="font-size:11px; margin-right:2px; color:var(--ink-400);"></i><?= htmlspecialchars($t['business_name']) ?>
               </div>
             <?php endif; ?>
 
             <div style="margin-top:4px;">
               <span style="display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:600; color:var(--primary); background:rgba(16,35,64,0.06); padding:2px 6px; border-radius:4px;">
-                <i class="bi bi-geo-alt" style="font-size:9.5px;"></i> <?= htmlspecialchars($t['property_name']) ?>
+                <i class="ico ico-geo-alt" style="font-size:9.5px;"></i> <?= htmlspecialchars($t['property_name']) ?>
               </span>
             </div>
           </a>
@@ -102,7 +102,7 @@
           </div>
           <div style="font-size:11.5px; color:var(--ink-500); margin-top:3px; display:flex; align-items:center; gap:8px;">
             <span style="color:var(--primary); font-weight:600;">
-              <i class="bi bi-building"></i> <?= htmlspecialchars($activeTenant['property_name']) ?>
+              <i class="ico ico-building"></i> <?= htmlspecialchars($activeTenant['property_name']) ?>
             </span>
             <?php if (!empty($activeTenant['unit_label'])): ?>
               <span>• Unit <?= htmlspecialchars($activeTenant['unit_label']) ?></span>
@@ -111,7 +111,7 @@
         </div>
         <div>
           <a href="/dashboard.php?page=tenants" class="btn" style="font-size:11.5px; padding:5px 12px; height:auto; color:var(--ink-700); border:1px solid var(--border); background:#fff; display:inline-flex; align-items:center; gap:5px;" title="View in Tenants Roster">
-            <i class="bi bi-person-badge"></i> Tenant Info
+            <i class="ico ico-person-badge"></i> Tenant Info
           </a>
         </div>
       </div>
@@ -120,7 +120,7 @@
       <div class="chat-messages" id="chat-messages-container" style="flex:1; overflow-y:auto; padding:20px;">
         <?php if (!$thread): ?>
           <div style="text-align:center; padding:40px 20px; color:var(--ink-500);">
-            <i class="bi bi-chat-dots" style="font-size:32px; color:var(--ink-300); display:block; margin-bottom:8px;"></i>
+            <i class="ico ico-chat-dots" style="font-size:32px; color:var(--ink-300); display:block; margin-bottom:8px;"></i>
             <p style="font-size:13px; margin:0 0 4px; font-weight:600; color:var(--ink-700);">No messages yet with <?= htmlspecialchars($activeTenant['tenant_name']) ?></p>
             <p style="font-size:11.5px; margin:0;">Send a direct message below to start the conversation.</p>
           </div>
@@ -128,7 +128,7 @@
           <div class="chat-bubble-row <?= $isMe ? 'me' : '' ?>">
             <div class="chat-bubble <?= $isMe ? 'me' : 'tenant' ?>">
               <?php if (!empty($m['notice_type'])): ?>
-                <p class="notice-label"><i class="bi bi-megaphone-fill" style="margin-right:3px;"></i><?= htmlspecialchars($m['notice_type']) ?></p>
+                <p class="notice-label"><i class="ico ico-megaphone-fill" style="margin-right:3px;"></i><?= htmlspecialchars($m['notice_type']) ?></p>
               <?php endif; ?>
               <div class="bubble-text"><?= nl2br(htmlspecialchars($m['body'])) ?></div>
               <p class="bubble-time"><?= (new DateTime($m['sent_at']))->format('M j, g:i A') ?></p>
@@ -143,13 +143,13 @@
         <input type="hidden" name="send_message" value="1">
         <input type="hidden" name="tenant_id" value="<?= $activeTenantId ?>">
         <input type="text" name="body" placeholder="Write a message to <?= htmlspecialchars($activeTenant['tenant_name']) ?>…" required autocomplete="off" autofocus>
-        <button type="submit" class="chat-send-btn" title="Send message"><i class="bi bi-send-fill"></i></button>
+        <button type="submit" class="chat-send-btn" title="Send message"><i class="ico ico-send-fill"></i></button>
       </form>
 
     <?php else: ?>
       <!-- EMPTY SELECTION STATE -->
       <div style="flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; color:var(--ink-500); padding:20px;">
-        <i class="bi bi-chat-square-text" style="font-size:36px; color:var(--ink-300); margin-bottom:12px;"></i>
+        <i class="ico ico-chat-square-text" style="font-size:36px; color:var(--ink-300); margin-bottom:12px;"></i>
         <h4 style="margin:0 0 6px; color:var(--ink-900);">No Tenant Selected</h4>
         <p style="font-size:13px; margin:0;">Select a tenant from the sidebar to view their message history.</p>
       </div>
@@ -191,7 +191,7 @@
         <tr>
           <td><span class="badge" style="background:var(--accent-soft); color:var(--primary); font-weight:600;"><?= htmlspecialchars($n['title']) ?></span></td>
           <td style="color:var(--ink-700); font-weight:500;">
-            <i class="bi bi-building" style="margin-right:4px; font-size:11px; color:var(--ink-400);"></i><?= htmlspecialchars($n['audience']) ?>
+            <i class="ico ico-building" style="margin-right:4px; font-size:11px; color:var(--ink-400);"></i><?= htmlspecialchars($n['audience']) ?>
           </td>
           <td style="color:var(--ink-600);"><?= htmlspecialchars($n['body']) ?></td>
           <td style="color:var(--ink-500); font-size:12px; white-space:nowrap;"><?= (new DateTime($n['sent_at']))->format('M j, g:i A') ?></td>
@@ -221,7 +221,7 @@
       <!-- TARGET BUILDING DROPDOWN -->
       <div style="margin-bottom:14px;">
         <label for="modalBuildingSelect" style="font-size:12px; font-weight:700; margin-bottom:6px; display:block; color:var(--ink-800);">
-          <i class="bi bi-building" style="margin-right:4px;"></i> Select Building
+          <i class="ico ico-building" style="margin-right:4px;"></i> Select Building
         </label>
         <select name="target_building" id="modalBuildingSelect" onchange="updateModalBuilding(this.value)" style="width:100%; padding:9px 12px; border-radius:8px; border:1px solid var(--border); font-size:13px; font-weight:600; color:var(--ink-900); background:#fff; cursor:pointer;">
           <option value="all" <?= ($selectedPropertyId === null) ? 'selected' : '' ?>>🏢 All Buildings (Broadcast to Everyone)</option>
@@ -238,7 +238,7 @@
       <!-- ALL TENANTS TOGGLE -->
       <label style="display:flex; align-items:center; justify-content:space-between; padding:12px; border:1px solid var(--border); border-radius:8px; margin-bottom:10px; cursor:pointer; background:#fbfcfe;">
         <span style="font-size:12.5px; font-weight:600; color:var(--ink-900);">
-          <i class="bi bi-people" style="margin-right:6px; color:var(--primary);"></i>
+          <i class="ico ico-people" style="margin-right:6px; color:var(--primary);"></i>
           <span id="allTenantsLabel">
             <?= $selectedPropertyId ? 'All tenants in this building' : 'All tenants (across all buildings)' ?>
           </span>
@@ -284,7 +284,7 @@
       </div>
 
       <button class="btn btn-primary" style="width:100%; margin-top:16px; display:flex; justify-content:center; align-items:center; gap:8px; padding:11px 16px; font-weight:600;" type="submit">
-        <i class="bi bi-megaphone"></i> Send Notification
+        <i class="ico ico-megaphone"></i> Send Notification
       </button>
     </form>
   </div>

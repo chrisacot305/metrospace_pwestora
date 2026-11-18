@@ -35,7 +35,7 @@
   </div>
   <a href="/dashboard.php?page=listings&add=1" class="btn btn-primary"
      style="width:auto; flex-shrink:0; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; padding:11px 20px;">
-    <i class="bi bi-plus-lg"></i> Add Property
+    <i class="ico ico-plus-lg"></i> Add Property
   </a>
 </div>
 
@@ -46,7 +46,7 @@
 <!-- SEARCH & FILTER BAR -->
 <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; padding:14px 16px; margin-bottom:20px; border:1px solid var(--border); border-radius:12px; background:var(--surface);">
   <div style="flex:1; min-width:220px; position:relative;">
-    <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--ink-400); font-size:13px;"></i>
+    <i class="ico ico-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--ink-400); font-size:13px;"></i>
     <input id="prop-search" type="search" placeholder="Search property name, address, or tenant..."
            autocomplete="off"
            style="width:100%; box-sizing:border-box; padding:8px 12px 8px 34px; border:1px solid var(--border); border-radius:8px; font:inherit; font-size:13px; background:var(--bg); color:var(--ink-900);">
@@ -103,7 +103,7 @@
         <?php if ($p['cover_photo']): ?>
           <img src="/<?= htmlspecialchars($p['cover_photo']) ?>" alt="<?= htmlspecialchars($p['name']) ?>">
         <?php else: ?>
-          <div class="prop-card-noimg"><i class="bi bi-building"></i></div>
+          <div class="prop-card-noimg"><i class="ico ico-building"></i></div>
         <?php endif; ?>
         <span class="prop-card-badge-type"><?= htmlspecialchars($p['type']) ?></span>
         <span class="prop-card-badge-status" style="<?= $statusBadge[1] ?>"><?= $statusBadge[0] ?></span>
@@ -113,7 +113,7 @@
         <?php if ($p['asking_rent']): ?>
           <p style="font-size:15px; font-weight:800; color:var(--primary); margin:4px 0 0;">₱<?= number_format($p['asking_rent'], 0) ?><span style="font-size:11px; font-weight:500; color:var(--ink-500);"> /month</span></p>
         <?php endif; ?>
-        <div class="prop-card-address"><i class="bi bi-geo-alt"></i> <?= htmlspecialchars($p['address']) ?></div>
+        <div class="prop-card-address"><i class="ico ico-geo-alt"></i> <?= htmlspecialchars($p['address']) ?></div>
         <?php if (!empty($p['landmark_name'])): ?>
           <div class="pm-card-landmark">
             <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
@@ -123,7 +123,7 @@
         <?php if ($p['latitude'] && $p['longitude']): ?>
           <a href="https://www.openstreetmap.org/?mlat=<?= $p['latitude'] ?>&mlon=<?= $p['longitude'] ?>#map=17/<?= $p['latitude'] ?>/<?= $p['longitude'] ?>"
              target="_blank" onclick="event.stopPropagation();" style="font-size:11.5px; color:var(--primary-light); font-weight:600; display:inline-block; margin-top:4px;">
-            <i class="bi bi-map"></i> View on map
+            <i class="ico ico-map"></i> View on map
           </a>
         <?php endif; ?>
 
@@ -131,17 +131,17 @@
         <div style="margin:8px 0 6px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;">
           <?php if ($propIsFull): ?>
             <span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#b91c1c; background:#fee2e2; padding:3px 8px; border-radius:12px;">
-              <i class="bi bi-x-circle-fill" style="font-size:10px;"></i> Full (0 / <?= $propTotalUnits ?> Available)
+              <i class="ico ico-x-circle-fill" style="font-size:10px;"></i> Full (0 / <?= $propTotalUnits ?> Available)
             </span>
           <?php else: ?>
             <span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#0369a1; background:#e0f2fe; padding:3px 8px; border-radius:12px;">
-              <i class="bi bi-check-circle-fill" style="font-size:10px;"></i> <?= $propAvailableUnits ?> / <?= $propTotalUnits ?> Spaces Available
+              <i class="ico ico-check-circle-fill" style="font-size:10px;"></i> <?= $propAvailableUnits ?> / <?= $propTotalUnits ?> Spaces Available
             </span>
           <?php endif; ?>
 
           <?php if ($propActiveTenants > 0): ?>
             <span style="font-size:11px; color:var(--ink-500); font-weight:600;">
-              <i class="bi bi-people-fill"></i> <?= $propActiveTenants ?> active <?= $propActiveTenants === 1 ? 'tenant' : 'tenants' ?>
+              <i class="ico ico-people-fill"></i> <?= $propActiveTenants ?> active <?= $propActiveTenants === 1 ? 'tenant' : 'tenants' ?>
             </span>
           <?php endif; ?>
         </div>
@@ -165,10 +165,10 @@
 
         <div style="margin-top:14px; padding-top:10px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
           <span style="font-size:12px; font-weight:700; color:var(--primary);">
-            <i class="bi bi-sliders"></i> Customize Property
+            <i class="ico ico-sliders"></i> Customize Property
           </span>
           <span class="btn" style="padding:4px 10px; font-size:11.5px; background:var(--bg); border:1px solid var(--border); color:var(--ink-800);">
-            Edit <i class="bi bi-chevron-right"></i>
+            Edit <i class="ico ico-chevron-right"></i>
           </span>
         </div>
       </div>

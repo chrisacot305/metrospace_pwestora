@@ -140,8 +140,8 @@ if ($action === 'reset_password') {
         json_error('Please enter a valid 6-digit verification code.');
     }
 
-    if (strlen($newPassword) < 6) {
-        json_error('Password must be at least 6 characters long.');
+    if (strlen($newPassword) < 8) {
+        json_error('Password must be at least 8 characters long.');
     }
 
     if (!$otpService->verify($normalizedPhone, $otp)) {

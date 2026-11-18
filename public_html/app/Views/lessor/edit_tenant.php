@@ -8,7 +8,7 @@
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
   <h2 style="margin:0;">Edit Tenant</h2>
   <a href="/dashboard.php?page=tenants" class="btn" style="background:var(--bg); border:1px solid var(--border); color:var(--ink-900);">
-    <i class="bi bi-arrow-left"></i> Back to Tenants
+    <i class="ico ico-arrow-left"></i> Back to Tenants
   </a>
 </div>
 
@@ -17,7 +17,7 @@
 <?php endif; ?>
 <?php if ($success): ?>
   <div style="background:var(--success-soft); color:var(--success); padding:12px 16px; border-radius:8px; margin-bottom:16px; font-weight:500;">
-    <i class="bi bi-check-circle"></i> <?= htmlspecialchars($success) ?>
+    <i class="ico ico-check-circle"></i> <?= htmlspecialchars($success) ?>
   </div>
 <?php endif; ?>
 
@@ -75,7 +75,7 @@
     </div>
 
     <button type="submit" class="btn btn-primary" style="width:100%; padding:10px; font-size:14px; font-weight:600;">
-      <i class="bi bi-save"></i> Save Changes
+      <i class="ico ico-save"></i> Save Changes
     </button>
   </form>
 </div>

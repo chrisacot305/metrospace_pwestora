@@ -669,7 +669,38 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
     return rev == true || rev == 1 || rev == '1';
   }
 
+  bool get _isPaid {
+    final p = widget.violation['is_paid'];
+    return p == true || p == 1 || p == '1';
+  }
+
   Widget _buildActionButtons() {
+    if (_isPaid) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF0FDF4),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: const Color(0xFF86EFAC), width: 1.2),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 22),
+            SizedBox(width: 10),
+            Text(
+              'Citation Penalty Paid & Settled',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF15803D),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     if (_isRevoked) {
       return Column(
         children: [

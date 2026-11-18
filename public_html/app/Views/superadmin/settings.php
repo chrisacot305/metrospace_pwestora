@@ -16,7 +16,7 @@
 
 <?php if ($successMsg): ?>
   <div id="temp-success-msg" class="success-msg">
-    <i class="bi bi-check-circle-fill"></i> <?= htmlspecialchars($successMsg) ?>
+    <i class="ico ico-check-circle-fill"></i> <?= htmlspecialchars($successMsg) ?>
   </div>
   <script>
     // Clean up the URL so refreshing doesn't resubmit the form
@@ -71,7 +71,7 @@
   <!-- ACTIONS -->
   <div class="mt-16">
     <button type="submit" class="btn btn-accent">
-      <i class="bi bi-save"></i> Save Changes
+      <i class="ico ico-save"></i> Save Changes
     </button>
   </div>
 </form>

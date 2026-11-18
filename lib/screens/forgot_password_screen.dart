@@ -916,7 +916,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     const SizedBox(height: 8),
                     const Center(
                       child: Text(
-                        'Enter a strong new password for your account. Must be at least 6 characters.',
+                        'Enter a strong new password for your account. Must be at least 8 characters.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 14,
@@ -975,7 +975,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ),
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Please enter your new password';
-                        if (v.length < 6) return 'Password must be at least 6 characters';
+                        if (v.length < 8) return 'Password must be at least 8 characters';
                         return null;
                       },
                     ),

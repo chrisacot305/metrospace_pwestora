@@ -12,7 +12,7 @@
   </div>
   
   <a href="/export_audit_log.php" class="btn btn-outline">
-    <i class="bi bi-download"></i> Export Full Log
+    <i class="ico ico-download"></i> Export Full Log
   </a>
 </div>
 
@@ -21,7 +21,7 @@
   <!-- SEARCH & FILTER BAR -->
   <div class="filter-bar">
     <div class="search-wrapper">
-      <i class="bi bi-search search-icon"></i>
+      <i class="ico ico-search search-icon"></i>
       <input id="audit-search" class="search-input" type="search" placeholder="Search actors or targets..." autocomplete="off">
     </div>
 
@@ -103,7 +103,7 @@
     var prevBtn = document.createElement('button');
     prevBtn.type = 'button';
     prevBtn.className = 'page-btn';
-    prevBtn.innerHTML = '<i class="bi bi-chevron-left"></i> Prev';
+    prevBtn.innerHTML = '<i class="ico ico-chevron-left"></i> Prev';
     prevBtn.disabled = currentPage === 1;
     prevBtn.addEventListener('click', function () {
       if (currentPage > 1) { currentPage--; filterTable(); }
@@ -161,7 +161,7 @@
     var nextBtn = document.createElement('button');
     nextBtn.type = 'button';
     nextBtn.className = 'page-btn';
-    nextBtn.innerHTML = 'Next <i class="bi bi-chevron-right"></i>';
+    nextBtn.innerHTML = 'Next <i class="ico ico-chevron-right"></i>';
     nextBtn.disabled = currentPage === totalPages;
     nextBtn.addEventListener('click', function () {
       if (currentPage < totalPages) { currentPage++; filterTable(); }

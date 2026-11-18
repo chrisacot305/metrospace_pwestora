@@ -66,9 +66,15 @@ final class PaymentsController extends Controller
                         $prePenalty = (float) ($preBilling['penalty_amount'] ?? 0);
                         $preOverdue = (float) ($preBilling['overdue_rent_amount'] ?? 0);
 
+                        // Settle violations if payment covers full arrears, or specifically covers the penalty, or if note indicates penalty target
                         if ($prePenalty > 0 && $amount >= ($preOverdue + $prePenalty - 0.01)) {
                             if (stripos($newNote, 'FineSettled:') === false) {
                                 $newNote .= ' | FineSettled: ' . number_format($prePenalty, 2, '.', '');
+                            }
+                            $shouldSettleViolations = true;
+                        } elseif ($prePenalty > 0 && ($amount >= ($prePenalty - 0.01) || stripos($currentNote, 'Penalty') !== false || stripos($currentNote, 'Fine') !== false)) {
+                            if (stripos($newNote, 'FineSettled:') === false) {
+                                $newNote .= ' | FineSettled: ' . number_format(min($amount, $prePenalty), 2, '.', '');
                             }
                             $shouldSettleViolations = true;
                         } elseif ($prePenalty <= 0.009 && $preOverdue > 0 && $amount >= ($preOverdue - 0.01)) {

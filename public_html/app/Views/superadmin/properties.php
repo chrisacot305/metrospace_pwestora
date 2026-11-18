@@ -16,7 +16,7 @@
   <!-- SEARCH & FILTER BAR -->
   <div class="filter-bar">
     <div class="search-wrapper">
-      <i class="bi bi-search search-icon"></i>
+      <i class="ico ico-search search-icon"></i>
       <input id="prop-search" class="search-input" type="search" placeholder="Search property name or lessor..." autocomplete="off">
     </div>
 
@@ -56,12 +56,12 @@
             <td><strong><?= htmlspecialchars($p['name']) ?></strong></td>
             <td><?= htmlspecialchars($p['lessor_name']) ?></td>
             <td><?= htmlspecialchars($p['type']) ?></td>
-            <td><i class="bi bi-file-earmark-text"></i> <?= $docCount ?> / <?= count($docLabels) ?> files</td>
+            <td><i class="ico ico-file-earmark-text"></i> <?= $docCount ?> / <?= count($docLabels) ?> files</td>
             <td>
               <?php if ($isPending): ?>
                 <span class="badge badge-pending">Pending Review</span>
               <?php elseif ($isVerified): ?>
-                <span class="badge badge-verified"><i class="bi bi-check-circle-fill"></i> Verified</span>
+                <span class="badge badge-verified"><i class="ico ico-check-circle-fill"></i> Verified</span>
               <?php else: ?>
                 <span class="badge badge-suspended">Rejected</span>
               <?php endif; ?>
@@ -156,7 +156,7 @@
     <div class="doc-list-wrap">
       <?php foreach ($docLabels as $key => $label): $path = $reviewing[$key] ?? null; ?>
         <div class="doc-list-item">
-          <span class="doc-label"><i class="bi bi-file-earmark-text"></i> <?= htmlspecialchars($label) ?></span>
+          <span class="doc-label"><i class="ico ico-file-earmark-text"></i> <?= htmlspecialchars($label) ?></span>
           <?php if ($path): ?>
             <a href="/<?= htmlspecialchars(ltrim($path, '/')) ?>" target="_blank" class="doc-link">View</a>
           <?php else: ?>
@@ -191,7 +191,7 @@
           <input type="hidden" name="property_id" value="<?= $reviewing['id'] ?>">
           <input type="hidden" name="action" value="approve">
           <button class="btn btn-approve" type="submit">
-            <i class="bi bi-check-lg"></i> Approve
+            <i class="ico ico-check-lg"></i> Approve
           </button>
         </form>
         <form method="POST">
@@ -199,7 +199,7 @@
           <input type="hidden" name="property_id" value="<?= $reviewing['id'] ?>">
           <input type="hidden" name="action" value="reject">
           <button class="btn btn-reject" type="submit">
-            <i class="bi bi-x-lg"></i> Reject
+            <i class="ico ico-x-lg"></i> Reject
           </button>
         </form>
       </div>

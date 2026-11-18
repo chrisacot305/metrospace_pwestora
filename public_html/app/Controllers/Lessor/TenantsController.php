@@ -157,6 +157,24 @@ final class TenantsController extends Controller
         }
         unset($t);
 
+        // Transaction history for the "History" popup (payments, deposits, installments, violations).
+        $tenantHistory = [];
+        try {
+            $allHistory = (new \App\Models\TenantHistoryModel($this->pdo))->forLessor($lessorId);
+            foreach ($tenants as $t) {
+                $tid = (int) $t['id'];
+                $tenantHistory[$tid] = [
+                    'tenant'   => (string) $t['tenant_name'],
+                    'business' => (string) ($t['business_name'] ?? ''),
+                    'property' => (string) ($t['property_name'] ?? ''),
+                    'events'   => $allHistory[$tid]['events'] ?? [],
+                    'summary'  => $allHistory[$tid]['summary'] ?? ['paid' => 0, 'pending' => 0, 'held' => 0, 'unpaid' => 0, 'strikes' => 0],
+                ];
+            }
+        } catch (\Throwable $e) {
+            error_log('Tenant history failed: ' . $e->getMessage());
+        }
+
         $viewTermsId = isset($_GET['view_terms']) ? (int) $_GET['view_terms'] : null;
         $viewingTenant = null;
         if ($viewTermsId) {

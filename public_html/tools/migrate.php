@@ -70,6 +70,10 @@ $pdo->exec('CREATE TABLE IF NOT EXISTS saved_properties (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 echo "  ok table saved_properties\n";
 
+// Forgot-password links (also created automatically on first use by PasswordResetModel).
+new App\Models\PasswordResetModel($pdo);
+echo "  ok table password_resets\n";
+
 require_once APP_PATH . '/Services/RentNotificationService.php';
 ensure_sms_reminder_logs_table($pdo);
 echo "  ok table sms_reminder_logs\n";

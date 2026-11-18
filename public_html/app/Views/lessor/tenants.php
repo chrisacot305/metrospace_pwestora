@@ -180,11 +180,11 @@
                 <?php elseif ($cs === 'rejected'): ?><span style="margin-left:auto; font-size:10px; color:#dc2626; font-weight:700;">Declined</span><?php endif; ?>
               </a>
 
-              <a href="/dashboard.php?page=payments&tenant=<?= $t['id'] ?>" 
-                 style="display:flex; align-items:center; padding:10px 14px; color:var(--ink-900); text-decoration:none; font-size:12.5px; border-bottom:1px solid var(--bg);">
+              <button type="button" onclick="openTenantHistory(<?= (int) $t['id'] ?>)"
+                 style="display:flex; align-items:center; width:100%; padding:10px 14px; color:var(--ink-900); background:#fff; border:none; border-bottom:1px solid var(--bg); font:inherit; font-size:12.5px; cursor:pointer; text-align:left;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px; color:var(--ink-500);"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> 
                 History
-              </a>
+              </button>
               
               <a href="/dashboard.php?page=messages&tenant=<?= $t['id'] ?>" 
                  style="display:flex; align-items:center; padding:10px 14px; color:var(--ink-900); text-decoration:none; font-size:12.5px; border-bottom:1px solid var(--bg);">
@@ -470,4 +470,144 @@
     </div>
   </div>
 </div>
+<?php endif; ?>
+
+<?php if ($tenants): ?>
+<!-- ===================== Tenant History popup ===================== -->
+<style>
+  .th-overlay { position:fixed; inset:0; background:rgba(15,23,42,.5); display:none; align-items:center; justify-content:center; z-index:1100; padding:16px; backdrop-filter:blur(2px); }
+  .th-overlay.open { display:flex; }
+  .th-modal { background:#fff; width:720px; max-width:100%; max-height:90vh; border-radius:14px; box-shadow:0 20px 60px rgba(0,0,0,.25); display:flex; flex-direction:column; overflow:hidden; }
+  .th-head { padding:18px 20px 14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; gap:12px; align-items:flex-start; }
+  .th-head h3 { margin:0; font-size:17px; color:var(--ink-900); }
+  .th-sub { font-size:12.5px; color:var(--ink-500); margin-top:3px; }
+  .th-x { background:none; border:none; font-size:26px; line-height:1; color:var(--ink-500); cursor:pointer; padding:0 4px; }
+  .th-sum { display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; padding:14px 20px; background:var(--bg); }
+  .th-tile { background:#fff; border:1px solid var(--border); border-radius:10px; padding:10px 12px; }
+  .th-tile span { display:block; font-size:11px; color:var(--ink-500); text-transform:uppercase; letter-spacing:.3px; }
+  .th-tile strong { display:block; font-size:16px; color:var(--ink-900); margin-top:3px; }
+  .th-tabs { display:flex; gap:6px; padding:12px 20px 0; flex-wrap:wrap; }
+  .th-tab { border:1px solid var(--border); background:#fff; color:var(--ink-700, #374151); font:inherit; font-size:12px; font-weight:600; padding:6px 12px; border-radius:999px; cursor:pointer; }
+  .th-tab.active { background:var(--primary); border-color:var(--primary); color:#fff; }
+  .th-list { overflow-y:auto; padding:8px 20px 20px; flex:1; }
+  .th-item { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--bg); align-items:flex-start; }
+  .th-dot { width:34px; height:34px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; }
+  .th-dot.payment { background:#e0ecff; color:#1d4ed8; } .th-dot.deposit { background:#dcfce7; color:#15803d; }
+  .th-dot.installment { background:#fef3c7; color:#b45309; } .th-dot.violation { background:#fee2e2; color:#b91c1c; }
+  .th-main { flex:1; min-width:0; }
+  .th-title { font-weight:600; font-size:13.5px; color:var(--ink-900); }
+  .th-detail { font-size:12px; color:var(--ink-500); margin-top:2px; word-break:break-word; }
+  .th-date { font-size:11.5px; color:var(--ink-400, #9ca3af); margin-top:2px; }
+  .th-right { text-align:right; flex-shrink:0; }
+  .th-amt { font-weight:800; font-size:14px; color:var(--ink-900); }
+  .th-pill { display:inline-block; margin-top:4px; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px; }
+  .th-pill.good { background:var(--success-soft); color:var(--success); } .th-pill.warn { background:var(--warning-soft); color:var(--warning); }
+  .th-pill.bad { background:var(--error-soft, #fee2e2); color:var(--error); } .th-pill.muted { background:var(--bg); color:var(--ink-500); }
+  .th-empty { text-align:center; color:var(--ink-500); padding:40px 10px; font-size:13px; }
+  @media (max-width: 640px) {
+    .th-overlay { padding:0; align-items:flex-end; }
+    .th-modal { max-height:92vh; border-radius:14px 14px 0 0; }
+    .th-sum { grid-template-columns:repeat(2, 1fr); }
+  }
+</style>
+
+<div class="th-overlay" id="thOverlay" role="dialog" aria-modal="true" aria-labelledby="thName">
+  <div class="th-modal">
+    <div class="th-head">
+      <div style="min-width:0;">
+        <h3 id="thName">Transaction history</h3>
+        <div class="th-sub" id="thSub"></div>
+      </div>
+      <button type="button" class="th-x" id="thClose" aria-label="Close">&times;</button>
+    </div>
+    <div class="th-sum">
+      <div class="th-tile"><span>Total paid</span><strong id="thPaid">₱0</strong></div>
+      <div class="th-tile"><span>Deposit held</span><strong id="thHeld">₱0</strong></div>
+      <div class="th-tile"><span>Pending review</span><strong id="thPending">0</strong></div>
+      <div class="th-tile"><span>Unpaid fines</span><strong id="thFines">₱0</strong></div>
+    </div>
+    <div class="th-tabs" id="thTabs">
+      <button type="button" class="th-tab active" data-type="">All</button>
+      <button type="button" class="th-tab" data-type="payment">Payments</button>
+      <button type="button" class="th-tab" data-type="deposit">Deposits</button>
+      <button type="button" class="th-tab" data-type="installment">Installments</button>
+      <button type="button" class="th-tab" data-type="violation">Violations</button>
+    </div>
+    <div class="th-list" id="thList"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var DATA = <?= js($tenantHistory ?? []) ?>;
+  var overlay = document.getElementById('thOverlay');
+  var list = document.getElementById('thList');
+  var tabs = document.querySelectorAll('#thTabs .th-tab');
+  var current = null, filter = '';
+  var LETTER = { payment: '₱', deposit: 'SD', installment: 'IN', violation: '!' };
+
+  function peso(n) { return '₱' + Number(n || 0).toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+  function fmtDate(s) {
+    if (!s) return '';
+    var d = new Date(String(s).replace(' ', 'T'));
+    if (isNaN(d)) return s;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      + (/\d{2}:\d{2}/.test(s) && !/00:00:00$/.test(s) ? ' · ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '');
+  }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  function render() {
+    list.innerHTML = '';
+    var events = (current.events || []).filter(function (e) { return !filter || e.type === filter; });
+    if (!events.length) {
+      list.appendChild(el('div', 'th-empty', filter ? 'No records of this type yet.' : 'No transactions recorded for this tenant yet.'));
+      return;
+    }
+    events.forEach(function (e) {
+      var row = el('div', 'th-item');
+      row.appendChild(el('div', 'th-dot ' + e.type, LETTER[e.type] || '•'));
+      var main = el('div', 'th-main');
+      main.appendChild(el('div', 'th-title', e.title));
+      if (e.detail) main.appendChild(el('div', 'th-detail', e.detail));
+      main.appendChild(el('div', 'th-date', fmtDate(e.date)));
+      row.appendChild(main);
+      var right = el('div', 'th-right');
+      if (e.amount !== null && e.amount !== undefined) right.appendChild(el('div', 'th-amt', peso(e.amount)));
+      right.appendChild(el('span', 'th-pill ' + e.tone, e.status));
+      row.appendChild(right);
+      list.appendChild(row);
+    });
+  }
+
+  window.openTenantHistory = function (id) {
+    current = DATA[id];
+    if (!current) return;
+    document.querySelectorAll('.action-dropdown-menu').forEach(function (d) { d.style.display = 'none'; });
+    document.getElementById('thName').textContent = current.tenant + (current.business ? ' · ' + current.business : '');
+    document.getElementById('thSub').textContent = 'Transaction history at ' + (current.property || 'this property');
+    var s = current.summary || {};
+    document.getElementById('thPaid').textContent = peso(s.paid);
+    document.getElementById('thHeld').textContent = peso(s.held);
+    document.getElementById('thPending').textContent = s.pending || 0;
+    document.getElementById('thFines').textContent = peso(s.unpaid);
+    filter = '';
+    tabs.forEach(function (t) { t.classList.toggle('active', t.dataset.type === ''); });
+    render();
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  };
+  function close() { overlay.classList.remove('open'); document.body.style.overflow = ''; }
+
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      filter = t.dataset.type;
+      tabs.forEach(function (x) { x.classList.toggle('active', x === t); });
+      render();
+    });
+  });
+  document.getElementById('thClose').addEventListener('click', close);
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && overlay.classList.contains('open')) close(); });
+})();
+</script>
 <?php endif; ?>

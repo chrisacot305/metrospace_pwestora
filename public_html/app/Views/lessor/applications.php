@@ -19,14 +19,14 @@
   <div style="display:flex; gap:10px; flex-wrap:nowrap; align-items:center; padding:14px 16px; border-bottom:1px solid var(--border); overflow-x:auto;">
     
     <div style="flex:1; min-width:220px; position:relative;">
-      <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--ink-400); font-size:13px;"></i>
+      <i class="ico ico-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--ink-400); font-size:13px;"></i>
       <input id="app-search" type="search" placeholder="Search applicant, business, or property..."
              autocomplete="off"
              style="width:100%; box-sizing:border-box; padding:8px 12px 8px 34px; border:1px solid var(--border); border-radius:8px; font:inherit; font-size:13px; background:var(--bg); color:var(--ink-900);">
     </div>
 
     <a href="/dashboard.php?page=applications&log=1" class="btn btn-primary" style="width:auto; display:inline-flex; align-items:center; gap:6px; padding:6px 14px; font-size:12px; flex-shrink:0;">
-      <i class="bi bi-plus-lg"></i> Log Application
+      <i class="ico ico-plus-lg"></i> Log Application
     </a>
 
     <select id="app-status-filter"
@@ -75,7 +75,7 @@
           <td>
             <?php if ($appDocs > 0): ?>
               <span class="badge" style="background:#e6f4ea; color:#137333; font-weight:600;">
-                <i class="bi bi-file-earmark-check"></i> <?= $appDocs ?>/4 Docs
+                <i class="ico ico-file-earmark-check"></i> <?= $appDocs ?>/4 Docs
               </span>
             <?php else: ?>
               <span style="font-size:11.5px; color:var(--ink-400);">None</span>
@@ -150,7 +150,7 @@
     // Previous Button
     var prevBtn = document.createElement('button');
     prevBtn.type = 'button';
-    prevBtn.innerHTML = '<i class="bi bi-chevron-left"></i> Prev';
+    prevBtn.innerHTML = '<i class="ico ico-chevron-left"></i> Prev';
     prevBtn.disabled = currentPage === 1;
     prevBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:' + (currentPage === 1 ? 'var(--bg)' : '#fff') + '; color:' + (currentPage === 1 ? 'var(--ink-300)' : 'var(--ink-900)') + '; cursor:' + (currentPage === 1 ? 'not-allowed' : 'pointer') + '; font-family:inherit; font-weight:500;';
     prevBtn.addEventListener('click', function () {
@@ -180,7 +180,7 @@
     // Next Button
     var nextBtn = document.createElement('button');
     nextBtn.type = 'button';
-    nextBtn.innerHTML = 'Next <i class="bi bi-chevron-right"></i>';
+    nextBtn.innerHTML = 'Next <i class="ico ico-chevron-right"></i>';
     nextBtn.disabled = currentPage === totalPages;
     nextBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:' + (currentPage === totalPages ? 'var(--bg)' : '#fff') + '; color:' + (currentPage === totalPages ? 'var(--ink-300)' : 'var(--ink-900)') + '; cursor:' + (currentPage === totalPages ? 'not-allowed' : 'pointer') + '; font-family:inherit; font-weight:500;';
     nextBtn.addEventListener('click', function () {
@@ -390,25 +390,25 @@
 
     <?php
     $tenantDocLabels = [
-        'valid_id_path'        => ['label' => 'Valid Government ID',         'icon' => 'bi-person-badge'],
-        'sec_dti_path'         => ['label' => 'SEC / DTI Registration',      'icon' => 'bi-file-earmark-ruled'],
-        'business_permit_path' => ['label' => "Mayor's / Business Permit",  'icon' => 'bi-file-earmark-check'],
-        'bir_cert_path'        => ['label' => 'BIR Certificate / Registration', 'icon' => 'bi-file-earmark-text'],
+        'valid_id_path'        => ['label' => 'Valid Government ID',         'icon' => 'ico-person-badge'],
+        'sec_dti_path'         => ['label' => 'SEC / DTI Registration',      'icon' => 'ico-file-earmark-ruled'],
+        'business_permit_path' => ['label' => "Mayor's / Business Permit",  'icon' => 'ico-file-earmark-check'],
+        'bir_cert_path'        => ['label' => 'BIR Certificate / Registration', 'icon' => 'ico-file-earmark-text'],
     ];
     ?>
     <div class="card" style="margin-bottom:16px;">
       <p style="margin:0 0 10px; font-size:12.5px; font-weight:700; color:var(--ink-900);">
-        <i class="bi bi-folder2-open" style="color:var(--primary); margin-right:4px;"></i> Tenant Verification Documents
+        <i class="ico ico-folder2-open" style="color:var(--primary); margin-right:4px;"></i> Tenant Verification Documents
       </p>
       <div style="display:flex; flex-direction:column; gap:8px;">
         <?php foreach ($tenantDocLabels as $key => $info): $path = $reviewing[$key] ?? null; ?>
           <div style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border:1px solid var(--border); border-radius:8px; background:var(--bg);">
             <span style="font-size:12px; font-weight:500; color:var(--ink-800); display:flex; align-items:center; gap:6px;">
-              <i class="bi <?= $info['icon'] ?>" style="color:var(--ink-500);"></i> <?= $info['label'] ?>
+              <i class="ico <?= $info['icon'] ?>" style="color:var(--ink-500);"></i> <?= $info['label'] ?>
             </span>
             <?php if (!empty($path)): ?>
               <a href="/<?= htmlspecialchars($path) ?>" target="_blank" class="btn btn-primary" style="width:auto; padding:4px 10px; font-size:11.5px; display:inline-flex; align-items:center; gap:4px; text-decoration:none;">
-                <i class="bi bi-box-arrow-up-right"></i> View
+                <i class="ico ico-box-arrow-up-right"></i> View
               </a>
             <?php else: ?>
               <span style="font-size:11px; color:var(--ink-400); font-style:italic;">Not uploaded</span>

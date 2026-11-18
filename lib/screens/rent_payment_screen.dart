@@ -55,7 +55,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     return [];
   }
 
-  // Exact backend fine (Strike 1 = ₱0, Strike 2 = ₱500, Strike 3 = ₱1,500)
+  // Exact backend fine (Strike 1 = ₱0, Strike 2 = ₱500 late fee / ₱0 conduct, Strike 3 = ₱1,000)
   double get _effectiveLateFee => _penaltyAmount;
 
   double get _overdueRentAmount =>

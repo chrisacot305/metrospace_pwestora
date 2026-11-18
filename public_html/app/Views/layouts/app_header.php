@@ -13,8 +13,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title><?= APP_NAME ?> · <?= htmlspecialchars(ucfirst($page)) ?></title>
-<link rel="stylesheet" href="/assets/css/style.css?v=13">
 <link rel="stylesheet" href="/assets/css/style.css?v=<?= filemtime(APP_ROOT . '/assets/css/style.css') ?>">
+<link rel="stylesheet" href="/assets/css/icons.css?v=<?= @filemtime(APP_ROOT . '/assets/css/icons.css') ?: 1 ?>">
 <link rel="stylesheet" href="/assets/css/enhancements.css?v=<?= @filemtime(APP_ROOT . '/assets/css/enhancements.css') ?: 1 ?>">
 <link rel="icon" type="image/png" href="/assets/img/icon.png">
 <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png?v=2">
@@ -30,7 +30,7 @@
       <?php foreach ($nav as $item): ?>
         <a class="nav-item <?= $page === $item['id'] ? 'active' : '' ?>"
            href="/dashboard.php?page=<?= $item['id'] ?>">
-          <i class="bi <?= $item['icon'] ?>"></i> <span><?= $item['label'] ?></span>
+          <i class="ico <?= $item['icon'] ?>"></i> <span><?= $item['label'] ?></span>
           <?php if ($item['id'] === 'payments' && !empty($pendingPaymentsCount)): ?>
             <span class="badge badge-pending" style="margin-left:auto; font-size:11px; padding:2px 7px;"><?= $pendingPaymentsCount ?></span>
           <?php endif; ?>
@@ -42,7 +42,11 @@
   <div class="main">
     <div class="topbar">
       <div class="who">
-        <button class="menu-toggle" id="menuToggle" aria-label="Open menu"><i class="bi bi-list"></i></button>
+        <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+            <line x1="4" y1="6" x2="20" y2="6"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="18" x2="20" y2="18"></line>
+          </svg>
+        </button>
         <div style="min-width:0;">
           <strong><?= htmlspecialchars($user['company'] ?: $user['name']) ?></strong>
           <span class="role-pill" style="margin-left:8px;"><?= $roleLabel ?></span>
@@ -104,7 +108,7 @@
         <?php endif; ?>
         <span class="email-full"><?= htmlspecialchars($user['email']) ?></span>
         <a href="/logout.php" class="btn btn-primary" style="padding:8px 14px;">
-          <i class="bi bi-box-arrow-right"></i> <span class="d-none-mobile">Log out</span>
+          <i class="ico ico-box-arrow-right"></i> <span class="d-none-mobile">Log out</span>
         </a>
       </div>
     </div>
@@ -129,7 +133,7 @@
             <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
             <input type="hidden" name="mark_all_read" value="1">
             <button type="submit" class="btn" style="background:var(--bg); border:1px solid var(--border); color:var(--ink-800); font-weight:600; padding:6px 12px; font-size:12px; border-radius:8px;">
-              <i class="bi bi-check2-all" style="margin-right:4px;"></i> Mark all read
+              <i class="ico ico-check2-all" style="margin-right:4px;"></i> Mark all read
             </button>
           </form>
         <?php endif; ?>
@@ -141,7 +145,7 @@
     <div style="flex:1; overflow-y:auto; border-top:1px solid var(--border); padding-top:8px;">
       <?php if (!$allNotices): ?>
         <div style="padding:60px 20px; text-align:center; color:var(--ink-500);">
-          <i class="bi bi-bell-slash" style="font-size:32px; color:var(--border); display:block; margin-bottom:12px;"></i>
+          <i class="ico ico-bell-slash" style="font-size:32px; color:var(--border); display:block; margin-bottom:12px;"></i>
           You're all caught up! No notifications to show.
         </div>
       <?php else: ?>
@@ -160,7 +164,7 @@
                   </h4>
                   <p style="margin:0 0 8px; font-size:12.5px; color:var(--ink-700); line-height:1.5; white-space:pre-wrap;"><?= htmlspecialchars($n['body']) ?></p>
                   <div style="font-size:11px; color:var(--ink-400); font-weight:500;">
-                    <i class="bi bi-clock" style="margin-right:4px;"></i> <?= (new DateTime($n['sent_at']))->format('M j, Y g:i A') ?>
+                    <i class="ico ico-clock" style="margin-right:4px;"></i> <?= (new DateTime($n['sent_at']))->format('M j, Y g:i A') ?>
                   </div>
                 </div>
               </div>
@@ -193,10 +197,11 @@
   var sidebar = document.getElementById('sidebar');
   var overlay = document.getElementById('sidebarOverlay');
   var toggle = document.getElementById('menuToggle');
-  function open() { sidebar.classList.add('open'); overlay.classList.add('open'); }
-  function close() { sidebar.classList.remove('open'); overlay.classList.remove('open'); }
-  if (toggle) toggle.addEventListener('click', open);
+  function open() { sidebar.classList.add('open'); overlay.classList.add('open'); if (toggle) toggle.setAttribute('aria-expanded', 'true'); }
+  function close() { sidebar.classList.remove('open'); overlay.classList.remove('open'); if (toggle) toggle.setAttribute('aria-expanded', 'false'); }
+  if (toggle) toggle.addEventListener('click', function () { sidebar.classList.contains('open') ? close() : open(); });
   if (overlay) overlay.addEventListener('click', close);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
 
   // Notification Bell Logic
   var bell = document.getElementById('notifBell');

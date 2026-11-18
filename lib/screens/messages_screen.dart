@@ -167,12 +167,16 @@ class _MessagesScreenState extends State<MessagesScreen> {
             // Fallback: If no chat message exists in the database thread for this violation,
             // synthesize an official citation card entry in parsedMsgs so it appears in the chat feed!
             final strikeBadge = 'STRIKE $strike OF 3';
-            final penaltyLine = strike == 2
-                ? '\nPenalty Injected: ₱500.00 late/infraction penalty added to billing statement.'
-                : (strike >= 3
-                    ? '\nPenalty Injected: ₱1,500.00 penalty & Formal Lease Termination / Eviction proceedings initiated.'
-                    : '\nAction Required: Immediate compliance with commercial property guidelines.');
             final category = v['category']?.toString() ?? 'Lease Violation';
+            final catLower = category.toLowerCase();
+            final isLateRent = catLower.contains('rent') || catLower.contains('due') || catLower.contains('past due');
+            final penaltyLine = strike >= 3
+                ? '\nPenalty Injected: ₱1,000.00 penalty & Formal Lease Termination / Eviction proceedings initiated.'
+                : (strike == 2
+                    ? (isLateRent
+                        ? '\nPenalty Injected: ₱500.00 late payment penalty added to billing statement.'
+                        : '\nPenalty Injected: ₱0.00 (Strike 2 recorded. Action required to prevent escalation to Strike 3 eviction).')
+                    : '\nAction Required: Immediate compliance with commercial property guidelines.');
             final msgBody = '⚠️ OFFICIAL NOTICE OF INFRACTION ($strikeBadge)\nCategory: $category$penaltyLine\n\nA formal citation has been officially recorded against your lease agreement. Please review the citation details and disciplinary policy under your account.';
 
             final vId = v['id'] is int ? v['id'] as int : int.tryParse(v['id']?.toString() ?? '0') ?? 0;

@@ -19,7 +19,7 @@
   <div style="display:flex; gap:10px; flex-wrap:nowrap; align-items:center; padding:14px 16px; border-bottom:1px solid var(--border); overflow-x:auto;">
     
     <div style="flex:1; min-width:220px; position:relative;">
-      <i class="bi bi-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--ink-400); font-size:13px;"></i>
+      <i class="ico ico-search" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--ink-400); font-size:13px;"></i>
       <input id="req-search" type="search" placeholder="Search property, tenant, reason, or plan..."
              autocomplete="off"
              style="width:100%; box-sizing:border-box; padding:8px 12px 8px 34px; border:1px solid var(--border); border-radius:8px; font:inherit; font-size:13px; background:var(--bg); color:var(--ink-900);">
@@ -27,7 +27,7 @@
 
     <!-- LOG REQUEST BUTTON -->
     <a href="/dashboard.php?page=installments&log=1" class="btn btn-primary" style="width:auto; display:inline-flex; align-items:center; gap:6px; padding:6px 14px; font-size:12px; flex-shrink:0;">
-      <i class="bi bi-plus-lg"></i> Log Request
+      <i class="ico ico-plus-lg"></i> Log Request
     </a>
 
     <select id="req-status-filter"
@@ -123,7 +123,7 @@
 
     var prevBtn = document.createElement('button');
     prevBtn.type = 'button';
-    prevBtn.innerHTML = '<i class="bi bi-chevron-left"></i> Prev';
+    prevBtn.innerHTML = '<i class="ico ico-chevron-left"></i> Prev';
     prevBtn.disabled = currentPage === 1;
     prevBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:' + (currentPage === 1 ? 'var(--bg)' : '#fff') + '; color:' + (currentPage === 1 ? 'var(--ink-300)' : 'var(--ink-900)') + '; cursor:' + (currentPage === 1 ? 'not-allowed' : 'pointer') + '; font-family:inherit; font-weight:500;';
     prevBtn.addEventListener('click', function () {
@@ -147,7 +147,7 @@
 
     var nextBtn = document.createElement('button');
     nextBtn.type = 'button';
-    nextBtn.innerHTML = 'Next <i class="bi bi-chevron-right"></i>';
+    nextBtn.innerHTML = 'Next <i class="ico ico-chevron-right"></i>';
     nextBtn.disabled = currentPage === totalPages;
     nextBtn.style.cssText = 'padding:5px 10px; font-size:12px; border:1px solid var(--border); border-radius:6px; background:' + (currentPage === totalPages ? 'var(--bg)' : '#fff') + '; color:' + (currentPage === totalPages ? 'var(--ink-300)' : 'var(--ink-900)') + '; cursor:' + (currentPage === totalPages ? 'not-allowed' : 'pointer') + '; font-family:inherit; font-weight:500;';
     nextBtn.addEventListener('click', function () {
@@ -342,7 +342,7 @@
         <input type="hidden" name="request_id" value="<?= $reviewing['id'] ?>">
         <input type="hidden" name="action" value="approve">
         <button class="btn" style="width:100%; background:var(--success); color:#fff;" type="submit">
-          <i class="bi bi-check-lg"></i> Approve Plan
+          <i class="ico ico-check-lg"></i> Approve Plan
         </button>
       </form>
       <form method="POST" action="/dashboard.php?page=installments" style="flex:1;">
@@ -350,7 +350,7 @@
         <input type="hidden" name="request_id" value="<?= $reviewing['id'] ?>">
         <input type="hidden" name="action" value="reject">
         <button class="btn" style="width:100%; background:var(--error); color:#fff;" type="submit">
-          <i class="bi bi-x-lg"></i> Reject
+          <i class="ico ico-x-lg"></i> Reject
         </button>
       </form>
     </div>

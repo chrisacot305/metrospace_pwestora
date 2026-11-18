@@ -34,6 +34,9 @@
       <h2 class="auth-title">Welcome back</h2>
       <p class="auth-sub">Log in as Admin (Lessor) or Super Admin.</p>
 
+      <?php if (!empty($success)): ?>
+        <div class="success-msg"><?= htmlspecialchars($success) ?></div>
+      <?php endif; ?>
       <?php if ($error): ?>
         <div class="error-msg"><?= htmlspecialchars($error) ?></div>
       <?php endif; ?>
@@ -46,7 +49,10 @@
         </div>
         <div class="field">
           <label>Password</label>
-          <input type="password" name="password" required placeholder="••••••••">
+          <input type="password" name="password" required placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div style="text-align:right; margin:-6px 0 14px; font-size:13px;">
+          <a class="btn-link" href="/forgot_password.php">Forgot password?</a>
         </div>
         <button class="btn btn-primary" type="submit">Log in</button>
       </form>

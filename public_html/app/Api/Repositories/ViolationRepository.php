@@ -68,16 +68,16 @@ final class ViolationRepository extends Repository
 
     /**
      * Unpaid strike 2+ violations with their fine.
-     * Default fines when none is set: strike 2 = 500, strike 3+ = 1500.
+     * Respects recorded fine_amount (late rent = 500, conduct = 0; strike 3 = 1000).
      */
     public function unpaidFinesForTenant(int $tenantId): array
     {
         return $this->fetchAll(
             'SELECT id, category, strike,
                     CASE
-                        WHEN fine_amount > 0 THEN fine_amount
-                        WHEN strike = 2 THEN 500.00
-                        WHEN strike >= 3 THEN 1500.00
+                        WHEN fine_amount IS NOT NULL THEN fine_amount
+                        WHEN strike >= 3 THEN 1000.00
+                        WHEN strike = 2 AND (category LIKE "%Rent%" OR category LIKE "%Due%") THEN 500.00
                         ELSE 0.00
                     END AS fine_amount,
                     issued_at
