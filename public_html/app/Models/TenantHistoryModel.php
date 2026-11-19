@@ -115,8 +115,10 @@ class TenantHistoryModel extends Model
                 [$status, $tone] = ['Fine paid', 'good'];
             } elseif ($fine > 0) {
                 [$status, $tone] = ['Fine unpaid', 'bad'];
+            } elseif (!empty($v['acknowledged'])) {
+                [$status, $tone] = ['Acknowledged', 'good'];
             } else {
-                [$status, $tone] = ['Recorded', 'bad'];
+                [$status, $tone] = ['Pending Acknowledgment', 'muted'];
             }
             $add((int) $v['tenant_id'], [
                 'type'   => 'violation',

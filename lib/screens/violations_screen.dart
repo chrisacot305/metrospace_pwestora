@@ -859,7 +859,7 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
                               ),
                               SizedBox(width: 5),
                               Text(
-                                'Pending Read · Tap to Review',
+                                'Pending Acknowledgment · Tap to Review',
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w700,

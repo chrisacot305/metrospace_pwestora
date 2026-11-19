@@ -172,11 +172,11 @@
               <?php elseif (!empty($v['dispute_status']) && $v['dispute_status'] === 'rejected'): ?>
                 <span class="badge badge-rejected" style="font-size:11px;">Dispute Rejected (Upheld)</span>
               <?php elseif ($v['acknowledged']): ?>
-                <span class="badge badge-approved" style="font-size:11px;">
-                  Read
+                <span class="badge badge-approved" style="font-size:11px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-weight:700;">
+                  Acknowledged
                 </span>
               <?php else: ?>
-                <span class="badge" style="background:#f1f3f4; color:var(--ink-500); font-size:11px;">Pending Read</span>
+                <span class="badge" style="background:#f1f3f4; color:var(--ink-500); font-size:11px;">Pending Acknowledgment</span>
               <?php endif; ?>
             </td>
             
@@ -383,7 +383,7 @@
         <script type="application/json" id="viol_categories_data"><?= json_encode($tenantCategories, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?></script>
 
         <p style="font-size:12.5px; color:var(--ink-500); margin-bottom:24px; line-height:1.5; background:var(--bg); padding:12px; border-radius:8px;">
-          This creates a permanent digital citation that quotes the contract clause and its legal basis. The tenant receives a notification with a read receipt — escalation strikes accumulate automatically per tenant.
+          This creates a permanent digital citation that quotes the contract clause and its legal basis. The tenant receives a notification requiring formal acknowledgment — escalation strikes accumulate automatically per tenant.
         </p>
 
         <button class="btn btn-primary" style="width:100%; display:flex; justify-content:center; padding:12px; border-radius:8px; font-weight:600; background:var(--error); border:none;" type="submit">
