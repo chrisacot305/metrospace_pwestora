@@ -385,6 +385,8 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
               color: isCurrent ? textColor : const Color(0xFF64748B),
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -490,6 +492,8 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
                         ? (isDark ? Colors.white : AppColors.midnightNavy)
                         : const Color(0xFF64748B),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
@@ -524,6 +528,8 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
                         ? (isDark ? Colors.white : AppColors.midnightNavy)
                         : const Color(0xFF64748B),
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
@@ -681,6 +687,8 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
                           ),
                         ),
 
+                        const SizedBox(width: 8),
+
                         // Strike Pill
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -697,7 +705,7 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
                                 : (isPaid
                                     ? 'Strike $strike (Settled)'
                                     : (isDisputePending
-                                        ? 'Strike $strike (Pending Review)'
+                                        ? 'Strike $strike (Pending)'
                                         : (isDisputeRejected ? 'Strike $strike (Upheld)' : 'Strike $strike'))),
                             style: TextStyle(
                               fontSize: 11,
@@ -751,123 +759,74 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
 
                     // Bottom Row: Acknowledged Badge & Appeal Action
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Status Badge
-                        if (isRevoked)
-                          Row(
-                            children: const [
+                        // Status Badge (Flexible to prevent overflow)
+                        Expanded(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
                               Icon(
-                                Icons.check_circle_outline_rounded,
-                                color: Color(0xFF64748B),
+                                isRevoked
+                                    ? Icons.check_circle_outline_rounded
+                                    : (isPaid
+                                        ? Icons.verified_rounded
+                                        : (isDisputePending
+                                            ? Icons.pending_actions_rounded
+                                            : (isDisputeRejected
+                                                ? Icons.report_problem_rounded
+                                                : (isAck
+                                                    ? Icons.check_circle_rounded
+                                                    : Icons.access_time_filled_rounded)))),
+                                color: isRevoked
+                                    ? const Color(0xFF64748B)
+                                    : (isPaid
+                                        ? const Color(0xFF10B981)
+                                        : (isDisputePending
+                                            ? const Color(0xFF1E6BFF)
+                                            : (isDisputeRejected
+                                                ? const Color(0xFFDC2626)
+                                                : (isAck
+                                                    ? const Color(0xFF16A34A)
+                                                    : const Color(0xFFDC2626))))),
                                 size: 16,
                               ),
-                              SizedBox(width: 5),
-                              Text(
-                                'Citation Revoked',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF64748B),
-                                ),
-                              ),
-                            ],
-                          )
-                        else if (isPaid)
-                          Row(
-                            children: const [
-                              Icon(
-                                Icons.verified_rounded,
-                                color: Color(0xFF10B981),
-                                size: 16,
-                              ),
-                              SizedBox(width: 5),
-                              Text(
-                                'Penalty Settled',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF10B981),
-                                ),
-                              ),
-                            ],
-                          )
-                        else if (isDisputePending)
-                          Row(
-                            children: const [
-                              Icon(
-                                Icons.pending_actions_rounded,
-                                color: Color(0xFF1E6BFF),
-                                size: 16,
-                              ),
-                              SizedBox(width: 5),
-                              Text(
-                                'Dispute Under Review',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1E6BFF),
-                                ),
-                              ),
-                            ],
-                          )
-                        else if (isDisputeRejected)
-                          Row(
-                            children: const [
-                              Icon(
-                                Icons.report_problem_rounded,
-                                color: Color(0xFFDC2626),
-                                size: 16,
-                              ),
-                              SizedBox(width: 5),
-                              Text(
-                                'Dispute Rejected (Upheld)',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFFDC2626),
-                                ),
-                              ),
-                            ],
-                          )
-                        else if (isAck)
-                          Row(
-                            children: const [
-                              Icon(
-                                Icons.check_circle_rounded,
-                                color: Color(0xFF16A34A),
-                                size: 16,
-                              ),
-                              SizedBox(width: 5),
-                              Text(
-                                'Citation Acknowledged',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF15803D),
-                                ),
-                              ),
-                            ],
-                          )
-                        else
-                          Row(
-                            children: const [
-                              Icon(
-                                Icons.access_time_filled_rounded,
-                                color: Color(0xFFDC2626),
-                                size: 16,
-                              ),
-                              SizedBox(width: 5),
-                              Text(
-                                'Pending Acknowledgment · Tap to Review',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFFDC2626),
+                              const SizedBox(width: 5),
+                              Flexible(
+                                child: Text(
+                                  isRevoked
+                                      ? 'Citation Revoked'
+                                      : (isPaid
+                                          ? 'Penalty Settled'
+                                          : (isDisputePending
+                                              ? 'Dispute Review'
+                                              : (isDisputeRejected
+                                                  ? 'Dispute Rejected'
+                                                  : (isAck
+                                                      ? 'Acknowledged'
+                                                      : 'Pending Acknowledgment')))),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: isRevoked
+                                        ? const Color(0xFF64748B)
+                                        : (isPaid
+                                            ? const Color(0xFF10B981)
+                                            : (isDisputePending
+                                                ? const Color(0xFF1E6BFF)
+                                                : (isDisputeRejected
+                                                    ? const Color(0xFFDC2626)
+                                                    : (isAck
+                                                        ? const Color(0xFF15803D)
+                                                        : const Color(0xFFDC2626))))),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
+                        ),
+                        const SizedBox(width: 8),
 
                         // Dispute / Message Lessor Action
                         InkWell(
@@ -882,6 +841,7 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: const [
                                 Text(
                                   'Appeal / Message',

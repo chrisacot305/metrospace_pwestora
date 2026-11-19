@@ -372,13 +372,17 @@ class EvictionLockPanel extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: onProceedToPayment,
             icon: const Icon(Icons.payment_rounded, size: 20),
-            label: Text(
-              totalDue > 0
-                  ? 'Proceed to Payment (₱${_formatMoney(totalDue)})'
-                  : 'Open Payment Page',
-              style: const TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w800,
+            label: Flexible(
+              child: Text(
+                totalDue > 0
+                    ? 'Proceed to Payment (₱${_formatMoney(totalDue)})'
+                    : 'Open Payment Page',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
             style: ElevatedButton.styleFrom(
@@ -396,13 +400,17 @@ class EvictionLockPanel extends StatelessWidget {
           ElevatedButton.icon(
             onPressed: onMessageLessor,
             icon: const Icon(Icons.chat_outlined, size: 19),
-            label: Text(
-              isTerminated
-                  ? 'Message Lessor for Unit Turnover'
-                  : 'Message Lessor to Negotiate',
-              style: const TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w800,
+            label: Flexible(
+              child: Text(
+                isTerminated
+                    ? 'Message Lessor for Unit Turnover'
+                    : 'Message Lessor to Negotiate',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
             style: ElevatedButton.styleFrom(
@@ -421,11 +429,15 @@ class EvictionLockPanel extends StatelessWidget {
         OutlinedButton.icon(
           onPressed: onViewNotice,
           icon: const Icon(Icons.description_outlined, size: 18),
-          label: Text(
-            isTerminated
-                ? 'View Formal Lease Termination Notice'
-                : 'View Official Notice to Cure',
-            style: const TextStyle(fontWeight: FontWeight.w700),
+          label: Flexible(
+            child: Text(
+              isTerminated
+                  ? 'View Termination Notice'
+                  : 'View Official Notice to Cure',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
           style: OutlinedButton.styleFrom(
             foregroundColor: isDark ? Colors.white : AppColors.midnightNavy,

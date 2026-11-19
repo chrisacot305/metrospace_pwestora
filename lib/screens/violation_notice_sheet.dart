@@ -432,6 +432,8 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
             fontWeight: active ? FontWeight.w700 : FontWeight.w500,
             color: active ? AppColors.ink900 : AppColors.ink400,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
       ],
     );
@@ -689,12 +691,16 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
           children: const [
             Icon(Icons.verified_rounded, color: Color(0xFF16A34A), size: 22),
             SizedBox(width: 10),
-            Text(
-              'Citation Penalty Paid & Settled',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF15803D),
+            Flexible(
+              child: Text(
+                'Citation Penalty Paid & Settled',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF15803D),
+                ),
               ),
             ),
           ],
@@ -717,12 +723,16 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
               children: const [
                 Icon(Icons.check_circle_outline_rounded, color: AppColors.ink500, size: 22),
                 SizedBox(width: 10),
-                Text(
-                  'Citation Revoked by Lessor',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.ink700,
+                Flexible(
+                  child: Text(
+                    'Citation Revoked by Lessor',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.ink700,
+                    ),
                   ),
                 ),
               ],
@@ -765,12 +775,16 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
                   children: const [
                     Icon(Icons.pending_actions_rounded, color: AppColors.electricBlue, size: 22),
                     SizedBox(width: 8),
-                    Text(
-                      'Dispute Under Review',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.midnightNavy,
+                    Flexible(
+                      child: Text(
+                        'Dispute Under Review',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.midnightNavy,
+                        ),
                       ),
                     ),
                   ],
@@ -826,13 +840,17 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
               children: const [
                 Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 22),
                 SizedBox(width: 10),
-                Text(
-                  'Citation Acknowledged',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF15803D),
-                    letterSpacing: -0.1,
+                Flexible(
+                  child: Text(
+                    'Citation Acknowledged',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF15803D),
+                      letterSpacing: -0.1,
+                    ),
                   ),
                 ),
               ],
@@ -852,9 +870,13 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
                   );
                 },
                 icon: const Icon(Icons.download_rounded, size: 18, color: AppColors.ink700),
-                label: const Text(
-                  'Download Formal Notice of Eviction (PDF)',
-                  style: TextStyle(fontSize: 13, color: AppColors.ink700, fontWeight: FontWeight.w600),
+                label: const Flexible(
+                  child: Text(
+                    'Download Eviction Notice (PDF)',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 13, color: AppColors.ink700, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ),
@@ -884,9 +906,13 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : const Icon(Icons.assignment_turned_in_rounded),
-              label: Text(
-                _isSubmitting ? 'Logging Acknowledgment...' : 'Acknowledge Eviction Notice',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+              label: Flexible(
+                child: Text(
+                  _isSubmitting ? 'Logging Acknowledgment...' : 'Acknowledge Eviction Notice',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                ),
               ),
             ),
           ),
@@ -898,9 +924,13 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
               child: OutlinedButton.icon(
                 onPressed: _isSubmitting ? null : _showDisputeDialog,
                 icon: const Icon(Icons.help_outline_rounded, size: 18, color: AppColors.electricBlue),
-                label: const Text(
-                  'Dispute Citation (Lessor Review)',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.electricBlue),
+                label: const Flexible(
+                  child: Text(
+                    'Dispute Citation (Lessor Review)',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.electricBlue),
+                  ),
                 ),
                 style: OutlinedButton.styleFrom(
                   side: const BorderSide(color: Color(0xFFBFDBFE)),
@@ -923,9 +953,13 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
                 );
               },
               icon: const Icon(Icons.download_rounded, size: 18, color: AppColors.ink700),
-              label: const Text(
-                'Download Formal Notice of Eviction (PDF)',
-                style: TextStyle(fontSize: 13, color: AppColors.ink700, fontWeight: FontWeight.w600),
+              label: const Flexible(
+                child: Text(
+                  'Download Eviction Notice (PDF)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, color: AppColors.ink700, fontWeight: FontWeight.w600),
+                ),
               ),
             ),
           ),
@@ -1011,9 +1045,13 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
                     children: const [
                       Icon(Icons.check_circle_outline_rounded, size: 20),
                       SizedBox(width: 8),
-                      Text(
-                        'Acknowledge Receipt & Compliance',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      Flexible(
+                        child: Text(
+                          'Acknowledge Receipt & Compliance',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                        ),
                       ),
                     ],
                   ),
@@ -1027,9 +1065,13 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
             child: OutlinedButton.icon(
               onPressed: _isSubmitting ? null : _showDisputeDialog,
               icon: const Icon(Icons.help_outline_rounded, size: 18, color: AppColors.electricBlue),
-              label: const Text(
-                'Dispute Citation (Lessor Review)',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.electricBlue),
+              label: const Flexible(
+                child: Text(
+                  'Dispute Citation (Lessor Review)',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.electricBlue),
+                ),
               ),
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: Color(0xFFBFDBFE)),

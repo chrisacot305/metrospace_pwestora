@@ -240,31 +240,38 @@ class _HomeShellState extends State<HomeShell> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(10),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.error.withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.gavel_rounded,
+                            color: AppColors.error,
+                            size: 20,
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.gavel_rounded,
-                          color: AppColors.error,
-                          size: 20,
+                        const SizedBox(width: 10),
+                        Flexible(
+                          child: Text(
+                            'Pre-Eviction Notice',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white : AppColors.midnightNavy,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Pwestora · Pre-Eviction Notice',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : AppColors.midnightNavy,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   TextButton.icon(
                     onPressed: _signOutFromLock,
                     icon: const Icon(Icons.logout_rounded, size: 17),
