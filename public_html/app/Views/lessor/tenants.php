@@ -193,7 +193,7 @@
               </a>
 
               <!-- EVICT ACTION (Now a secure POST Form pointing to the correct page!) -->
-              <form method="POST" action="/dashboard.php?page=tenants" style="margin:0; padding:0;" onsubmit="return confirm('Are you sure you want to terminate this lease and evict the tenant?');">
+              <form method="POST" action="/dashboard.php?page=tenants" style="margin:0; padding:0;" onsubmit="return confirm('Are you sure you want to formally terminate this lease and execute eviction? This will immediately terminate the lease and close payment access.');">
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <input type="hidden" name="action" value="evict">
                 <input type="hidden" name="tenant_id" value="<?= $t['id'] ?>">

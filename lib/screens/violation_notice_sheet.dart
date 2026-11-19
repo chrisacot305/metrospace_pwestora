@@ -397,7 +397,7 @@ class _ViolationNoticeSheetState extends State<ViolationNoticeSheet> {
                 child: _buildProgressBar(
                   step: 3,
                   active: _strike >= 3,
-                  label: 'Eviction',
+                  label: 'Pre-Eviction',
                   color: AppColors.error,
                 ),
               ),

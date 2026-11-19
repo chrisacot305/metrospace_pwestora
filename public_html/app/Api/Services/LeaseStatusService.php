@@ -88,6 +88,11 @@ final class LeaseStatusService
         $l['strike_level']              = (int) $state['strike_level'];
         $l['escalation_strike']         = (int) $state['escalation_strike'];
         $l['is_eviction']               = (bool) $state['is_eviction'];
+        $l['is_pre_eviction']           = (bool) ($state['is_pre_eviction'] ?? false);
+        $l['pre_eviction_deadline']     = $state['pre_eviction_deadline'] ?? null;
+        $l['pre_eviction_days_remaining'] = (int) ($state['pre_eviction_days_remaining'] ?? 0);
+        $l['pre_eviction_seconds_remaining'] = (int) ($state['pre_eviction_seconds_remaining'] ?? 0);
+        $l['is_cure_expired']           = (bool) ($state['is_cure_expired'] ?? false);
         $l['is_terminated']             = (bool) $state['is_terminated'];
         $l['security_deposit']          = (float) $state['security_deposit'];
         $l['auto_deposit_applied']      = (float) $state['auto_deposit_applied'];

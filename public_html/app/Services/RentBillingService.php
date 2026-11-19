@@ -20,6 +20,7 @@ final class RentBillingService
     public const GRACE_DAYS    = 5;
     public const STRIKE_2_FINE = 500.0;
     public const STRIKE_3_FINE = 1000.0;
+    public const PRE_EVICTION_CURE_DAYS = 5;
 
     public function __construct(private PDO $pdo) {}
 
@@ -94,10 +95,15 @@ final class RentBillingService
                 'penalty_amount'         => $penalties['penalty_total'],
                 'penalty_breakdown'      => $penalties['breakdown'],
                 'total_due'              => $penalties['penalty_total'],
-                'strike_level'           => $penalties['unresolved_strike'],
-                'escalation_strike'      => $penalties['escalation_strike'],
-                'is_eviction'            => $penalties['is_eviction'],
-                'is_terminated'          => $tenantStatus === 'terminated',
+                'strike_level'                   => $penalties['unresolved_strike'],
+                'escalation_strike'              => $penalties['escalation_strike'],
+                'is_eviction'                    => $penalties['is_eviction'],
+                'is_pre_eviction'                => $penalties['is_pre_eviction'],
+                'pre_eviction_deadline'          => $penalties['pre_eviction_deadline'],
+                'pre_eviction_days_remaining'    => $penalties['pre_eviction_days_remaining'],
+                'pre_eviction_seconds_remaining' => $penalties['pre_eviction_seconds_remaining'],
+                'is_cure_expired'                => $penalties['is_cure_expired'],
+                'is_terminated'                  => $penalties['is_terminated'],
                 'security_deposit'       => $deposit,
                 'auto_deposit_applied'   => 0.0,
                 'last_paid_at'           => $lastPaidAt,
@@ -226,10 +232,15 @@ final class RentBillingService
                 'penalty_amount'           => $penaltyTotal,
                 'penalty_breakdown'        => $penalties['breakdown'],
                 'total_due'                => $totalDue,
-                'strike_level'             => $penalties['unresolved_strike'],
-                'escalation_strike'        => $penalties['escalation_strike'],
-                'is_eviction'              => $penalties['is_eviction'],
-                'is_terminated'            => $tenantStatus === 'terminated',
+                'strike_level'                   => $penalties['unresolved_strike'],
+                'escalation_strike'              => $penalties['escalation_strike'],
+                'is_eviction'                    => $penalties['is_eviction'],
+                'is_pre_eviction'                => $penalties['is_pre_eviction'],
+                'pre_eviction_deadline'          => $penalties['pre_eviction_deadline'],
+                'pre_eviction_days_remaining'    => $penalties['pre_eviction_days_remaining'],
+                'pre_eviction_seconds_remaining' => $penalties['pre_eviction_seconds_remaining'],
+                'is_cure_expired'                => $penalties['is_cure_expired'],
+                'is_terminated'                  => $penalties['is_terminated'],
                 'security_deposit'         => $deposit,
                 'auto_deposit_applied'     => $autoDepositApplied,
                 'last_paid_at'             => $lastPaidAt,
@@ -269,10 +280,15 @@ final class RentBillingService
                 'penalty_amount'           => $penaltyTotal,
                 'penalty_breakdown'        => $penalties['breakdown'],
                 'total_due'                => $totalDue,
-                'strike_level'             => $penalties['unresolved_strike'],
-                'escalation_strike'        => $penalties['escalation_strike'],
-                'is_eviction'              => $penalties['is_eviction'],
-                'is_terminated'            => $tenantStatus === 'terminated',
+                'strike_level'                   => $penalties['unresolved_strike'],
+                'escalation_strike'              => $penalties['escalation_strike'],
+                'is_eviction'                    => $penalties['is_eviction'],
+                'is_pre_eviction'                => $penalties['is_pre_eviction'],
+                'pre_eviction_deadline'          => $penalties['pre_eviction_deadline'],
+                'pre_eviction_days_remaining'    => $penalties['pre_eviction_days_remaining'],
+                'pre_eviction_seconds_remaining' => $penalties['pre_eviction_seconds_remaining'],
+                'is_cure_expired'                => $penalties['is_cure_expired'],
+                'is_terminated'                  => $penalties['is_terminated'],
                 'security_deposit'         => $deposit,
                 'auto_deposit_applied'     => $autoDepositApplied,
                 'last_paid_at'             => $lastPaidAt,
@@ -325,10 +341,15 @@ final class RentBillingService
                 'penalty_amount'           => $penaltyTotal,
                 'penalty_breakdown'        => $penalties['breakdown'],
                 'total_due'                => $totalDue,
-                'strike_level'             => $penalties['unresolved_strike'],
-                'escalation_strike'        => $penalties['escalation_strike'],
-                'is_eviction'              => $penalties['is_eviction'],
-                'is_terminated'            => $tenantStatus === 'terminated',
+                'strike_level'                   => $penalties['unresolved_strike'],
+                'escalation_strike'              => $penalties['escalation_strike'],
+                'is_eviction'                    => $penalties['is_eviction'],
+                'is_pre_eviction'                => $penalties['is_pre_eviction'],
+                'pre_eviction_deadline'          => $penalties['pre_eviction_deadline'],
+                'pre_eviction_days_remaining'    => $penalties['pre_eviction_days_remaining'],
+                'pre_eviction_seconds_remaining' => $penalties['pre_eviction_seconds_remaining'],
+                'is_cure_expired'                => $penalties['is_cure_expired'],
+                'is_terminated'                  => $penalties['is_terminated'],
                 'security_deposit'         => $deposit,
                 'auto_deposit_applied'     => $autoDepositApplied,
                 'last_paid_at'             => $lastPaidAt,
@@ -369,10 +390,15 @@ final class RentBillingService
             'penalty_amount'           => $penaltyTotal,
             'penalty_breakdown'        => $penalties['breakdown'],
             'total_due'                => $penaltyTotal,
-            'strike_level'             => $penalties['unresolved_strike'],
-            'escalation_strike'        => $penalties['escalation_strike'],
-            'is_eviction'              => $penalties['is_eviction'],
-            'is_terminated'            => $tenantStatus === 'terminated',
+            'strike_level'                   => $penalties['unresolved_strike'],
+            'escalation_strike'              => $penalties['escalation_strike'],
+            'is_eviction'                    => $penalties['is_eviction'],
+            'is_pre_eviction'                => $penalties['is_pre_eviction'],
+            'pre_eviction_deadline'          => $penalties['pre_eviction_deadline'],
+            'pre_eviction_days_remaining'    => $penalties['pre_eviction_days_remaining'],
+            'pre_eviction_seconds_remaining' => $penalties['pre_eviction_seconds_remaining'],
+            'is_cure_expired'                => $penalties['is_cure_expired'],
+            'is_terminated'                  => $penalties['is_terminated'],
             'security_deposit'         => $deposit,
             'auto_deposit_applied'     => $autoDepositApplied,
             'last_paid_at'             => $lastPaidAt,
@@ -783,6 +809,11 @@ final class RentBillingService
                 $this->pdo->exec("ALTER TABLE `violations` ADD COLUMN `$col` $def");
             } catch (\Throwable $e) {}
         }
+
+        // Auto-normalize any legacy Strike 3 fines that were stored as 1500 to the canonical 1000
+        try {
+            $this->pdo->exec("UPDATE `violations` SET fine_amount = 1000.00 WHERE strike >= 3 AND (fine_amount >= 1500.00 OR fine_amount IS NULL)");
+        } catch (\Throwable $e) {}
     }
 
     /** Computes unpaid fines breakdown, active strike level, and eviction lock state. */
@@ -792,8 +823,9 @@ final class RentBillingService
 
         try {
             $stmt = $this->pdo->prepare(
-                "SELECT id, category, strike,
+                "SELECT id, category, strike, issued_at,
                         CASE
+                            WHEN fine_amount >= 1500.00 THEN 1000.00
                             WHEN fine_amount IS NOT NULL THEN fine_amount
                             WHEN strike >= 3 THEN 1000.00
                             WHEN strike = 2 AND (category LIKE '%Rent%' OR category LIKE '%Due%') THEN 500.00
@@ -811,8 +843,9 @@ final class RentBillingService
         } catch (\Throwable $e) {
             try {
                 $stmt = $this->pdo->prepare(
-                    "SELECT id, category, strike,
+                    "SELECT id, category, strike, issued_at,
                             CASE
+                                WHEN fine_amount >= 1500.00 THEN 1000.00
                                 WHEN fine_amount IS NOT NULL THEN fine_amount
                                 WHEN strike >= 3 THEN 1000.00
                                 WHEN strike = 2 AND (category LIKE '%Rent%' OR category LIKE '%Due%') THEN 500.00
@@ -833,12 +866,21 @@ final class RentBillingService
         $total            = 0.0;
         $breakdown        = [];
         $unresolvedStrike = 0;
+        $strike3IssuedAt  = null;
 
         foreach ($rows as $v) {
             $strike = (int) $v['strike'];
             $fine   = (float) $v['fine_amount'];
             if ($strike > $unresolvedStrike) {
                 $unresolvedStrike = $strike;
+            }
+            if ($strike >= 3 && !empty($v['issued_at'])) {
+                try {
+                    $rowDate = new DateTime($v['issued_at']);
+                    if ($strike3IssuedAt === null || $rowDate < $strike3IssuedAt) {
+                        $strike3IssuedAt = $rowDate;
+                    }
+                } catch (\Throwable $e) {}
             }
             if ($fine > 0) {
                 $total += $fine;
@@ -849,6 +891,41 @@ final class RentBillingService
                     'amount'       => $fine,
                     'label'        => "Strike $strike Penalty (" . $v['category'] . ')',
                 ];
+            }
+        }
+
+        // Pre-eviction countdown & forced eviction evaluation
+        $isPreEviction                  = false;
+        $cureDeadline                   = null;
+        $cureSecondsRemaining           = 0;
+        $cureDaysRemaining              = 0;
+        $isCureExpired                  = false;
+
+        if ($unresolvedStrike >= 3 && $total > 0.009 && $tenantStatus !== 'terminated') {
+            $refDate      = $strike3IssuedAt ?: new DateTime();
+            $cureDeadline = (clone $refDate)->modify('+' . self::PRE_EVICTION_CURE_DAYS . ' days');
+            $now          = new DateTime();
+            $diffSecs     = $cureDeadline->getTimestamp() - $now->getTimestamp();
+
+            if ($diffSecs <= 0) {
+                $isCureExpired        = true;
+                $cureSecondsRemaining = 0;
+                $cureDaysRemaining    = 0;
+                // Auto-terminate / forced eviction on cure expiry
+                try {
+                    $this->pdo->prepare("UPDATE tenants SET status = 'terminated', end_date = CURDATE() WHERE id = ? AND status <> 'terminated'")
+                        ->execute([$tenantId]);
+                    $this->pdo->prepare("UPDATE lease_contracts SET status = 'terminated' WHERE tenant_id = ? AND status <> 'terminated'")
+                        ->execute([$tenantId]);
+                    $tenantStatus  = 'terminated';
+                    $isPreEviction = false;
+                } catch (\Throwable $e) {
+                    error_log('Forced eviction failed: ' . $e->getMessage());
+                }
+            } else {
+                $isPreEviction        = true;
+                $cureSecondsRemaining = $diffSecs;
+                $cureDaysRemaining    = (int) ceil($diffSecs / 86400);
             }
         }
 
@@ -881,15 +958,22 @@ final class RentBillingService
             }
         }
 
-        // An eviction lock only applies if there is an unresolved Strike 3 with an active penalty balance due, or if the tenant was formally terminated by the lessor.
-        $isEviction = ($unresolvedStrike >= 3 && $total > 0.009) || ($tenantStatus === 'terminated');
+        // Pre-eviction restriction applies if in active Strike 3 cure period or formally terminated
+        $isEviction = $isPreEviction || ($tenantStatus === 'terminated') || ($unresolvedStrike >= 3 && $total > 0.009);
 
         return [
-            'penalty_total'     => $total,
-            'breakdown'         => $breakdown,
-            'unresolved_strike' => $unresolvedStrike,
-            'escalation_strike' => $escalationStrike,
-            'is_eviction'       => $isEviction,
+            'penalty_total'                  => $total,
+            'breakdown'                      => $breakdown,
+            'unresolved_strike'              => $unresolvedStrike,
+            'escalation_strike'              => $escalationStrike,
+            'is_eviction'                    => $isEviction,
+            'is_pre_eviction'                => $isPreEviction,
+            'pre_eviction_deadline'          => $cureDeadline ? $cureDeadline->format('Y-m-d H:i:s') : null,
+            'pre_eviction_days_remaining'    => $cureDaysRemaining,
+            'pre_eviction_seconds_remaining' => $cureSecondsRemaining,
+            'is_cure_expired'                => $isCureExpired,
+            'is_terminated'                  => $tenantStatus === 'terminated',
+            'tenant_status'                  => $tenantStatus,
         ];
     }
 

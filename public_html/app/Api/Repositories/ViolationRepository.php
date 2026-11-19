@@ -75,6 +75,7 @@ final class ViolationRepository extends Repository
         return $this->fetchAll(
             'SELECT id, category, strike,
                     CASE
+                        WHEN fine_amount >= 1500.00 THEN 1000.00
                         WHEN fine_amount IS NOT NULL THEN fine_amount
                         WHEN strike >= 3 THEN 1000.00
                         WHEN strike = 2 AND (category LIKE "%Rent%" OR category LIKE "%Due%") THEN 500.00

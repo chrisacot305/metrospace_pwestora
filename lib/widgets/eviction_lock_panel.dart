@@ -22,13 +22,14 @@ String leaseDisplayLabel(Map<String, dynamic> lease) {
   return biz.isNotEmpty ? biz : (prop.isNotEmpty ? prop : 'Commercial Unit');
 }
 
-/// Shared Strike 3 Eviction / Lease Termination lock panel shown either full-screen
+/// Shared Strike 3 Pre-Eviction / Lease Termination lock panel shown either full-screen
 /// (single locked business) or inline below the swipeable card carousel (multi-business).
 class EvictionLockPanel extends StatelessWidget {
   final Map<String, dynamic> lease;
   final VoidCallback onProceedToPayment;
   final VoidCallback onViewNotice;
   final VoidCallback? onRefresh;
+  final VoidCallback? onMessageLessor;
   final String? cleanBusinessLabel;
   final VoidCallback? onSwitchToCleanBusiness;
 
@@ -38,6 +39,7 @@ class EvictionLockPanel extends StatelessWidget {
     required this.onProceedToPayment,
     required this.onViewNotice,
     this.onRefresh,
+    this.onMessageLessor,
     this.cleanBusinessLabel,
     this.onSwitchToCleanBusiness,
   });
@@ -175,8 +177,8 @@ class EvictionLockPanel extends StatelessWidget {
                 ),
                 child: Text(
                   isTerminated
-                      ? 'LEASE TERMINATED'
-                      : 'STRIKE 3 • EVICTION NOTICE',
+                      ? 'LEASE TERMINATED · EVICTED'
+                      : 'STRIKE 3 • PRE-EVICTION NOTICE',
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w900,
@@ -208,8 +210,8 @@ class EvictionLockPanel extends StatelessWidget {
               const SizedBox(height: 14),
               Text(
                 isTerminated
-                    ? 'This lease has been terminated by the lessor. Other features for this business are locked.'
-                    : 'This business has reached Strike 3 eviction standing. Other features are locked for this lease and only the Rent Payment page and Eviction Notice remain accessible until your overdue balance and penalties are settled and verified.',
+                    ? 'This lease has been formally terminated by the lessor. App access is permanently closed for this business unit. Please coordinate with property management for unit turnover.'
+                    : 'This business has reached Strike 3 standing and entered the 5-Day Pre-Eviction Remedy Period. App features are restricted to Rent Payment and Lessor Communication until your balance and penalty are settled.',
                 style: TextStyle(
                   fontSize: 13,
                   height: 1.45,
@@ -219,6 +221,79 @@ class EvictionLockPanel extends StatelessWidget {
             ],
           ),
         ),
+        if (!isTerminated) ...[
+          const SizedBox(height: 12),
+          Builder(builder: (context) {
+            final int daysRemaining =
+                (lease['pre_eviction_days_remaining'] as num?)?.toInt() ?? 5;
+            final int secondsRemaining =
+                (lease['pre_eviction_seconds_remaining'] as num?)?.toInt() ??
+                    (daysRemaining * 86400);
+            final int hours = ((secondsRemaining % 86400) / 3600).floor();
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1515) : const Color(0xFFFFF1F2),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFFF43F5E).withValues(alpha: 0.45),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE11D48).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.timer_outlined,
+                      size: 24,
+                      color: Color(0xFFE11D48),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '5-DAY PRE-EVICTION CURE PERIOD',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.6,
+                            color: Color(0xFFBE123C),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          '$daysRemaining Days, $hours Hours Remaining',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: isDark ? Colors.white : const Color(0xFF881337),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Settle your balance or message the lessor to negotiate before the deadline to prevent forced eviction.',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: isDark ? const Color(0xFFFDA4AF) : const Color(0xFF9F1239),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
         const SizedBox(height: 16),
         Container(
           padding: const EdgeInsets.all(18),
@@ -233,7 +308,7 @@ class EvictionLockPanel extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Outstanding Balance to Unlock Business',
+                'Outstanding Balance to Lift Restriction',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -317,12 +392,40 @@ class EvictionLockPanel extends StatelessWidget {
           ),
           const SizedBox(height: 10),
         ],
+        if (onMessageLessor != null) ...[
+          ElevatedButton.icon(
+            onPressed: onMessageLessor,
+            icon: const Icon(Icons.chat_outlined, size: 19),
+            label: Text(
+              isTerminated
+                  ? 'Message Lessor for Unit Turnover'
+                  : 'Message Lessor to Negotiate',
+              style: const TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isTerminated
+                  ? const Color(0xFF0F172A)
+                  : const Color(0xFF1E6BFF),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+        ],
         OutlinedButton.icon(
           onPressed: onViewNotice,
           icon: const Icon(Icons.description_outlined, size: 18),
-          label: const Text(
-            'View Official Eviction & Violation Notice',
-            style: TextStyle(fontWeight: FontWeight.w700),
+          label: Text(
+            isTerminated
+                ? 'View Formal Lease Termination Notice'
+                : 'View Official Notice to Cure',
+            style: const TextStyle(fontWeight: FontWeight.w700),
           ),
           style: OutlinedButton.styleFrom(
             foregroundColor: isDark ? Colors.white : AppColors.midnightNavy,

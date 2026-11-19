@@ -660,93 +660,81 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                     const SizedBox(width: 8),
 
-                    // Chat Button (Clean borderless floating circular button — locked while viewing an evicted card)
-                    Opacity(
-                      opacity: isActiveLocked ? 0.45 : 1.0,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(22),
-                        onTap: isActiveLocked
-                            ? _showLockedNotice
-                            : () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => MessagesScreen(
-                                      lease: _activeLease,
-                                      onNavigateTab: widget.onNavigateTab,
-                                    ),
-                                  ),
-                                );
-                              },
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: isDark
-                                ? const Color(0xFF1E293B)
-                                : Colors.white,
-                            boxShadow: [
-                              BoxShadow(
-                                color: isDark
-                                    ? Colors.black.withValues(alpha: 0.35)
-                                    : const Color(
-                                        0xFF0F172A,
-                                      ).withValues(alpha: 0.07),
-                                blurRadius: 12,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
+                    // Chat Button (Clean borderless floating circular button — always accessible for negotiation)
+                    InkWell(
+                      borderRadius: BorderRadius.circular(22),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => MessagesScreen(
+                              lease: _activeLease,
+                              onNavigateTab: widget.onNavigateTab,
+                            ),
                           ),
-                          child: isActiveLocked
-                              ? const Icon(
-                                  Icons.lock_outline_rounded,
-                                  size: 20,
-                                  color: AppColors.error,
-                                )
-                              : Stack(
-                                  clipBehavior: Clip.none,
-                                  alignment: Alignment.center,
-                                  children: [
-                                    SvgPicture.asset(
-                                      'img/comment-alt-dots.svg',
-                                      width: 21,
-                                      height: 21,
-                                      colorFilter: ColorFilter.mode(
-                                        isDark
-                                            ? const Color(0xFF60A5FA)
-                                            : const Color(0xFF0F172A),
-                                        BlendMode.srcIn,
-                                      ),
-                                    ),
-                                    Positioned(
-                                      top: 2,
-                                      right: 2,
-                                      child: Container(
-                                        width: 10,
-                                        height: 10,
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF2563EB),
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: isDark
-                                                ? const Color(0xFF1E293B)
-                                                : Colors.white,
-                                            width: 1.8,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(
-                                                0xFF2563EB,
-                                              ).withValues(alpha: 0.4),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 1),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                        );
+                      },
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isDark
+                              ? const Color(0xFF1E293B)
+                              : Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: isDark
+                                  ? Colors.black.withValues(alpha: 0.35)
+                                  : const Color(
+                                      0xFF0F172A,
+                                    ).withValues(alpha: 0.07),
+                              blurRadius: 12,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.center,
+                          children: [
+                            SvgPicture.asset(
+                              'img/comment-alt-dots.svg',
+                              width: 21,
+                              height: 21,
+                              colorFilter: ColorFilter.mode(
+                                isDark
+                                    ? const Color(0xFF60A5FA)
+                                    : const Color(0xFF0F172A),
+                                BlendMode.srcIn,
+                              ),
+                            ),
+                            Positioned(
+                              top: 2,
+                              right: 2,
+                              child: Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isDark
+                                        ? const Color(0xFF1E293B)
+                                        : Colors.white,
+                                    width: 1.8,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFF2563EB,
+                                      ).withValues(alpha: 0.4),
+                                      blurRadius: 4,
                                     ),
                                   ],
                                 ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -1162,6 +1150,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             );
                           }
                         : null,
+                    onMessageLessor: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => MessagesScreen(
+                            lease: _activeLease,
+                            onNavigateTab: widget.onNavigateTab,
+                          ),
+                        ),
+                      );
+                    },
                     onProceedToPayment: () async {
                       await Navigator.of(context).push(
                         MaterialPageRoute(

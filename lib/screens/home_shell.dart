@@ -12,6 +12,7 @@ import 'ticket_create_screen.dart';
 import 'profile_screen.dart';
 import 'rent_payment_screen.dart';
 import 'violations_screen.dart';
+import 'messages_screen.dart';
 import 'login_screen.dart';
 
 class HomeShell extends StatefulWidget {
@@ -255,7 +256,7 @@ class _HomeShellState extends State<HomeShell> {
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        'Pwestora Account Lock',
+                        'Pwestora · Pre-Eviction Notice',
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -309,6 +310,14 @@ class _HomeShellState extends State<HomeShell> {
               const SizedBox(height: 18),
               EvictionLockPanel(
                 lease: lease,
+                onMessageLessor: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => MessagesScreen(lease: lease),
+                    ),
+                  );
+                  _recheckLease();
+                },
                 onProceedToPayment: () async {
                   await Navigator.of(context).push(
                     MaterialPageRoute(

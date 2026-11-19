@@ -114,6 +114,13 @@ class TenantModel extends Model
         $this->run('UPDATE tenants SET end_date = ? WHERE id = ? AND lessor_id = ?', [$endDate, $tenantId, $lessorId]);
     }
 
+    /** Formally terminates lease and executes eviction (status = terminated). */
+    public function terminateLease(int $tenantId, int $lessorId): void
+    {
+        $this->run("UPDATE tenants SET status = 'terminated', end_date = CURDATE() WHERE id = ? AND lessor_id = ?", [$tenantId, $lessorId]);
+        $this->run("UPDATE lease_contracts SET status = 'terminated' WHERE tenant_id = ? AND lessor_id = ?", [$tenantId, $lessorId]);
+    }
+
     /** Tenant + linked app-user contact details (Edit Tenant screen). */
     public function findWithContact(int $tenantId, int $lessorId): ?array
     {

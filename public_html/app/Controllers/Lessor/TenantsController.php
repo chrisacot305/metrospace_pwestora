@@ -26,9 +26,9 @@ final class TenantsController extends Controller
             Csrf::check();
             $evictId = (int) ($_POST['tenant_id'] ?? 0);
             try {
-                // End date = yesterday → the tenant instantly shows "Lease ended".
-                $tenantsModel->endLease($evictId, $lessorId, date('Y-m-d', strtotime('-1 day')));
-                $this->redirect('/dashboard.php?page=tenants');
+                // Formally terminate lease & execute eviction (status = terminated)
+                $tenantsModel->terminateLease($evictId, $lessorId);
+                $this->redirect('/dashboard.php?page=tenants&msg=evicted');
             } catch (\Throwable $e) {
                 error_log('Eviction failed: ' . $e->getMessage());
                 $error = 'Failed to process eviction — the error has been logged. Please try again.';
@@ -94,10 +94,19 @@ final class TenantsController extends Controller
             }
 
             if (!empty($billing['is_terminated'])) {
-                $t['status_label'] = 'Terminated';
-                $t['status_style'] = 'background:var(--bg); color:var(--ink-500);';
+                $t['status_label'] = 'Terminated / Evicted';
+                $t['status_style'] = 'background:var(--error-soft, #fee2e2); color:var(--error); font-weight:700;';
+            } elseif (!empty($billing['is_pre_eviction'])) {
+                if (!empty($billing['is_cure_expired'])) {
+                    $t['status_label'] = 'Pre-Eviction Expired';
+                    $t['status_style'] = 'background:#fef2f2; color:#b91c1c; border:1px solid #f87171; font-weight:700;';
+                } else {
+                    $days = (int) ($billing['pre_eviction_days_remaining'] ?? 5);
+                    $t['status_label'] = 'Pre-Eviction (' . $days . 'd left)';
+                    $t['status_style'] = 'background:#fef3c7; color:#92400e; border:1px solid #fde68a; font-weight:700;';
+                }
             } elseif (!empty($billing['is_eviction'])) {
-                $t['status_label'] = 'Eviction Lock (Strike 3)';
+                $t['status_label'] = 'Pre-Eviction Notice';
                 $t['status_style'] = 'background:var(--error-soft, #fee2e2); color:var(--error);';
             }
 
