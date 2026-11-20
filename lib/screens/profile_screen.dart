@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme.dart';
 import '../services/api_service.dart';
 import '../services/theme_service.dart';
@@ -7,6 +8,7 @@ import 'lease_contract_screen.dart';
 import 'violations_screen.dart';
 import 'payment_arrangement_screen.dart';
 import 'personal_info_screen.dart';
+import 'messages_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final Map<String, dynamic>? lease;
@@ -75,12 +77,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         builder: (_) => ViolationsScreen(lease: _leaseData ?? widget.lease),
       ),
     ).then((_) => _loadProfile());
-  }
-
-  void _showComingSoon(String title) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$title is available in this section.')),
-    );
   }
 
 
@@ -324,7 +320,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildMenuItem(
                   icon: Icons.help_outline_rounded,
                   title: 'Help & Support',
-                  onTap: () => _showComingSoon('Help & Support'),
+                  onTap: _showHelpAndSupportModal,
                 ),
               ]),
             ] else ...[
@@ -335,7 +331,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _buildMenuItem(
                   icon: Icons.help_outline_rounded,
                   title: 'Help & Support',
-                  onTap: () => _showComingSoon('Help & Support'),
+                  onTap: _showHelpAndSupportModal,
                 ),
               ]),
             ],
@@ -695,6 +691,398 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showHelpAndSupportModal() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    int expandedFaqIndex = -1;
+
+    final faqs = [
+      {
+        'q': 'How do I pay rent and upload proof of payment?',
+        'a': 'Go to your Home dashboard, tap "Pay Rent", choose GCash or Bank Transfer, and upload your screenshot with the exact reference number. Payment is verified by the lessor within 1–2 hours.',
+        'icon': Icons.payment_rounded,
+      },
+      {
+        'q': 'How does the 3-Strike Escalation policy work?',
+        'a': 'Strike 1 is a warning, Strike 2 adds a ₱500 penalty, and Strike 3 enters a 5-day Notice to Cure remedy period. You can submit a formal dispute with explanations from your Violations tab.',
+        'icon': Icons.gavel_rounded,
+      },
+      {
+        'q': 'Can I split my rent if experiencing cash flow delays?',
+        'a': 'Yes! Active tenants in good standing can apply for a 50/50 Payment Restructuring plan directly from the Payment Arrangement screen with zero late penalty escalation.',
+        'icon': Icons.handshake_outlined,
+      },
+      {
+        'q': 'How do I request physical stall repairs or maintenance?',
+        'a': 'Tap the elevated (+) Report button on your bottom navigation dock to upload photos and submit an urgent ticket to building engineering.',
+        'icon': Icons.build_circle_outlined,
+      },
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+              ),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF161616) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 4,
+                        margin: const EdgeInsets.only(top: 12, bottom: 8),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF333333) : const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Header
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(9),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF1E3A8A).withValues(alpha: 0.35)
+                                        : const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.support_agent_rounded,
+                                    color: AppColors.electricBlue,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Help & Support',
+                                        style: TextStyle(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.w900,
+                                          color: isDark ? Colors.white : AppColors.midnightNavy,
+                                          letterSpacing: -0.3,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Direct assistance and commercial lease answers',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+
+                            // Section 1: Contact Channels
+                            Text(
+                              'Direct Support Channels',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                letterSpacing: 0.1,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            // Channel 1: Message Lessor
+                            _buildSupportChannelTile(
+                              icon: Icons.chat_outlined,
+                              iconColor: AppColors.electricBlue,
+                              iconBg: isDark
+                                  ? const Color(0xFF1E3A8A).withValues(alpha: 0.3)
+                                  : const Color(0xFFEFF6FF),
+                              title: 'Message Lessor / Admin',
+                              subtitle: 'Open real-time in-app discussion',
+                              trailing: const Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 12,
+                                color: AppColors.electricBlue,
+                              ),
+                              onTap: () {
+                                Navigator.pop(ctx);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => MessagesScreen(lease: _leaseData),
+                                  ),
+                                );
+                              },
+                              isDark: isDark,
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Channel 2: Phone Hotline
+                            _buildSupportChannelTile(
+                              icon: Icons.phone_in_talk_outlined,
+                              iconColor: const Color(0xFF10B981),
+                              iconBg: isDark
+                                  ? const Color(0xFF065F46).withValues(alpha: 0.3)
+                                  : const Color(0xFFECFDF5),
+                              title: 'Property Admin Hotline',
+                              subtitle: '+63 (02) 8888-7937 • Mon–Sat 8am–6pm',
+                              trailing: const Icon(
+                                Icons.copy_rounded,
+                                size: 14,
+                                color: Color(0xFF10B981),
+                              ),
+                              onTap: () {
+                                Clipboard.setData(const ClipboardData(text: '+63288887937'));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text('Admin hotline copied to clipboard: (02) 8888-7937'),
+                                    backgroundColor: const Color(0xFF10B981),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                );
+                              },
+                              isDark: isDark,
+                            ),
+                            const SizedBox(height: 8),
+
+                            // Channel 3: Email Support
+                            _buildSupportChannelTile(
+                              icon: Icons.mail_outline_rounded,
+                              iconColor: const Color(0xFF6366F1),
+                              iconBg: isDark
+                                  ? const Color(0xFF312E81).withValues(alpha: 0.3)
+                                  : const Color(0xFFEEF2FF),
+                              title: 'Email Customer Support',
+                              subtitle: 'support@pwestora.com • 24hr response time',
+                              trailing: const Icon(
+                                Icons.copy_rounded,
+                                size: 14,
+                                color: Color(0xFF6366F1),
+                              ),
+                              onTap: () {
+                                Clipboard.setData(const ClipboardData(text: 'support@pwestora.com'));
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text('Support email copied to clipboard: support@pwestora.com'),
+                                    backgroundColor: const Color(0xFF6366F1),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                );
+                              },
+                              isDark: isDark,
+                            ),
+
+                            const SizedBox(height: 22),
+
+                            // Section 2: Frequently Asked Questions
+                            Text(
+                              'Frequently Asked Questions',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? Colors.white70 : const Color(0xFF334155),
+                                letterSpacing: 0.1,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+
+                            ...List.generate(faqs.length, (idx) {
+                              final item = faqs[idx];
+                              final isExpanded = expandedFaqIndex == idx;
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: isExpanded
+                                        ? AppColors.electricBlue.withValues(alpha: 0.5)
+                                        : (isDark ? const Color(0xFF2B2B2B) : const Color(0xFFE2E8F0)),
+                                  ),
+                                ),
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(14),
+                                  onTap: () {
+                                    setModalState(() {
+                                      expandedFaqIndex = isExpanded ? -1 : idx;
+                                    });
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(14),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              item['icon'] as IconData,
+                                              size: 16,
+                                              color: isExpanded
+                                                  ? AppColors.electricBlue
+                                                  : (isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B)),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                item['q'] as String,
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: isDark ? Colors.white : AppColors.midnightNavy,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Icon(
+                                              isExpanded
+                                                  ? Icons.keyboard_arrow_up_rounded
+                                                  : Icons.keyboard_arrow_down_rounded,
+                                              color: const Color(0xFF64748B),
+                                              size: 20,
+                                            ),
+                                          ],
+                                        ),
+                                        if (isExpanded) ...[
+                                          const SizedBox(height: 10),
+                                          const Divider(height: 1),
+                                          const SizedBox(height: 10),
+                                          Text(
+                                            item['a'] as String,
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                                              height: 1.45,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+
+                            const SizedBox(height: 16),
+                            Center(
+                              child: Text(
+                                'Pwestora Commercial Leasing Platform • v1.0.4',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildSupportChannelTile({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBg,
+    required String title,
+    required String subtitle,
+    required Widget trailing,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDark ? const Color(0xFF2B2B2B) : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 18, color: iconColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : AppColors.midnightNavy,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            trailing,
+          ],
         ),
       ),
     );
