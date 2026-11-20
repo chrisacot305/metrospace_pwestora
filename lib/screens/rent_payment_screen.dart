@@ -311,6 +311,279 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     );
   }
 
+  String get _paymentTargetLabel {
+    if (_isEffectiveOverdue) {
+      if (_selectedTarget == 'overdue_cycle' || _selectedTarget == 'overdue_october') {
+        return 'Overdue Arrears ($_overdueOptionLabel)';
+      }
+      if (_selectedTarget == 'full_balance') {
+        return 'Full Settlement (Arrears + Upcoming Rent)';
+      }
+    }
+    if (_hasRestructuring) {
+      if (_selectedTarget == 'restructuring_plan') {
+        return 'Payment Plan Installment';
+      }
+      if (_selectedTarget == 'both') {
+        return 'Installment + Regular Cycle';
+      }
+    }
+    return 'Regular Monthly Rent';
+  }
+
+  Future<bool?> _showPaymentConfirmationSheet(double amt, String ref) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final propName = (widget.lease['property_name'] ?? widget.lease['business_name'] ?? 'Commercial Stall').toString();
+    final targetLabel = _paymentTargetLabel;
+    final hasProof = _proofImage != null;
+
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF161616) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF065F46).withValues(alpha: 0.35)
+                                  : const Color(0xFFECFDF5),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.verified_outlined,
+                              size: 22,
+                              color: Color(0xFF10B981),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Review Payment Details',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: isDark ? Colors.white : AppColors.midnightNavy,
+                                    letterSpacing: -0.2,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Is everything correct before submitting for verification?',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Payment Summary Box
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF2B2B2B) : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            _buildPaymentConfirmRow('Commercial Unit', propName, isDark: isDark),
+                            const Divider(height: 16),
+                            _buildPaymentConfirmRow('Payment Purpose', targetLabel, isDark: isDark),
+                            const Divider(height: 16),
+                            _buildPaymentConfirmRow(
+                              'Amount to Settle',
+                              '₱${_formatMoney(amt)}',
+                              isDark: isDark,
+                              isHighlight: true,
+                            ),
+                            const Divider(height: 16),
+                            _buildPaymentConfirmRow('Payment Channel', 'Online / Instapay / GCash', isDark: isDark),
+                            const Divider(height: 16),
+                            _buildPaymentConfirmRow('Reference Number', ref, isDark: isDark),
+                            const Divider(height: 16),
+                            _buildPaymentConfirmRow(
+                              'Receipt Screenshot',
+                              hasProof ? 'Attached (Ready)' : 'No image attached',
+                              isDark: isDark,
+                              isProofStatus: true,
+                              hasProof: hasProof,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Audit & Verification Notice
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFDBEAFE),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.shield_outlined, size: 16, color: Color(0xFF1E6BFF)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Please ensure your Reference Number matches your bank or e-wallet receipt. Once submitted, your transfer is immediately queued for lessor verification.',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E40AF),
+                                  height: 1.35,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Actions
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.check_circle_rounded, size: 18),
+                              SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  'Confirm & Submit Payment',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: isDark ? Colors.white70 : AppColors.ink700,
+                            side: BorderSide(
+                              color: isDark ? const Color(0xFF333333) : const Color(0xFFCBD5E1),
+                            ),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: const Text('Go Back & Edit', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPaymentConfirmRow(
+    String label,
+    String value, {
+    bool isDark = false,
+    bool isHighlight = false,
+    bool isProofStatus = false,
+    bool hasProof = false,
+  }) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: isHighlight ? FontWeight.w900 : FontWeight.w700,
+              color: isHighlight
+                  ? const Color(0xFF10B981)
+                  : (isProofStatus
+                      ? (hasProof ? const Color(0xFF10B981) : const Color(0xFFDC2626))
+                      : (isDark ? Colors.white : const Color(0xFF0A1832))),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _submitPayment() async {
     if (_isPaymentComplete) return;
 
@@ -344,6 +617,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
         ref = 'TRX-${DateTime.now().millisecondsSinceEpoch % 1000000}';
       }
     }
+
+    final confirmed = await _showPaymentConfirmationSheet(amt, ref);
+    if (confirmed != true) return;
 
     setState(() => _submitting = true);
 

@@ -47,7 +47,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
   // Step 1: Proposal State
   String _selectedCategory = 'Food & Beverage';
   int _selectedTerm = 12; // months (6, 12, 24, 36)
-  DateTime _targetMoveInDate = DateTime.now().add(const Duration(days: 14));
+  DateTime? _targetMoveInDate;
   bool _customRateMode = false;
   double _effectiveRent = 0.0;
 
@@ -381,7 +381,7 @@ class _ApplyScreenState extends State<ApplyScreen> {
         'term': _selectedTerm,
         'effective_rent': _effectiveRent,
         'custom_rate_mode': _customRateMode,
-        'target_move_in': _targetMoveInDate.toIso8601String(),
+        'target_move_in': _targetMoveInDate?.toIso8601String(),
         'docs': docMap,
         'checklist': checklistMap,
         'saved_at': DateTime.now().toIso8601String(),
@@ -501,6 +501,29 @@ class _ApplyScreenState extends State<ApplyScreen> {
 
   void _proceedToDocuments() {
     if (!_formKey.currentState!.validate()) return;
+    if (_targetMoveInDate == null) {
+      setState(() => _error = 'Please select your target move-in date before proceeding');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Row(
+            children: [
+              Icon(Icons.calendar_today_rounded, color: Colors.white, size: 18),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Target move-in date is required. Please pick a date.',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
     if (_customRateMode) {
       final parsed = double.tryParse(_customRentCtrl.text.trim());
       if (parsed == null || parsed <= 0) {
@@ -525,11 +548,13 @@ class _ApplyScreenState extends State<ApplyScreen> {
 
   Future<void> _selectTargetDate() async {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final now = DateTime.now();
+    final initial = _targetMoveInDate ?? now.add(const Duration(days: 14));
     final picked = await showDatePicker(
       context: context,
-      initialDate: _targetMoveInDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: initial.isBefore(now) ? now : initial,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
       builder: (context, child) {
         return Theme(
           data: isDark
@@ -553,7 +578,11 @@ class _ApplyScreenState extends State<ApplyScreen> {
       },
     );
     if (picked != null) {
-      setState(() => _targetMoveInDate = picked);
+      setState(() {
+        _targetMoveInDate = picked;
+        _error = null;
+      });
+      _saveDraft();
     }
   }
 
@@ -674,7 +703,277 @@ class _ApplyScreenState extends State<ApplyScreen> {
     );
   }
 
+  String _formatMoney(num val) {
+    final str = val.toStringAsFixed(0);
+    final buffer = StringBuffer();
+    for (int i = 0; i < str.length; i++) {
+      if (i > 0 && (str.length - i) % 3 == 0) buffer.write(',');
+      buffer.write(str[i]);
+    }
+    return buffer.toString();
+  }
+
+  Future<bool?> _showProposalConfirmationSheet() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fullBusinessName = _businessCtrl.text.trim();
+    final moveInStr = _targetMoveInDate != null
+        ? '${_targetMoveInDate!.month}/${_targetMoveInDate!.day}/${_targetMoveInDate!.year}'
+        : 'Not specified';
+    final agreedCount = _checklistClauses.where((c) => c['agreed'] == true).length;
+    final counterCount = _checklistClauses.where((c) => c['agreed'] == false).length;
+
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.navyCard : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 12, bottom: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white24 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF1E3A8A).withValues(alpha: 0.35)
+                                  : const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(
+                              Icons.assignment_turned_in_rounded,
+                              size: 22,
+                              color: AppColors.electricBlue,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Confirm Commercial Proposal',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: isDark ? Colors.white : AppColors.ink900,
+                                    letterSpacing: -0.2,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Is everything correct before submitting to the lessor?',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark ? AppColors.ink400 : AppColors.ink500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Proposal Summary Card
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.navySurface : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark ? AppColors.navyBorder : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            _buildConfirmationRow('Commercial Stall', widget.propertyName, isDark: isDark),
+                            const Divider(height: 16),
+                            _buildConfirmationRow(
+                              'Business Name',
+                              fullBusinessName.isNotEmpty ? fullBusinessName : 'Commercial Tenant',
+                              isDark: isDark,
+                            ),
+                            const Divider(height: 16),
+                            _buildConfirmationRow('Category', _selectedCategory, isDark: isDark),
+                            const Divider(height: 16),
+                            _buildConfirmationRow('Lease Term', '$_selectedTerm Months', isDark: isDark),
+                            const Divider(height: 16),
+                            _buildConfirmationRow(
+                              'Proposed Rent',
+                              '₱${_formatMoney(_effectiveRent)} / month',
+                              isDark: isDark,
+                              isHighlight: true,
+                            ),
+                            const Divider(height: 16),
+                            _buildConfirmationRow('Target Move-In', moveInStr, isDark: isDark),
+                            const Divider(height: 16),
+                            _buildConfirmationRow(
+                              'Attached Docs',
+                              '${_uploadedDocs.length} verification file(s)',
+                              isDark: isDark,
+                            ),
+                            const Divider(height: 16),
+                            _buildConfirmationRow(
+                              'Contract Checklist',
+                              '$agreedCount Agreed • $counterCount Countered',
+                              isDark: isDark,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Audit Notice Box
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFDBEAFE),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline_rounded, size: 16, color: AppColors.electricBlue),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Once submitted, your commercial proposal and uploaded documents are formally logged and dispatched to property management for leasing evaluation.',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: isDark ? const Color(0xFF93C5FD) : const Color(0xFF1E40AF),
+                                  height: 1.35,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Actions
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDark ? AppColors.electricBlue : AppColors.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.check_circle_rounded, size: 18),
+                              SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  'Confirm & Submit Proposal',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w800),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 44,
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: isDark ? Colors.white70 : AppColors.ink700,
+                            side: BorderSide(
+                              color: isDark ? AppColors.navyBorder : const Color(0xFFCBD5E1),
+                            ),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: const Text('Go Back & Edit', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildConfirmationRow(String label, String value, {bool isDark = false, bool isHighlight = false}) {
+    return Row(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: isDark ? AppColors.ink400 : AppColors.ink500,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: isHighlight ? FontWeight.w900 : FontWeight.w700,
+              color: isHighlight
+                  ? AppColors.electricBlue
+                  : (isDark ? Colors.white : AppColors.ink900),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _submit() async {
+    final confirmed = await _showProposalConfirmationSheet();
+    if (confirmed != true) return;
+
     setState(() {
       _loading = true;
       _error = null;
@@ -710,7 +1009,10 @@ class _ApplyScreenState extends State<ApplyScreen> {
       // Append metadata to negotiation payload for lessor context
       negotiationPayload['_proposal_meta'] = {
         'category': _selectedCategory,
-        'target_move_in': _targetMoveInDate.toIso8601String().split('T').first,
+        'target_move_in': (_targetMoveInDate ?? DateTime.now().add(const Duration(days: 14)))
+            .toIso8601String()
+            .split('T')
+            .first,
       };
 
       final Map<String, Map<String, dynamic>> docPayload = {};
@@ -914,8 +1216,9 @@ class _ApplyScreenState extends State<ApplyScreen> {
   }
 
   Widget _buildStepOneForm(bool isDark) {
-    final formattedDate =
-        '${_targetMoveInDate.month}/${_targetMoveInDate.day}/${_targetMoveInDate.year}';
+    final formattedDate = _targetMoveInDate != null
+        ? '${_targetMoveInDate!.month}/${_targetMoveInDate!.day}/${_targetMoveInDate!.year}'
+        : 'Select planned move-in date (Required)';
 
     return Form(
       key: _formKey,
@@ -1322,13 +1625,26 @@ class _ApplyScreenState extends State<ApplyScreen> {
                 const SizedBox(height: 20),
 
                 // Target Move-in Date Tile
-                Text(
-                  'Target Move-In / Turnover Date',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : AppColors.ink900,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      'Target Move-In / Turnover Date',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? Colors.white : AppColors.ink900,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Text(
+                      '*',
+                      style: TextStyle(
+                        color: AppColors.error,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 6),
                 InkWell(
@@ -1339,14 +1655,21 @@ class _ApplyScreenState extends State<ApplyScreen> {
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.navySurface : AppColors.bg,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: isDark ? AppColors.navyBorder : AppColors.border),
+                      border: Border.all(
+                        color: _targetMoveInDate == null && _error != null
+                            ? AppColors.error
+                            : (isDark ? AppColors.navyBorder : AppColors.border),
+                        width: _targetMoveInDate == null && _error != null ? 1.5 : 1,
+                      ),
                     ),
                     child: Row(
                       children: [
                         Icon(
                           Icons.calendar_today_rounded,
                           size: 18,
-                          color: isDark ? const Color(0xFF60A5FA) : AppColors.primary,
+                          color: _targetMoveInDate == null
+                              ? (_error != null ? AppColors.error : AppColors.ink400)
+                              : (isDark ? const Color(0xFF60A5FA) : AppColors.primary),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -1364,9 +1687,13 @@ class _ApplyScreenState extends State<ApplyScreen> {
                                 formattedDate,
                                 style: TextStyle(
                                   fontSize: 13.5,
-                                  fontWeight: FontWeight.w800,
-                                  color: isDark ? Colors.white : AppColors.ink900,
+                                  fontWeight: _targetMoveInDate != null ? FontWeight.w800 : FontWeight.w600,
+                                  color: _targetMoveInDate != null
+                                      ? (isDark ? Colors.white : AppColors.ink900)
+                                      : (_error != null ? AppColors.error : AppColors.ink400),
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),

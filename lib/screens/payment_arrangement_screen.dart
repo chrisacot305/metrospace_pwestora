@@ -2103,35 +2103,41 @@ class _PaymentArrangementScreenState extends State<PaymentArrangementScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.3) : const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: isDark ? const Color(0xFF1E40AF) : const Color(0xFFBFDBFE)),
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.3) : const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: isDark ? const Color(0xFF1E40AF) : const Color(0xFFBFDBFE)),
+                      ),
+                      child: const Icon(
+                        Icons.shield_outlined,
+                        size: 18,
+                        color: Color(0xFF005CEE),
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.shield_outlined,
-                      size: 18,
-                      color: Color(0xFF005CEE),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        'Security Deposit Shield',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : const Color(0xFF0A1832),
+                          letterSpacing: -0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Security Deposit Shield',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : const Color(0xFF0A1832),
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
@@ -2203,9 +2209,13 @@ class _PaymentArrangementScreenState extends State<PaymentArrangementScreen> {
             child: OutlinedButton.icon(
               onPressed: _showTopUpDepositModal,
               icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
-              label: const Text(
-                'Top Up Advance / Security Deposit',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+              label: const Flexible(
+                child: Text(
+                  'Top Up Advance / Security Deposit',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                ),
               ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF38BDF8),
