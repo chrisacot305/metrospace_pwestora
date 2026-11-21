@@ -436,7 +436,7 @@ class _ViolationsScreenState extends State<ViolationsScreen> {
                 ),
                 SizedBox(height: 3),
                 Text(
-                  'Violations are not permanent. Maintain a clean record for a 6-month rolling period with zero infractions to automatically reset your standing to 0 strikes. Monetary breaches can be cured by settling the balance.',
+                  'Violations are not permanent. Maintain a clean record for a 2-month (60-day) period with zero infractions to automatically reduce your standing by 1 strike. Monetary breaches can be cured by settling the balance.',
                   style: TextStyle(
                     fontSize: 11.5,
                     color: Color(0xFF3B82F6),
