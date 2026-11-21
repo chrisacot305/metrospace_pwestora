@@ -86,7 +86,8 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
   }
 
   String get _propertyName {
-    final name = widget.lease['property_name'] ??
+    final name =
+        widget.lease['property_name'] ??
         widget.lease['name'] ??
         _propertyDetail?['name'];
     return (name != null && name.toString().trim().isNotEmpty)
@@ -95,7 +96,8 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
   }
 
   String get _propertyAddress {
-    final addr = widget.lease['property_address'] ??
+    final addr =
+        widget.lease['property_address'] ??
         widget.lease['address'] ??
         _propertyDetail?['address'];
     return (addr != null && addr.toString().trim().isNotEmpty)
@@ -104,7 +106,8 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
   }
 
   String? get _coverPhoto {
-    final photo = widget.lease['cover_photo'] ??
+    final photo =
+        widget.lease['cover_photo'] ??
         widget.lease['photo'] ??
         _propertyDetail?['cover_photo'];
     if (photo != null && photo.toString().isNotEmpty) {
@@ -125,12 +128,14 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
   }
 
   String get _unitLabel {
-    final u = widget.lease['unit_label'] ??
+    final u =
+        widget.lease['unit_label'] ??
         widget.lease['unit'] ??
         widget.lease['stall'];
     if (u != null && u.toString().trim().isNotEmpty) {
       final s = u.toString().trim();
-      return s.toLowerCase().startsWith('unit') || s.toLowerCase().startsWith('stall')
+      return s.toLowerCase().startsWith('unit') ||
+              s.toLowerCase().startsWith('stall')
           ? s
           : 'Unit $s';
     }
@@ -138,13 +143,15 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
   }
 
   String get _leaseTermMonths {
-    final term = widget.lease['term_months'] ??
+    final term =
+        widget.lease['term_months'] ??
         widget.lease['lease_term'] ??
         _propertyDetail?['lease_term'] ??
         _propertyDetail?['term_months'];
     if (term != null && term.toString().trim().isNotEmpty) {
       final s = term.toString().trim();
-      if (s.toLowerCase().contains('month') || s.toLowerCase().contains('year')) {
+      if (s.toLowerCase().contains('month') ||
+          s.toLowerCase().contains('year')) {
         return s;
       }
       final numVal = int.tryParse(s);
@@ -169,13 +176,16 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
   }
 
   String get _monthlyRent {
-    final raw = widget.lease['rent'] ??
+    final raw =
+        widget.lease['rent'] ??
         widget.lease['asking_rent'] ??
         _propertyDetail?['asking_rent'];
     if (raw != null) {
       final numVal = double.tryParse(raw.toString());
       if (numVal != null && numVal > 0) {
-        final parts = numVal.toStringAsFixed(0).replaceAllMapped(
+        final parts = numVal
+            .toStringAsFixed(0)
+            .replaceAllMapped(
               RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
               (Match m) => '${m[1]},',
             );
@@ -186,16 +196,28 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
   }
 
   String get _dueDate {
-    final formatted = widget.lease['due_date_formatted']?.toString().trim() ?? '';
+    final formatted =
+        widget.lease['due_date_formatted']?.toString().trim() ?? '';
     if (formatted.isNotEmpty) return formatted;
 
-    final direct = widget.lease['due_date'] ?? widget.lease['effective_due_date'];
+    final direct =
+        widget.lease['due_date'] ?? widget.lease['effective_due_date'];
     if (direct != null && direct.toString().trim().isNotEmpty) {
       final parsed = DateTime.tryParse(direct.toString().trim());
       if (parsed != null) {
         const months = [
-          'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
         ];
         return '${months[parsed.month - 1]} ${parsed.day}, ${parsed.year}';
       }
@@ -205,14 +227,26 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
     final rawDay = widget.lease['due_day'];
     int? parsedDay = rawDay != null ? int.tryParse(rawDay.toString()) : null;
     if (parsedDay == null || parsedDay <= 0) {
-      final sinceDt = DateTime.tryParse((widget.lease['start_date'] ?? widget.lease['since'] ?? '').toString());
+      final sinceDt = DateTime.tryParse(
+        (widget.lease['start_date'] ?? widget.lease['since'] ?? '').toString(),
+      );
       parsedDay = sinceDt?.day ?? DateTime.now().day;
     }
 
     final now = DateTime.now();
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     final maxDays = DateTime(now.year, now.month + 1, 0).day;
     final day = parsedDay.clamp(1, maxDays);
@@ -234,11 +268,27 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
   }
 
   String get _appliedDate {
-    final raw = widget.lease['applied_at'] ?? widget.lease['submitted_at'] ?? widget.lease['since'];
+    final raw =
+        widget.lease['applied_at'] ??
+        widget.lease['submitted_at'] ??
+        widget.lease['since'];
     if (raw != null && raw.toString().isNotEmpty) {
       try {
         final dt = DateTime.parse(raw.toString());
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const months = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
+        ];
         return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
       } catch (_) {}
     }
@@ -248,11 +298,27 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
   String get _leaseDurationTimeline {
     final start = widget.lease['start_date'] ?? widget.lease['since'];
     final end = widget.lease['end_date'];
-    if (start != null && end != null && start.toString().isNotEmpty && end.toString().isNotEmpty) {
+    if (start != null &&
+        end != null &&
+        start.toString().isNotEmpty &&
+        end.toString().isNotEmpty) {
       try {
         final sDt = DateTime.parse(start.toString());
         final eDt = DateTime.parse(end.toString());
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const months = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec',
+        ];
         return '${months[sDt.month - 1]} ${sDt.year} – ${months[eDt.month - 1]} ${eDt.year}';
       } catch (_) {}
     }
@@ -370,518 +436,184 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                      // ================= 1. PICTURE OF THE BUILDING (INSET GLASS FRAME) =================
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                        child: Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(18),
-                              child: Container(
-                                height: 155,
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFCBD5E1).withValues(alpha: 0.35),
-                                  border: Border.all(
-                                    color: Colors.white.withValues(alpha: 0.65),
-                                    width: 1.0,
-                                  ),
-                                ),
-                                child: cover != null && cover.isNotEmpty
-                                    ? Image.network(
-                                        cover,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) =>
-                                            _buildFallbackPattern(),
-                                      )
-                                    : _buildFallbackPattern(),
-                              ),
-                            ),
-
-                            // Frosted Close Button
-                            Positioned(
-                              top: 10,
-                              right: 10,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(20),
-                                onTap: () => Navigator.of(context).pop(),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(20),
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(7),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withValues(alpha: 0.35),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: Colors.white.withValues(alpha: 0.60),
-                                          width: 1.0,
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.close_rounded,
-                                        size: 15,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // ================= CARD BODY CONTENT =================
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Verified Status Indicator Dot
-                            Row(
-                              children: [
-                                Container(
-                                  width: 6.5,
-                                  height: 6.5,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF10B981), // Emerald dot
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                const Text(
-                                  'VERIFIED COMMERCIAL PREMISES',
-                                  style: TextStyle(
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFF047857),
-                                    letterSpacing: 0.6,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-
-                            // Building Name
-                            Text(
-                              _propertyName,
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF0B1B3D),
-                                letterSpacing: -0.4,
-                                height: 1.2,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-
-                            // Building Street Address
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Padding(
-                                  padding: EdgeInsets.only(top: 2),
-                                  child: Icon(
-                                    Icons.location_on_rounded,
-                                    size: 13,
-                                    color: Color(0xFF1E6BFF),
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    _propertyAddress,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                      color: Color(0xFF475569),
-                                      height: 1.35,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 14),
-
-                            // ================= REGISTERED BUSINESS & UNIT (FROSTED TILE) =================
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                        // ================= 1. PICTURE OF THE BUILDING (INSET GLASS FRAME) =================
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                          child: Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(18),
                                 child: Container(
+                                  height: 155,
                                   width: double.infinity,
-                                  padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.52),
-                                    borderRadius: BorderRadius.circular(16),
+                                    color: const Color(
+                                      0xFFCBD5E1,
+                                    ).withValues(alpha: 0.35),
                                     border: Border.all(
-                                      color: Colors.white.withValues(alpha: 0.85),
-                                      width: 1.2,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.65,
                                       ),
-                                    ],
+                                      width: 1.0,
+                                    ),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(8),
+                                  child: cover != null && cover.isNotEmpty
+                                      ? Image.network(
+                                          cover,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) =>
+                                                  _buildFallbackPattern(),
+                                        )
+                                      : _buildFallbackPattern(),
+                                ),
+                              ),
+
+                              // Frosted Close Button
+                              Positioned(
+                                top: 10,
+                                right: 10,
+                                child: InkWell(
+                                  borderRadius: BorderRadius.circular(20),
+                                  onTap: () => Navigator.of(context).pop(),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: BackdropFilter(
+                                      filter: ImageFilter.blur(
+                                        sigmaX: 10,
+                                        sigmaY: 10,
+                                      ),
+                                      child: Container(
+                                        padding: const EdgeInsets.all(7),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF1E6BFF).withValues(alpha: 0.12),
-                                          borderRadius: BorderRadius.circular(10),
+                                          color: Colors.black.withValues(
+                                            alpha: 0.35,
+                                          ),
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.60,
+                                            ),
+                                            width: 1.0,
+                                          ),
                                         ),
                                         child: const Icon(
-                                          Icons.storefront_rounded,
-                                          color: Color(0xFF1E6BFF),
-                                          size: 18,
+                                          Icons.close_rounded,
+                                          size: 15,
+                                          color: Colors.white,
                                         ),
                                       ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const Text(
-                                              'REGISTERED BUSINESS',
-                                              style: TextStyle(
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.w800,
-                                                color: Color(0xFF64748B),
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              _businessName,
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w800,
-                                                color: Color(0xFF0B1B3D),
-                                                letterSpacing: -0.2,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 1),
-                                            Text(
-                                              _unitLabel,
-                                              style: const TextStyle(
-                                                fontSize: 11.5,
-                                                fontWeight: FontWeight.w600,
-                                                color: Color(0xFF475569),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                            ],
+                          ),
+                        ),
 
-                            const SizedBox(height: 10),
+                        // ================= CARD BODY CONTENT =================
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Verified Status Indicator Dot
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 6.5,
+                                    height: 6.5,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF10B981), // Emerald dot
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'VERIFIED COMMERCIAL PREMISES',
+                                    style: TextStyle(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF047857),
+                                      letterSpacing: 0.6,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
 
-                            // ================= LEASING TERM & FLOOR AREA (FROSTED TILES) =================
-                            Row(
-                              children: [
-                                // Leasing Term
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: BackdropFilter(
-                                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.52),
-                                          borderRadius: BorderRadius.circular(14),
-                                          border: Border.all(
-                                            color: Colors.white.withValues(alpha: 0.85),
-                                            width: 1.2,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.date_range_rounded,
-                                                  size: 12,
-                                                  color: Color(0xFF1E6BFF),
-                                                ),
-                                                SizedBox(width: 4),
-                                                Text(
-                                                  'PERIOD TERM',
-                                                  style: TextStyle(
-                                                    fontSize: 9,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: Color(0xFF64748B),
-                                                    letterSpacing: 0.5,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              _leaseTermMonths,
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w800,
-                                                color: Color(0xFF0B1B3D),
-                                                letterSpacing: -0.2,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        ),
+                              // Building Name
+                              Text(
+                                _propertyName,
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF0B1B3D),
+                                  letterSpacing: -0.4,
+                                  height: 1.2,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+
+                              // Building Street Address
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Padding(
+                                    padding: EdgeInsets.only(top: 2),
+                                    child: Icon(
+                                      Icons.location_on_rounded,
+                                      size: 13,
+                                      color: Color(0xFF1E6BFF),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      _propertyAddress,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                        color: Color(0xFF475569),
+                                        height: 1.35,
                                       ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 10),
+                                ],
+                              ),
 
-                                // Floor Area
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: BackdropFilter(
-                                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.52),
-                                          borderRadius: BorderRadius.circular(14),
-                                          border: Border.all(
-                                            color: Colors.white.withValues(alpha: 0.85),
-                                            width: 1.2,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.square_foot_rounded,
-                                                  size: 12,
-                                                  color: Color(0xFF8B5CF6),
-                                                ),
-                                                SizedBox(width: 4),
-                                                Text(
-                                                  'FLOOR AREA',
-                                                  style: TextStyle(
-                                                    fontSize: 9,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: Color(0xFF64748B),
-                                                    letterSpacing: 0.5,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              _floorArea,
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w800,
-                                                color: Color(0xFF0B1B3D),
-                                                letterSpacing: -0.2,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                              const SizedBox(height: 14),
 
-                            const SizedBox(height: 10),
-
-                            // ================= MONTHLY RENT & PAYMENT DUE (FROSTED TILES) =================
-                            Row(
-                              children: [
-                                // Monthly Rent
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: BackdropFilter(
-                                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.52),
-                                          borderRadius: BorderRadius.circular(14),
-                                          border: Border.all(
-                                            color: Colors.white.withValues(alpha: 0.85),
-                                            width: 1.2,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.payments_outlined,
-                                                  size: 12,
-                                                  color: Color(0xFF059669),
-                                                ),
-                                                SizedBox(width: 4),
-                                                Text(
-                                                  'MONTHLY RENT',
-                                                  style: TextStyle(
-                                                    fontSize: 9,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: Color(0xFF64748B),
-                                                    letterSpacing: 0.5,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              _monthlyRent,
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w800,
-                                                color: Color(0xFF0B1B3D),
-                                                letterSpacing: -0.2,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-
-                                // Payment Due Date
-                                Expanded(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: BackdropFilter(
-                                      filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.52),
-                                          borderRadius: BorderRadius.circular(14),
-                                          border: Border.all(
-                                            color: Colors.white.withValues(alpha: 0.85),
-                                            width: 1.2,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            const Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.calendar_today_rounded,
-                                                  size: 12,
-                                                  color: Color(0xFFD97706),
-                                                ),
-                                                SizedBox(width: 4),
-                                                Text(
-                                                  'PAYMENT DUE',
-                                                  style: TextStyle(
-                                                    fontSize: 9,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: Color(0xFF64748B),
-                                                    letterSpacing: 0.5,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              _dueDate,
-                                              style: const TextStyle(
-                                                fontSize: 12.5,
-                                                fontWeight: FontWeight.w800,
-                                                color: Color(0xFF0B1B3D),
-                                                letterSpacing: -0.2,
-                                              ),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            // ================= RENT ESCALATION (OPTIONAL IF SET) =================
-                            if (_escalationRate != null) ...[
-                              const SizedBox(height: 10),
+                              // ================= REGISTERED BUSINESS & UNIT (FROSTED TILE) =================
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(14),
+                                borderRadius: BorderRadius.circular(16),
                                 child: BackdropFilter(
-                                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                                  filter: ImageFilter.blur(
+                                    sigmaX: 12,
+                                    sigmaY: 12,
+                                  ),
                                   child: Container(
                                     width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.52),
-                                      borderRadius: BorderRadius.circular(14),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.52,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
                                       border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.85),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.85,
+                                        ),
                                         width: 1.2,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                                          color: const Color(
+                                            0xFF0F172A,
+                                          ).withValues(alpha: 0.03),
                                           blurRadius: 8,
                                           offset: const Offset(0, 2),
                                         ),
@@ -890,39 +622,55 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
                                     child: Row(
                                       children: [
                                         Container(
-                                          padding: const EdgeInsets.all(6),
+                                          padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                                            borderRadius: BorderRadius.circular(8),
+                                            color: const Color(
+                                              0xFF1E6BFF,
+                                            ).withValues(alpha: 0.12),
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
                                           ),
                                           child: const Icon(
-                                            Icons.trending_up_rounded,
-                                            size: 14,
-                                            color: Color(0xFF059669),
+                                            Icons.storefront_rounded,
+                                            color: Color(0xFF1E6BFF),
+                                            size: 18,
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
+                                        const SizedBox(width: 10),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               const Text(
-                                                'RENT ESCALATION',
+                                                'REGISTERED BUSINESS',
                                                 style: TextStyle(
-                                                  fontSize: 8.5,
+                                                  fontSize: 9,
                                                   fontWeight: FontWeight.w800,
                                                   color: Color(0xFF64748B),
                                                   letterSpacing: 0.5,
                                                 ),
                                               ),
-                                              const SizedBox(height: 1),
+                                              const SizedBox(height: 2),
                                               Text(
-                                                _escalationRate!,
+                                                _businessName,
                                                 style: const TextStyle(
-                                                  fontSize: 12.5,
+                                                  fontSize: 14,
                                                   fontWeight: FontWeight.w800,
                                                   color: Color(0xFF0B1B3D),
                                                   letterSpacing: -0.2,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 1),
+                                              Text(
+                                                _unitLabel,
+                                                style: const TextStyle(
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xFF475569),
                                                 ),
                                               ),
                                             ],
@@ -933,122 +681,561 @@ class _BuildingDetailsSheetState extends State<BuildingDetailsSheet> {
                                   ),
                                 ),
                               ),
-                            ],
 
-                            const SizedBox(height: 10),
+                              const SizedBox(height: 10),
 
-                            // ================= APPLICATION DATE & LEASE TIMELINE =================
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildFrostedInfoTile(
-                                    icon: Icons.how_to_reg_outlined,
-                                    iconColor: const Color(0xFF2563EB),
-                                    title: 'APPLICATION DATE',
-                                    value: _appliedDate,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _buildFrostedInfoTile(
-                                    icon: Icons.event_available_rounded,
-                                    iconColor: const Color(0xFF0284C7),
-                                    title: 'LEASE TIMELINE',
-                                    value: _leaseDurationTimeline,
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            // ================= DEPOSITS & ADVANCE RENT =================
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildFrostedInfoTile(
-                                    icon: Icons.security_rounded,
-                                    iconColor: const Color(0xFF10B981),
-                                    title: 'SECURITY DEPOSIT',
-                                    value: _securityDeposit,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _buildFrostedInfoTile(
-                                    icon: Icons.account_balance_wallet_outlined,
-                                    iconColor: const Color(0xFF6366F1),
-                                    title: 'ADVANCE RENT',
-                                    value: _advanceRent,
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 10),
-
-                            // ================= ACCOUNT STANDING & COMPLIANCE =================
-                            _buildFrostedInfoTile(
-                              icon: Icons.verified_user_outlined,
-                              iconColor: const Color(0xFF059669),
-                              title: 'LEGAL STANDING & COMPLIANCE',
-                              value: _accountStanding,
-                              isFullWidth: true,
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // ================= VIEW CONTRACT ACTION BUTTON =================
-                            InkWell(
-                              borderRadius: BorderRadius.circular(14),
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => LeaseContractScreen(lease: widget.lease),
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(vertical: 13),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFF1E3A8A), Color(0xFF1E6BFF)],
-                                  ),
-                                  borderRadius: BorderRadius.circular(14),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF1E6BFF).withValues(alpha: 0.28),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: const [
-                                    Icon(Icons.description_outlined, color: Colors.white, size: 16),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'View Signed Lease Contract (PDF)',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.2,
+                              // ================= LEASING TERM & FLOOR AREA (FROSTED TILES) =================
+                              Row(
+                                children: [
+                                  // Leasing Term
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(
+                                          sigmaX: 12,
+                                          sigmaY: 12,
+                                        ),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 11,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.52,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.85,
+                                              ),
+                                              width: 1.2,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(
+                                                  0xFF0F172A,
+                                                ).withValues(alpha: 0.03),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.date_range_rounded,
+                                                    size: 12,
+                                                    color: Color(0xFF1E6BFF),
+                                                  ),
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    'PERIOD TERM',
+                                                    style: TextStyle(
+                                                      fontSize: 9,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: Color(0xFF64748B),
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                _leaseTermMonths,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Color(0xFF0B1B3D),
+                                                  letterSpacing: -0.2,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ],
+                                  ),
+                                  const SizedBox(width: 10),
+
+                                  // Floor Area
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(
+                                          sigmaX: 12,
+                                          sigmaY: 12,
+                                        ),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 11,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.52,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.85,
+                                              ),
+                                              width: 1.2,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(
+                                                  0xFF0F172A,
+                                                ).withValues(alpha: 0.03),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.square_foot_rounded,
+                                                    size: 12,
+                                                    color: Color(0xFF8B5CF6),
+                                                  ),
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    'FLOOR AREA',
+                                                    style: TextStyle(
+                                                      fontSize: 9,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: Color(0xFF64748B),
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                _floorArea,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Color(0xFF0B1B3D),
+                                                  letterSpacing: -0.2,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              // ================= MONTHLY RENT & PAYMENT DUE (FROSTED TILES) =================
+                              Row(
+                                children: [
+                                  // Monthly Rent
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(
+                                          sigmaX: 12,
+                                          sigmaY: 12,
+                                        ),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 11,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.52,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.85,
+                                              ),
+                                              width: 1.2,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(
+                                                  0xFF0F172A,
+                                                ).withValues(alpha: 0.03),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.payments_outlined,
+                                                    size: 12,
+                                                    color: Color(0xFF059669),
+                                                  ),
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    'MONTHLY RENT',
+                                                    style: TextStyle(
+                                                      fontSize: 9,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: Color(0xFF64748B),
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                _monthlyRent,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Color(0xFF0B1B3D),
+                                                  letterSpacing: -0.2,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+
+                                  // Payment Due Date
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(14),
+                                      child: BackdropFilter(
+                                        filter: ImageFilter.blur(
+                                          sigmaX: 12,
+                                          sigmaY: 12,
+                                        ),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 12,
+                                            vertical: 11,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.white.withValues(
+                                              alpha: 0.52,
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.85,
+                                              ),
+                                              width: 1.2,
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(
+                                                  0xFF0F172A,
+                                                ).withValues(alpha: 0.03),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons
+                                                        .calendar_today_rounded,
+                                                    size: 12,
+                                                    color: Color(0xFFD97706),
+                                                  ),
+                                                  SizedBox(width: 4),
+                                                  Text(
+                                                    'PAYMENT DUE',
+                                                    style: TextStyle(
+                                                      fontSize: 9,
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: Color(0xFF64748B),
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                _dueDate,
+                                                style: const TextStyle(
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Color(0xFF0B1B3D),
+                                                  letterSpacing: -0.2,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              // ================= RENT ESCALATION (OPTIONAL IF SET) =================
+                              if (_escalationRate != null) ...[
+                                const SizedBox(height: 10),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(
+                                      sigmaX: 12,
+                                      sigmaY: 12,
+                                    ),
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 10,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.52,
+                                        ),
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.85,
+                                          ),
+                                          width: 1.2,
+                                        ),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(
+                                              0xFF0F172A,
+                                            ).withValues(alpha: 0.03),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.all(6),
+                                            decoration: BoxDecoration(
+                                              color: const Color(
+                                                0xFF10B981,
+                                              ).withValues(alpha: 0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
+                                            child: const Icon(
+                                              Icons.trending_up_rounded,
+                                              size: 14,
+                                              color: Color(0xFF059669),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                const Text(
+                                                  'RENT ESCALATION',
+                                                  style: TextStyle(
+                                                    fontSize: 8.5,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: Color(0xFF64748B),
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 1),
+                                                Text(
+                                                  _escalationRate!,
+                                                  style: const TextStyle(
+                                                    fontSize: 12.5,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: Color(0xFF0B1B3D),
+                                                    letterSpacing: -0.2,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+
+                              const SizedBox(height: 10),
+
+                              // ================= APPLICATION DATE & LEASE TIMELINE =================
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildFrostedInfoTile(
+                                      icon: Icons.how_to_reg_outlined,
+                                      iconColor: const Color(0xFF2563EB),
+                                      title: 'APPLICATION DATE',
+                                      value: _appliedDate,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: _buildFrostedInfoTile(
+                                      icon: Icons.event_available_rounded,
+                                      iconColor: const Color(0xFF0284C7),
+                                      title: 'LEASE TIMELINE',
+                                      value: _leaseDurationTimeline,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              // ================= DEPOSITS & ADVANCE RENT =================
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildFrostedInfoTile(
+                                      icon: Icons.security_rounded,
+                                      iconColor: const Color(0xFF10B981),
+                                      title: 'SECURITY DEPOSIT',
+                                      value: _securityDeposit,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: _buildFrostedInfoTile(
+                                      icon:
+                                          Icons.account_balance_wallet_outlined,
+                                      iconColor: const Color(0xFF6366F1),
+                                      title: 'ADVANCE RENT',
+                                      value: _advanceRent,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 10),
+
+                              // ================= ACCOUNT STANDING & COMPLIANCE =================
+                              _buildFrostedInfoTile(
+                                icon: Icons.verified_user_outlined,
+                                iconColor: const Color(0xFF059669),
+                                title: 'LEGAL STANDING & COMPLIANCE',
+                                value: _accountStanding,
+                                isFullWidth: true,
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // ================= VIEW CONTRACT ACTION BUTTON =================
+                              InkWell(
+                                borderRadius: BorderRadius.circular(14),
+                                onTap: () {
+                                  Navigator.of(context).pop();
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => LeaseContractScreen(
+                                        lease: widget.lease,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 13,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF1E3A8A),
+                                        Color(0xFF1E6BFF),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(
+                                          0xFF1E6BFF,
+                                        ).withValues(alpha: 0.28),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      Icon(
+                                        Icons.description_outlined,
+                                        color: Colors.white,
+                                        size: 16,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'View Signed Lease Contract',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.2,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
                 ],
               ),
             ),
